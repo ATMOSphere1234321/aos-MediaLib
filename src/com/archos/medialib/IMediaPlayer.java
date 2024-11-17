@@ -363,10 +363,14 @@ public interface IMediaPlayer {
     public static final int METADATA_KEY_AUDIO_TRACK_CHANNELS = 4;
     public static final int METADATA_KEY_AUDIO_TRACK_VBR = 5;
     public static final int METADATA_KEY_AUDIO_TRACK_SUPPORTED = 6;
-    public static final int METADATA_KEY_AUDIO_TRACK_MAX = 7;
+    public static final int METADATA_KEY_AUDIO_TRACK_LANGUAGE = 7;
+    public static final int METADATA_KEY_AUDIO_TRACK_MAX = 8;
 
     public static final int METADATA_KEY_SUBTITLE_TRACK = 30000;
     public static final int METADATA_KEY_SUBTITLE_TRACK_NAME = 0;
     public static final int METADATA_KEY_SUBTITLE_TRACK_PATH = 1;
-    public static final int METADATA_KEY_SUBTITLE_TRACK_MAX = 2;
+    public static final int METADATA_KEY_SUBTITLE_TRACK_IS_GFX = 2;
+    public static final int METADATA_KEY_SUBTITLE_TRACK_FORMAT = 3;
+    public static final int METADATA_KEY_SUBTITLE_TRACK_LANGUAGE = 4;
+    public static final int METADATA_KEY_SUBTITLE_TRACK_MAX = 5;
 }
