@@ -458,7 +458,7 @@ public class ISO639codes {
                 result = ""; // will be interpreted by Video as R.string.unknown_track_name
             }
         }
-        log.warn("generateTrackName: MARC input={}, lang={} -> cleanString={}, language={} -> result={}", string, lang, cleanString, language,result);
+        log.debug("generateTrackName: input={}, lang={} -> cleanString={}, language={} -> result={}", string, lang, cleanString, language,result);
         return result;
     }
 
