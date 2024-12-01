@@ -22,18 +22,25 @@ import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.archos.environment.ArchosUtils;
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
 
-public class MediaThumbnailService extends Service {
+import java.lang.ref.WeakReference;
+
+public class MediaThumbnailService extends Service implements DefaultLifecycleObserver {
 
     private static boolean sFirst = true;
-    private static boolean DBG = false;
-
+    private static final boolean DBG = false;
 
     static class ServiceStub extends IMediaThumbnailService.Stub {
         MediaThumbnailService mService;
@@ -55,19 +62,32 @@ public class MediaThumbnailService extends Service {
 
     private final IBinder mBinder = new ServiceStub(this);
 
-    private final Handler mHandler = new Handler() {
-        public void handleMessage(android.os.Message msg) {
-            if (msg.what == TIMEOUT_MSG) {
-                Runtime.getRuntime().exit(-1);
+    private static class ThumbnailHandler extends Handler {
+        private final WeakReference<MediaThumbnailService> mServiceRef;
+
+        ThumbnailHandler(MediaThumbnailService service) {
+            super(Looper.getMainLooper());
+            mServiceRef = new WeakReference<>(service);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MediaThumbnailService service = mServiceRef.get();
+            if (service != null) {
+                if (msg.what == TIMEOUT_MSG) {
+                    Runtime.getRuntime().exit(-1);
+                }
             }
-        };
-    };
+        }
+    }
+
+    private Handler mHandler = new ThumbnailHandler(this);
 
     private static final Object sLock = new Object();
     
     public static IMediaThumbnailService sMediaThumbnailService = null;
 
-    static private ServiceConnection mServiceConnection = new ServiceConnection() {
+    static private final ServiceConnection mServiceConnection = new ServiceConnection() {
         public void onServiceDisconnected(ComponentName name) {
             if (DBG) Log.d(TAG, "onServiceDisconnected");
             sMediaThumbnailService = null;
@@ -114,13 +134,31 @@ public class MediaThumbnailService extends Service {
                 } catch (InterruptedException e) {
                     Log.w(TAG, "bind_sync interrupted");
                     if(sFirst)
-                    Toast.makeText(ArchosUtils.getGlobalContext(), "bind_sync interrupted", Toast.LENGTH_LONG).show();
+                        Toast.makeText(ArchosUtils.getGlobalContext(), "bind_sync interrupted", Toast.LENGTH_LONG).show();
                     sFirst = false;
                     e.printStackTrace();
                 }
             }
             return sMediaThumbnailService;
         }
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        if (DBG) Log.d(TAG, "onCreate");
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (mHandler != null) {
+            mHandler.removeCallbacksAndMessages(null); // Clear any pending messages from the handler
+            mHandler = null;
+        }
+        // Unbind from the service connection if it's still bound
+        release(this);
+        super.onDestroy();
     }
 
     @Override
@@ -153,5 +191,16 @@ public class MediaThumbnailService extends Service {
             }
         }
         return bitmap;
+    }
+
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        Log.d(TAG, "onStop: LifecycleOwner App in background");
+        stopSelf();
+    }
+
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        Log.d(TAG, "onStart: LifecycleOwner App in foreground");
     }
 }

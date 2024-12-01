@@ -18,14 +18,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.database.ContentObserver;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
@@ -35,10 +32,12 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
-import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
+
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.archos.mediacenter.utils.AppState;
 import com.archos.mediacenter.utils.trakt.TraktService;
@@ -46,7 +45,6 @@ import com.archos.medialib.R;
 import com.archos.mediaprovider.DeleteFileCallback;
 import com.archos.environment.NetworkState;
 import com.archos.mediaprovider.video.VideoStore;
-import com.archos.mediaprovider.video.VideoStoreInternal;
 import com.archos.mediaprovider.video.WrapperChannelManager;
 import com.archos.mediascraper.preprocess.SearchInfo;
 import com.archos.mediascraper.preprocess.SearchPreprocessor;
@@ -61,7 +59,7 @@ import java.io.IOException;
 /**
  * Created by alexandre on 20/05/15.
  */
-public class AutoScrapeService extends Service {
+public class AutoScrapeService extends Service implements DefaultLifecycleObserver {
     public static final String EXPORT_EVERYTHING = "export_everything";
     public static final String RESCAN_EVERYTHING = "rescan_everything";
     public static final String RESCAN_MOVIES = "rescan_movies";
@@ -129,14 +127,24 @@ public class AutoScrapeService extends Service {
     public static void startService(Context context) {
         log.debug("startService in foreground");
         mContext = context;
-        ContextCompat.startForegroundService(context, new Intent(context, AutoScrapeService.class));
+        context.startService(new Intent(context, AutoScrapeService.class));
     }
 
-    public void stopService() {
-        log.debug("stopService: stopForeground only");
+    public void cleanup() {
+        log.debug("cleanup");
         sIsScraping = false;
+        // Stop the scraping thread if it's running
+        if (mThread != null) {
+            mThread.interrupt();
+            mThread = null;
+        }
+        // Stop the exporting thread if it's running
+        if (mExportingThread != null) {
+            mExportingThread.interrupt();
+            mExportingThread = null;
+        }
+        // Cancel the notification
         nm.cancel(NOTIFICATION_ID);
-        stopForeground(true);
     }
 
     // Used by system. Don't call
@@ -163,10 +171,8 @@ public class AutoScrapeService extends Service {
                 .setContentTitle(getString(R.string.scraping_in_progress))
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
-        log.debug("onCreate: startForeground");
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
+        log.debug("onCreate: register lifecycle observer");
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         mBinder = new AutoScraperBinder();
         mHandler = new Handler();
     }
@@ -174,10 +180,7 @@ public class AutoScrapeService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        log.debug("onStartCommand: startForeground");
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
+        log.debug("onStartCommand");
         if (log.isDebugEnabled() && intent.getAction()==null) log.debug("onStartCommand: action is nul!!!");
         if (log.isDebugEnabled() && intent.getAction()!=null) log.debug("onStartCommand: action " + intent.getAction());
         if(intent!=null) {
@@ -258,8 +261,8 @@ public class AutoScrapeService extends Service {
                     } while (index < numberOfRows);
                     sIsScraping = false;
                     cursor.close();
-                    log.debug("startExporting: call stopService");
-                    stopService();
+                    log.debug("startExporting: call stopSelf");
+                    stopSelf();
                 }
             };
             mExportingThread.start();
@@ -267,9 +270,9 @@ public class AutoScrapeService extends Service {
     }
     @Override
     public void onDestroy() {
-        super.onDestroy();
         log.debug("onDestroy() " + this);
-        stopService();
+        cleanup();
+        super.onDestroy();
     }
 
     /**
@@ -354,7 +357,7 @@ public class AutoScrapeService extends Service {
                         log.debug("startScraping: is AutoScrapeService enabled? " + isEnable(AutoScrapeService.this));
                     }
 
-                    do{
+                    do {
                         mNetworkOrScrapErrors = 0;
                         sNumberOfFilesScraped = 0;
                         sNumberOfFilesRemainingToProcess = 0;
@@ -388,13 +391,13 @@ public class AutoScrapeService extends Service {
 
                             sNumberOfFilesRemainingToProcess = window;
                             restartOnNextRound = true;
-                            while (cursor.moveToNext() && isEnable(AutoScrapeService.this)) {
+                            while (cursor.moveToNext() && isEnable(AutoScrapeService.this) && !Thread.currentThread().isInterrupted()) {
                                 // stop if disconnected while scraping
                                 if (!NetworkState.isLocalNetworkConnected(AutoScrapeService.this) && !NetworkState.isNetworkConnected(AutoScrapeService.this)) {
                                     cursor.close();
                                     sNumberOfFilesRemainingToProcess = 0;
-                                    log.debug("startScraping disconnected from network calling stopService");
-                                    stopService();
+                                    log.debug("startScraping disconnected from network calling stopSelf");
+                                    stopSelf();
                                     return;
                                 }
 
@@ -595,8 +598,8 @@ public class AutoScrapeService extends Service {
                             WrapperChannelManager.refreshChannels(AutoScrapeService.this);
                         }
                     });
-                    log.debug("startScraping: call stopService");
-                    stopService();
+                    log.debug("startScraping: call stopSelf");
+                    stopSelf();
                 }
             };
             mThread.start();
@@ -654,4 +657,17 @@ public class AutoScrapeService extends Service {
             return getContentResolver().query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, SCRAPER_ACTIVITY_COLS, where, selectionArgs, sortOrder);
         }
     }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
+    }
+
 }

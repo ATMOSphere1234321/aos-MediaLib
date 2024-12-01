@@ -19,14 +19,27 @@ import android.app.job.JobService;
 import android.content.Context;
 import android.content.Intent;
 
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
+
 import com.archos.environment.ArchosUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NetworkRefreshJob extends JobService {
+public class NetworkRefreshJob extends JobService implements DefaultLifecycleObserver {
 
     private static final Logger log = LoggerFactory.getLogger(NetworkRefreshJob.class);
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        log.debug("onCreate");
+
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+    }
 
     @Override
     public boolean onStartJob(JobParameters params) {
@@ -46,4 +59,16 @@ public class NetworkRefreshJob extends JobService {
         return true;
     }
 
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        log.debug("onStart: LifecycleOwner app in foreground");
+    }
 }

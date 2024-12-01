@@ -31,6 +31,10 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.widget.Toast;
@@ -77,7 +81,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-public class TraktService extends Service {
+public class TraktService extends Service implements DefaultLifecycleObserver {
 
     private static final Logger log = LoggerFactory.getLogger(TraktService.class);
     private static final String TAG = "TraktService";
@@ -95,7 +99,6 @@ public class TraktService extends Service {
     private TraktHandler mBackgroundHandler;
     private Handler mUiHandler;
     private Toast mToast = null;
-    private IndexHelper mIndexHelper = null;
     private NetworkState mNetworkState;
 
     private static final int MSG_RESULT = 0;
@@ -495,7 +498,7 @@ public class TraktService extends Service {
 
     private Trakt.Status syncFlushEpisodeList(String library, TraktAPI.EpisodeListParam param,
                                               ArrayList<TraktAPI.Episode> episodeList, ContentResolver cr, String selection, boolean mark) {
-        if (episodeList.size() > 0) {
+        if (!episodeList.isEmpty()) {
             param.episodes = new TraktAPI.Episode[episodeList.size()];
             param.episodes = episodeList.toArray(param.episodes);
             ArrayList<SyncEpisode> eps = new ArrayList<SyncEpisode>();
@@ -598,7 +601,7 @@ public class TraktService extends Service {
 
         //from trakt to db
 
-        if (videos != null && videos.size() > 0) {
+        if (videos != null && !videos.isEmpty()) {
             String whereR;
             for (PlaybackResponse video : videos){
                 if (video.movie != null) { // it is a movie
@@ -683,7 +686,7 @@ public class TraktService extends Service {
                 result.objType == Trakt.Result.ObjectType.MOVIES) {
             java.util.List<BaseMovie> movies = (java.util.List<BaseMovie>) result.obj;
 
-            if (movies.size() > 0) {
+            if (!movies.isEmpty()) {
                 InBuilder inBuilder = new InBuilder(VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID);
                 for (BaseMovie movie : movies){
                     inBuilder.addParam(movie.movie.ids.tmdb);
@@ -709,7 +712,7 @@ public class TraktService extends Service {
         if (result.status == Trakt.Status.SUCCESS &&
                 result.objType == Trakt.Result.ObjectType.SHOWS_PER_SEASON) {
             java.util.List<BaseShow> shows = (java.util.List<BaseShow> ) result.obj;
-            if (shows.size() > 0) {
+            if (!shows.isEmpty()) {
                 for (BaseShow show : shows) {
                     for (BaseSeason season : show.seasons) {
                         InBuilder inBuilder = new InBuilder("number_episode");
@@ -764,7 +767,7 @@ public class TraktService extends Service {
                         inBuilder.addParam(id);
                     }
                 }
-                if (movieList.size() > 0) {
+                if (!movieList.isEmpty()) {
                     param.movies = new TraktAPI.Movie[movieList.size()];
                     param.movies = movieList.toArray(param.movies);
                     ArrayList<SyncMovie> eps = new ArrayList<SyncMovie>();
@@ -1262,6 +1265,8 @@ public class TraktService extends Service {
         AppState.addOnForeGroundListener(mForeGroundListener);
         handleForeGround(AppState.isForeGround());
         super.onCreate();
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
@@ -1272,18 +1277,32 @@ public class TraktService extends Service {
     @Override
     public void onDestroy() {
         log.debug("onDestroy");
+        cleanup();
+        super.onDestroy();
+    }
+
+    private void cleanup() {
         removeListener();
-        mBackgroundHandler.removeCallbacksAndMessages(null);
-        if (mBackgroundHandlerThread.quit()) {
-            try {
-                mBackgroundHandlerThread.join();
-            } catch (InterruptedException e) {
+        if (mBackgroundHandler != null) {
+            mBackgroundHandler.removeCallbacksAndMessages(null);
+            if (mBackgroundHandlerThread.quit()) {
+                try {
+                    mBackgroundHandlerThread.join();
+                } catch (InterruptedException e) {
+                }
             }
+        }
+        if (mUiHandler != null) {
+            mUiHandler.removeCallbacksAndMessages(null); // Clear any pending messages
+            mUiHandler = null;
+        }
+        if (mToast != null) {
+            mToast.cancel();
+            mToast = null;
         }
         mBackgroundHandlerThread = null;
         mNetworkState = null;
         mTrakt = null;
-        super.onDestroy();
     }
 
     @Override
@@ -1510,6 +1529,19 @@ public class TraktService extends Service {
             networkState.removePropertyChangeListener(propertyChangeListener);
             mNetworkStateListenerAdded = false;
         }
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner App in background");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        log.debug("onStart: LifecycleOwner App in foreground");
     }
 
 }

@@ -25,7 +25,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.ServiceInfo;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -42,8 +41,9 @@ import android.provider.BaseColumns;
 import android.provider.MediaStore;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
-import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.archos.environment.ArchosUtils;
 import com.archos.mediacenter.utils.AppState;
@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
 
 import io.sentry.SentryLevel;
 
-public class VideoStoreImportService extends Service implements Handler.Callback {
+public class VideoStoreImportService extends Service implements Handler.Callback, DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(VideoStoreImportService.class);
 
     // handler message ids
@@ -84,7 +84,6 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     private VideoStoreImportImpl mImporter;
     private ContentObserver mContentObserver;
     private boolean mNeedToInitScraper = false;
-    private AppState.OnForeGroundListener mForeGroundListener;
 
     protected VolumeState mVolumeState;
     protected VolumeState.Observer mVolumeStateObserver;
@@ -132,8 +131,8 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                 serviceIntent.putExtras(broadcast.getExtras()); //in case we have an extra... such as "recordLogExtra"
             if (AppState.isForeGround()) {
                 log.debug("startIfHandles: apps is foreground startForegroundService and pass intent to self");
-                ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startIfHandles", "apps is foreground startForegroundService and pass intent to self");
-                ContextCompat.startForegroundService(context, serviceIntent);
+                ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startIfHandles", "apps is foreground mContext.startService and pass intent to self");
+                context.startService(serviceIntent);
             }
             return true;
         }
@@ -165,11 +164,8 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     public void onCreate() {
         // executed on each startService
         n = createNotification();
-        log.debug("onCreate: create notification + startForeground " + NOTIFICATION_ID);
-        ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onCreate", "created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null) + " isForeground=" + AppState.isForeGround());
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
+        log.debug("onCreate: create notification + startService " + NOTIFICATION_ID);
+        ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onCreate", "created notification + startService " + NOTIFICATION_ID + " notification null? " + (n == null) + " isForeground=" + AppState.isForeGround());
         // importer logic
         mImporter = new VideoStoreImportImpl(this);
         // setup background worker thread
@@ -206,58 +202,22 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             mVolumeState.registerReceiver();
         }
 
-        mForeGroundListener = new AppState.OnForeGroundListener() {
-            @Override
-            public void onForeGroundState(Context applicationContext, boolean foreground) {
-                log.debug("onForeGroundState:" + foreground);
-                // when switching to foreground state and db
-                // has potentially changed: trigger db import
-                if (foreground) {
-                    mVolumeState.registerReceiver();
-                    mVolumeState.updateState();
-
-                    if (ImportState.VIDEO.isDirty()) {
-                        log.debug("onCreate: onForeGround && ImportState.isDirty MESSAGE_IMPORT_FULL");
-                        mHandler
-                            .obtainMessage(MESSAGE_IMPORT_FULL, DONT_KILL_SELF, 0)
-                            .sendToTarget();
-                    }
-                } else {
-                    mVolumeState.unregisterReceiver();
-                }
-            }
-        };
-        AppState.addOnForeGroundListener(mForeGroundListener);
-
         // register contentobserver for files and videos, on change we import them
         getContentResolver().registerContentObserver(MediaStore.Files.getContentUri("external"),
                 true, mContentObserver);
         getContentResolver().registerContentObserver(MediaStore.Video.Media.getContentUri("external"),
                 true, mContentObserver);
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
     public void onDestroy() {
         log.debug("onDestroy");
         sActive = false;
-        AppState.removeOnForeGroundListener(mForeGroundListener);
-        mForeGroundListener = null;
         // stop handler thread
-        mHandlerThread.quit();
-        mImporter.destroy();
+        cleanup();
         if (ImportState.VIDEO.isInitialImport()) ImportState.VIDEO.setState(State.IDLE);
-        // hide notification
-        if (AppState.isForeGround()) {
-            log.debug("onDestroy: app is in foreground stopForeground");
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onDestroy", "app is in foreground stopForeground");
-            stopForeground(true);
-        } else {
-            log.debug("onDestroy: app is in background stopForeground+stopSelf");
-            // if app goes in background stop foreground service and stopSelf
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onDestroy", "app is in background stopForeground+stopSelf");
-            stopForeground(true);
-            stopSelf();
-        }
     }
 
     /** wether it's ok do do an import now, will mark db dirty if not */
@@ -277,12 +237,6 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
         log.debug("onStartCommand: created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
-
-        if (AppState.isForeGround()) {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-            );
-        }
 
         if (intent == null || intent.getAction() == null) {
             // do a full import here to make sure that we have initial data
@@ -357,7 +311,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                 ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "intent not treated, stopForeground");
                 log.warn("onStartCommand: intent not treated, stopForeground");
                 // not calling handleMessage thus stopForeground
-                stopForeground(true);
+                stopSelf();
             }
         }
         return Service.START_NOT_STICKY;
@@ -371,7 +325,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         if (AppState.isForeGround()) {
             ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in foreground calling ContextCompat.startForegroundService");
             log.debug("startService: app in foreground calling ContextCompat.startForegroundService");
-            ContextCompat.startForegroundService(context, intent); // triggers an initial video import on local storage because files might have been created meanwhile
+            context.startService(intent); // triggers an initial video import on local storage because files might have been created meanwhile
         } else {
             ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in background NOT calling ContextCompat.startForegroundService");
             log.debug("startService: app in background NOT calling ContextCompat.startForegroundService");
@@ -404,12 +358,11 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         log.debug("handleMessage:" + msg + " what:" + msg.what + " startid:" + msg.arg1);
         switch (msg.what) {
             case MESSAGE_KILL:
-                log.debug("handleMessage: MESSAGE_KILL: stopForeground");
+                log.debug("handleMessage: MESSAGE_KILL: stopSelf");
                 if (ImportState.VIDEO.isInitialImport()) ImportState.VIDEO.setState(State.IDLE);
-                ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.handleMessage", "MESSAGE_KILL: stopForeground");
-                stopForeground(true);
                 // this service used to be created through bind. So it couldn't be killed with stopself unless it was unbind
                 // (which wasn't done). To have the same behavior, do not stop service for now
+                // TODO MARC check stopSelf logic...
                 if (msg.arg1 != DONT_KILL_SELF){
                     log.debug("handleMessage: stopSelf");
                     ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.handleMessage", "MESSAGE_KILL: stopSelf");
@@ -449,8 +402,8 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                 mHandler.obtainMessage(MESSAGE_KILL, DONT_KILL_SELF, msg.arg2).sendToTarget();
                 break;
             default:
-                log.warn("ImportBgHandler - unknown msg.what: " + msg.what + " stopForeground");
-                stopForeground(true);
+                log.warn("ImportBgHandler - unknown msg.what: " + msg.what + " stopSelf");
+                stopSelf();
                 break;
         }
         if (mNeedToInitScraper) {
@@ -662,12 +615,12 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                 Intent intent = new Intent(mContext, VideoStoreImportService.class);
                 intent.setAction(ArchosMediaIntent.ACTION_VIDEO_SCANNER_IMPORT_INCR);
                 if (AppState.isForeGround()) {
-                    ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onChange", "app in foreground calling ContextCompat.startForegroundService");
+                    ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onChange", "app in foreground calling mContext.startService");
                     log.debug("onChange: app in foreground calling ContextCompat.startForegroundService");
-                    ContextCompat.startForegroundService(mContext, intent);
+                    mContext.startService(intent);
                 } else {
-                    ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onChange", "app in background NOT calling ContextCompat.startForegroundService");
-                    log.debug("onChange: app in background NOT calling ContextCompat.startForegroundService");
+                    ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onChange", "app in background NOT calling mContext.startService");
+                    log.debug("onChange: app in background NOT calling mContext.startService");
                 }
             }
         }
@@ -689,5 +642,54 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     private void initializeScraperData() {
         log.debug("initializeScraperData()");
         Scraper scraper = new Scraper(this);
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background");
+        ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStop (lifecycle)", "app is in background stopSelf");
+        stopSelf();
+    }
+
+    private void cleanup() {
+        // Stop the handler thread
+        if (mHandlerThread != null) {
+            mHandlerThread.quit();
+            mHandlerThread = null;
+        }
+        // Clean up the importer
+        if (mImporter != null) {
+            mImporter.destroy();
+            mImporter = null;
+        }
+        // Unregister the ContentObserver
+        getContentResolver().unregisterContentObserver(mContentObserver);
+        mContentObserver = null;
+        // Remove the VolumeState observer
+        if (mVolumeState != null) {
+            mVolumeState.unregisterReceiver();
+            mVolumeState.removeObserver(mVolumeStateObserver); // Also remove the observer
+            mVolumeStateObserver = null;
+            mVolumeState = null;
+        }
+        // Cancel the notification
+        nm.cancel(NOTIFICATION_ID);
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        log.debug("onStart: LifecycleOwner app in foreground");
+        // when switching to foreground state and db
+        // has potentially changed: trigger db import
+        if (mVolumeState != null) {
+            mVolumeState.registerReceiver();
+            mVolumeState.updateState();
+        }
+        if (ImportState.VIDEO.isDirty()) {
+            log.debug("onStart: onForeGround && ImportState.isDirty MESSAGE_IMPORT_FULL");
+            mHandler.obtainMessage(MESSAGE_IMPORT_FULL, DONT_KILL_SELF, 0).sendToTarget();
+        }
     }
 }

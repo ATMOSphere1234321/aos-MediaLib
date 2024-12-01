@@ -16,23 +16,19 @@
 package com.archos.mediaprovider.video;
 
 import android.app.IntentService;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.provider.BaseColumns;
 import android.util.Pair;
 
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.archos.filecorelibrary.FileEditor;
 import com.archos.filecorelibrary.jcifs.JcifsFileEditor;
@@ -40,7 +36,6 @@ import com.archos.mediacenter.filecoreextension.upnp2.FileEditorFactoryWithUpnp;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
 import com.archos.mediacenter.utils.AppState;
 import com.archos.environment.NetworkState;
-import com.archos.medialib.R;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
 
 import org.fourthline.cling.model.meta.Device;
@@ -52,7 +47,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** handles visibility updates of smb://server/share type servers in the database */
-public class RemoteStateService extends IntentService implements UpnpServiceManager.Listener {
+public class RemoteStateService extends IntentService implements UpnpServiceManager.Listener, DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(RemoteStateService.class);
 
     private static final Uri NOTIFY_URI = VideoStore.ALL_CONTENT_URI;
@@ -70,15 +65,15 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     private static final String SELECTION_ID = BaseColumns._ID + "=?";
     private static final String SELECTION_LOCAL_REMOTE =
             MediaColumns.DATA + " LIKE 'smb://%' OR " +
-            MediaColumns.DATA + " LIKE 'upnp://%' OR " +
-            MediaColumns.DATA + " LIKE 'smbj://%'";
+                    MediaColumns.DATA + " LIKE 'upnp://%' OR " +
+                    MediaColumns.DATA + " LIKE 'smbj://%'";
     private static final String SELECTION_DISTANT_REMOTE =
             MediaColumns.DATA + " LIKE 'ftps://%' OR " +
-            MediaColumns.DATA + " LIKE 'ftp://%' OR " +
-            MediaColumns.DATA + " LIKE 'sftp://%' OR " +
-            MediaColumns.DATA + " LIKE 'sshj://%' OR " +
-            MediaColumns.DATA + " LIKE 'webdav://%' OR " +
-            MediaColumns.DATA + " LIKE 'webdavs://%'";
+                    MediaColumns.DATA + " LIKE 'ftp://%' OR " +
+                    MediaColumns.DATA + " LIKE 'sftp://%' OR " +
+                    MediaColumns.DATA + " LIKE 'sshj://%' OR " +
+                    MediaColumns.DATA + " LIKE 'webdav://%' OR " +
+                    MediaColumns.DATA + " LIKE 'webdavs://%'";
     private static final String SELECTION_ALL_NETWORK = SELECTION_LOCAL_REMOTE+" OR "+SELECTION_DISTANT_REMOTE;
     public static final String ACTION_CHECK_SMB = "archos.intent.action.CHECK_SMB";
     private ConcurrentHashMap<String, Pair<Long, Integer>> mUpnpId; //store name, id and active state
@@ -89,6 +84,26 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
         super(RemoteStateService.class.getSimpleName());
         log.debug("SmbStateService CTOR");
         setIntentRedelivery(true);
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        log.debug("onCreate() "+this);
+
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        log.debug("onDestroy");
+        UpnpServiceManager.startServiceIfNeeded(this).removeListener(this);
+        if (mUpnpId != null) {
+            mUpnpId.clear();
+            mUpnpId = null;
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -113,49 +128,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
         log.debug("start");
         Intent intent = new Intent(context, RemoteStateService.class);
         intent.setAction(ACTION_CHECK_SMB);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
-        }
-    }
-
-    private static final int NOTIFICATION_ID = 13;
-    private NotificationManager nm;
-    private Notification n;
-    private static final String notifChannelId = "RemoteStateService_id";
-    private static final String notifChannelName = "RemoteStateService";
-    private static final String notifChannelDescr = "RemoteStateService";
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification notification = createNotification();
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification,
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-            );
-        }
-        return super.onStartCommand(intent, flags, startId);
-    }
-
-    private Notification createNotification() {
-        log.debug("createNotification");
-        // need to do that early to avoid ANR on Android 26+
-        nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel nc = new NotificationChannel(notifChannelId, notifChannelName,
-                    NotificationManager.IMPORTANCE_LOW);
-            nc.setDescription(notifChannelDescr);
-            if (nm != null)
-                nm.createNotificationChannel(nc);
-        }
-        return new NotificationCompat.Builder(this, notifChannelId)
-                .setSmallIcon(android.R.drawable.stat_notify_sync)
-                .setContentTitle(notifChannelName)
-                .setContentText("")
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true)
-                .build();
+        context.startService(intent);
     }
 
     public static void stop(Context context) {
@@ -262,7 +235,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     }
 
     protected final static boolean updateServerDb(long id, ContentResolver cr, int oldState,
-            int newState, long time) {
+                                                  int newState, long time) {
         log.debug("updateServerDb: id=" + id + ", oldState=" + oldState + ", newState=" + newState);
         if (oldState == newState) return false;
         ContentValues cv = new ContentValues();
@@ -273,7 +246,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
             cv.put(VideoStore.SmbServer.SmbServerColumns.LAST_SEEN, String.valueOf(time));
         }
         String[] selectionArgs = new String[] {
-            String.valueOf(id)
+                String.valueOf(id)
         };
         log.debug("DB: update server: " + id + " values:" + cv);
         int result = cr.update(SERVER_URI, cv, SELECTION_ID, selectionArgs);
@@ -286,17 +259,17 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
         final ContentResolver cr = getContentResolver();
         for(String deviceName : mUpnpId.keySet()){
             boolean isInList = false;
-           for(Device device : devices){
-               if(deviceName.startsWith("upnp://" + device.hashCode())){
-                   isInList = true;
-                   break;
-               }
-           }
+            for(Device device : devices){
+                if(deviceName.startsWith("upnp://" + device.hashCode())){
+                    isInList = true;
+                    break;
+                }
+            }
             log.debug("UPNP : is in list ?  "+deviceName+ " "+String.valueOf(isInList));
             long id = mUpnpId.get(deviceName).first;
             updateServerDb(id, cr, mUpnpId.get(deviceName).second, isInList?1:0, now);
             mUpnpId.put(deviceName, new Pair<>(id,isInList?1:0 ));
-       }
+        }
         cr.notifyChange(NOTIFY_URI, null);
     }
 
@@ -314,5 +287,17 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
             while (c.moveToNext() && active == false)
                 active = (c.getInt(2) == 1);
         return active;
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
     }
 }

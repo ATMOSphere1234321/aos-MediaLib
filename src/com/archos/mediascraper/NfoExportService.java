@@ -21,14 +21,14 @@ import android.app.NotificationManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.NetworkOnMainThreadException;
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
-import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import android.util.Log;
 
@@ -43,7 +43,7 @@ import com.archos.mediaprovider.video.VideoStore.Video.VideoColumns;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class NfoExportService extends IntentService {
+public class NfoExportService extends IntentService implements DefaultLifecycleObserver {
     private static final String TAG = "NfoExportService";
     private final static boolean DBG = false;
 
@@ -61,7 +61,6 @@ public class NfoExportService extends IntentService {
     private static final String notifChannelId = "NfoExportService_id";
     private static final String notifChannelName = "NfoExportService";
     private static final String notifChannelDescr = "NfoExportService";
-
 
     /**
      * simple guard against multiple tasks of the same directory
@@ -97,17 +96,16 @@ public class NfoExportService extends IntentService {
         sScheduledTasks.remove(EXPORT_ALL_KEY);
     }
 
-
     public static void exportDirectory(Context context, Uri directory) {
         Intent serviceIntent = new Intent(context, NfoExportService.class);
         serviceIntent.setAction(INTENT_EXPORT_FILE);
         serviceIntent.setData(directory);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+        if (AppState.isForeGround()) context.startService(serviceIntent);
     }
     public static void exportAll(Context context) {
         Intent serviceIntent = new Intent(context, NfoExportService.class);
         serviceIntent.setAction(INTENT_EXPORT_ALL);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+        if (AppState.isForeGround()) context.startService(serviceIntent);
     }
 
     public NfoExportService() {
@@ -136,18 +134,14 @@ public class NfoExportService extends IntentService {
                 .setContentText("")
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : null;
         Uri data = intent != null ? intent.getData() : null;
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
         boolean processIntent = false;
         if (INTENT_EXPORT_FILE.equals(action)) {
             if (addDirTask(data))
@@ -182,7 +176,7 @@ public class NfoExportService extends IntentService {
         nm.notify(NOTIFICATION_ID, nb.build());
         handleCursor(getAllCursor());
         removeAllTask();
-        stopForeground(true);
+        stopSelf();
     }
 
     private void exportFile(Uri data) {
@@ -202,7 +196,7 @@ public class NfoExportService extends IntentService {
             handleCursor(getInDirectoryCursor(data));
         }
         removeDirTask(data);
-        stopForeground(true);
+        stopSelf();
     }
 
     private void handleCursor(Cursor cursor) {
@@ -265,4 +259,30 @@ public class NfoExportService extends IntentService {
         return cr.query(URI, PROJECTION, SELECTION_FOLDER, selectionArgs, ORDER);
     }
 
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        if (DBG) Log.d(TAG, "onStop: LifecycleOwner app in background, stopSelf");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        if (DBG) Log.d(TAG, "onStart: LifecycleOwner app in foreground");
+    }
+
+    private void cleanup() {
+        // Clear the scheduled tasks
+        sScheduledTasks.clear();
+        // Cancel the notification
+        nm.cancel(NOTIFICATION_ID);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (DBG) Log.d(TAG, "onDestroy()");
+        cleanup(); // Call cleanup here
+        super.onDestroy();
+    }
 }

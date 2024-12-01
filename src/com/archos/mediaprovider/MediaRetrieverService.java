@@ -18,28 +18,71 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
+
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
 import com.archos.medialib.MediaMetadata;
 
-public class MediaRetrieverService extends Service {
+import java.lang.ref.WeakReference;
+
+public class MediaRetrieverService extends Service implements DefaultLifecycleObserver {
 
     private static final String TAG = "MediaRetrieverService";
+    private static final boolean DBG = false;
 
+    private static final int TIMEOUT_MSG = 0;
     private static final int TIMEOUT_MS = 6000;
-    private final Handler mHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            Runtime.getRuntime().exit(-1);
+
+    private static class MediaRetreiverHandler extends Handler {
+        private final WeakReference<MediaRetrieverService> mServiceRef;
+
+        MediaRetreiverHandler(MediaRetrieverService service) {
+            super(Looper.getMainLooper());
+            mServiceRef = new WeakReference<>(service);
         }
-    };
+
+        @Override
+        public void handleMessage(Message msg) {
+            MediaRetrieverService service = mServiceRef.get();
+            if (service != null) {
+                if (msg.what == TIMEOUT_MSG) {
+                    Runtime.getRuntime().exit(-1);
+                }
+            }
+        }
+    }
+
+    private Handler mHandler = new MediaRetreiverHandler(this);
 
     private final IBinder mBinder = new IMediaRetrieverService.Stub() {
         public MediaMetadata getMetadata(String path) {
             return MediaRetrieverService.this.getMetadata(path);
         }
     };
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        if (DBG) Log.d(TAG, "onCreate");
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        if (DBG) Log.d(TAG, "onDestroy");
+        if (mHandler != null) {
+            mHandler.removeCallbacksAndMessages(null);
+            mHandler = null;
+        }
+        super.onDestroy();
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -68,6 +111,19 @@ public class MediaRetrieverService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         return START_NOT_STICKY;
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        if (DBG) Log.d(TAG, "onStop: LifecycleOwner App in background");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        if (DBG) Log.d(TAG, "onStart: LifecycleOwner App in foreground");
     }
 
 }

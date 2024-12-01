@@ -41,6 +41,9 @@ import android.os.Process;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.util.Log;
@@ -83,7 +86,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressLint("LongLogTag")
-public class NetworkScannerServiceVideo extends Service implements Handler.Callback {
+public class NetworkScannerServiceVideo extends Service implements Handler.Callback, DefaultLifecycleObserver {
     /*
         explanation about upnp indexing behaviour
         a movie Dumbo.mkv is in /Video/All Videos/ and /Video/Movies/Folder1 and Video/Movies/Folder2
@@ -117,6 +120,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     private static boolean sIsScannerAlive;
     private String mRecordOnFailPreference;
     private String mRecordEndOfScanPreference;
+    WifiLock wifiLock;
 
     private static final int NOTIFICATION_ID = 1;
     private NotificationManager nm;
@@ -139,8 +143,8 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             if(broadcast.getExtras()!=null)
                 serviceIntent.putExtras(broadcast.getExtras()); //in case we have an extra... such as "recordLogExtra"
             if (AppState.isForeGround()) {
-                log.debug("startIfHandles: apps is foreground startForegroundService and pass intent to self");
-                ContextCompat.startForegroundService(context, serviceIntent);
+                log.debug("startIfHandles: apps is foreground startService and pass intent to self");
+                context.startService(serviceIntent);
             }
             return true;
         }
@@ -208,10 +212,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
         n = nb.build();
 
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
-        log.debug("onCreate: created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
+        log.debug("onCreate: created notification + startService " + NOTIFICATION_ID + " notification null? " + (n == null));
 
         sIsScannerAlive = true;
         notifyListeners();
@@ -227,24 +228,17 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         mHandler = new Handler(looper, this);
 
         mBlacklist = Blacklist.getInstance(this);
+
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
     public void onDestroy() {
-        sIsScannerAlive = false;
-        notifyListeners();
-        //stop Upnp service if on background
-        UpnpServiceManager.getSingleton(this).releaseStopLock();
-        if(!AppState.isForeGround()){
-            UpnpServiceManager.stopServiceIfLaunched();
-        }
-        if(mRecordEndOfScanPreference!=null) //time to set end of scan
-            PreferenceManager.getDefaultSharedPreferences(this).edit().putLong(mRecordEndOfScanPreference, System.currentTimeMillis()).apply();
         log.debug("onDestroy");
-        // remove handler
-        mHandlerThread.quit();
-        nm.cancel(NOTIFICATION_ID);
-        stopForeground(true);
+        cleanup();
+        // Additional cleanup if necessary
+        super.onDestroy();
     }
 
     @Override
@@ -252,10 +246,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         // intents delivered here
         log.debug("onStartCommand:" + intent + " flags:" + flags + " startId:" + startId + ((intent != null) ? ", getAction " + intent.getAction() : " getAction null"));
 
-        log.debug("onStartCommand: created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
+        log.debug("onStartCommand: created notification + startService " + NOTIFICATION_ID + " notification null? " + (n == null));
 
         if (intent == null || intent.getAction() == null)
             return START_NOT_STICKY;
@@ -308,9 +299,8 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             case MESSAGE_KILL:
                 log.debug("handleMessage: MESSAGE_KILL");
                 if (msg.arg1 != -1) {
-                    stopSelf(msg.arg1);
                     nm.cancel(NOTIFICATION_ID);
-                    stopForeground(true);
+                    stopSelf(msg.arg1);
                 }
                 break;
             case MESSAGE_DO_SCAN:
@@ -411,7 +401,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             log.debug("doScan path resolved to:" + f.getUri().toString());
             ContentResolver cr = getContentResolver();
             WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-            WifiLock wifiLock = wifiManager.createWifiLock(WIFI_MODE_FULL_HIGH_PERF, "ArchosNetworkIndexer");
+            wifiLock = wifiManager.createWifiLock(WIFI_MODE_FULL_HIGH_PERF, "ArchosNetworkIndexer");
             wifiLock.acquire();
 
             // send out a sticky broadcast telling the world that we started scanning
@@ -501,8 +491,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             log.trace("doScan: added:" + insertCount + " modified:" + updateCount + " deleted:" + deleteCount + " listed files " + mFoundFiles);
             wifiLock.release();
 
-        }
-        else if(mRecordOnFailPreference!=null){
+        } else if(mRecordOnFailPreference!=null){
             PreferenceManager.getDefaultSharedPreferences(this).edit().putInt(mRecordOnFailPreference, -1).commit();//unable to reach server
         }
         if (log.isDebugEnabled()) {
@@ -1121,5 +1110,41 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             c.close();
         }
         return result;
+    }
+
+    public void cleanup() {
+        log.debug("cleanup");
+        // Stop the handler thread safely
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely(); // Safely quit the handler thread
+            mHandlerThread = null; // Clear the reference
+        }
+        //stop Upnp service if on background
+        UpnpServiceManager.getSingleton(this).releaseStopLock();
+        if(!AppState.isForeGround()){
+            UpnpServiceManager.stopServiceIfLaunched();
+        }
+        // Release any acquired locks (e.g., WifiLock)
+        if (wifiLock != null && wifiLock.isHeld()) {
+            wifiLock.release(); // Release the WifiLock
+        }
+        // Notify listeners that the scanner is stopping
+        sIsScannerAlive = false;
+        notifyListeners();
+        // Handle any necessary cleanup or state management here
+        nm.cancel(NOTIFICATION_ID);
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stop service");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        log.debug("onStart: LifecycleOwner app in foreground");
     }
 }

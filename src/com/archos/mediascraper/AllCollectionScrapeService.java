@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package com.archos.mediascraper;
 
 import android.app.IntentService;
@@ -21,23 +20,21 @@ import android.app.NotificationManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.Build;
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
-import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
-import com.archos.mediacenter.utils.AppState;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.video.ScraperStore;
 import com.archos.mediascraper.themoviedb3.CollectionInfo;
 import com.archos.mediascraper.themoviedb3.CollectionResult;
 import com.archos.mediascraper.themoviedb3.MovieCollection;
 import com.archos.mediascraper.themoviedb3.MyTmdb;
-import com.archos.mediascraper.xml.MovieScraper3;
 import com.uwetrottmann.tmdb2.services.CollectionsService;
 
 import org.slf4j.Logger;
@@ -47,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import okhttp3.Cache;
 
-public class AllCollectionScrapeService extends IntentService {
+public class AllCollectionScrapeService extends IntentService implements DefaultLifecycleObserver {
     private static final String PREFERENCE_NAME = "themoviedb.org";
 
     private static final Logger log = LoggerFactory.getLogger(AllCollectionScrapeService.class);
@@ -122,23 +119,27 @@ public class AllCollectionScrapeService extends IntentService {
         sScheduledTasks.remove(EXPORT_NOIMAGE_KEY);
     }
 
-    public static void rescrapeCollection(Context context, Long collectionId) {
-        Intent serviceIntent = new Intent(context, AllCollectionScrapeService.class);
-        serviceIntent.setAction(INTENT_RESCRAPE_COLLECTION);
-        serviceIntent.putExtra("collectionId", collectionId);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+    public void rescrapeCollection(Context context, Long collectionId) {
+        log.debug("rescrapeCollection: " + collectionId);
+        if (collectionId != null && collectionId > 0) {
+            handleCursor(getCollectionCursor(collectionId));
+        }
+        removeTask(collectionId);
+        stopSelf();
     }
 
-    public static void rescrapeAllCollections(Context context) {
-        Intent serviceIntent = new Intent(context, AllCollectionScrapeService.class);
-        serviceIntent.setAction(INTENT_RESCRAPE_ALL_COLLECTIONS);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+    public void rescrapeAllCollections(Context context) {
+        log.debug("rescrapeAllCollections");
+        handleCursor(getAllCursor());
+        removeAllTask();
+        stopSelf();
     }
 
-    public static void rescrapeNoImageCollections(Context context) {
-        Intent serviceIntent = new Intent(context, AllCollectionScrapeService.class);
-        serviceIntent.setAction(INTENT_RESCRAPE_NOIMAGE_COLLECTIONS);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+    public void rescrapeNoImageCollections(Context context) {
+        log.debug("rescrapeNoImageCollections");
+        handleCursor(getNoImageCursor());
+        removeNoImageTask();
+        stopSelf();
     }
 
     public AllCollectionScrapeService() {
@@ -171,18 +172,22 @@ public class AllCollectionScrapeService extends IntentService {
                 .setContentText("")
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
+
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        log.debug("onDestroy");
+        cleanup();
+        super.onDestroy();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : null;
         Long collectionId = intent != null ? intent.getLongExtra("collectionId", -1) : null;
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0
-        );
         boolean processIntent = false;
         if (INTENT_RESCRAPE_COLLECTION.equals(action)) {
             if (addTask(collectionId))
@@ -222,7 +227,7 @@ public class AllCollectionScrapeService extends IntentService {
         nm.notify(NOTIFICATION_ID, nb.build());
         handleCursor(getAllCursor());
         removeAllTask();
-        stopForeground(true);
+        stopSelf();
     }
 
     private void rescrapeNoImageCollections() {
@@ -231,7 +236,7 @@ public class AllCollectionScrapeService extends IntentService {
         nm.notify(NOTIFICATION_ID, nb.build());
         handleCursor(getNoImageCursor());
         removeNoImageTask();
-        stopForeground(true);
+        stopSelf();
     }
 
     private void rescrapeCollection(Long collectionId) {
@@ -243,7 +248,7 @@ public class AllCollectionScrapeService extends IntentService {
             handleCursor(getCollectionCursor(collectionId));
         }
         removeTask(collectionId);
-        stopForeground(true);
+        stopSelf();
     }
 
     private void handleCursor(Cursor cursor) {
@@ -306,5 +311,25 @@ public class AllCollectionScrapeService extends IntentService {
         ContentResolver cr = getContentResolver();
         String[] selectionArgs = { collectionId.toString() };
         return cr.query(URI, PROJECTION, SELECTION_COLLECTION, selectionArgs, null);
+    }
+
+    private void cleanup() {
+        // Clear the scheduled tasks
+        sScheduledTasks.clear();
+        // Cancel the notification
+        nm.cancel(NOTIFICATION_ID);
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background stopSelf");
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
+        // App in foreground
     }
 }
