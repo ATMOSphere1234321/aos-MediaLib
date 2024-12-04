@@ -101,6 +101,8 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
     private final static boolean CRASH_ON_ERROR = false;
 
+    private volatile boolean isServiceRunning = true;
+
     public VideoStoreImportService() {
         log.debug("VideoStoreImportService CTOR");
     }
@@ -647,8 +649,10 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     @Override
     public void onStop(LifecycleOwner owner) {
         // App in background
-        log.debug("onStop: LifecycleOwner app in background");
+        isServiceRunning = false;
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStop (lifecycle)", "app is in background stopSelf");
+        cleanup();
         stopSelf();
     }
 
@@ -660,12 +664,15 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         }
         // Clean up the importer
         if (mImporter != null) {
+            mImporter.interruptImport();
             mImporter.destroy();
             mImporter = null;
         }
         // Unregister the ContentObserver
-        getContentResolver().unregisterContentObserver(mContentObserver);
-        mContentObserver = null;
+        if (mContentObserver != null) {
+            getContentResolver().unregisterContentObserver(mContentObserver);
+            mContentObserver = null;
+        }
         // Remove the VolumeState observer
         if (mVolumeState != null) {
             mVolumeState.unregisterReceiver();
@@ -680,6 +687,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     @Override
     public void onStart(LifecycleOwner owner) {
         // App in foreground
+        isServiceRunning = true;
         log.debug("onStart: LifecycleOwner app in foreground");
         // when switching to foreground state and db
         // has potentially changed: trigger db import
