@@ -62,6 +62,8 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     private static final String notifChannelName = "NfoExportService";
     private static final String notifChannelDescr = "NfoExportService";
 
+    private volatile boolean isServiceRunning = true;
+
     /**
      * simple guard against multiple tasks of the same directory
      * @return true if this uri or an export all task is not scheduled already
@@ -202,7 +204,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     private void handleCursor(Cursor cursor) {
         if (cursor != null) {
             NfoWriter.ExportContext exportContext = new NfoWriter.ExportContext();
-            while (cursor.moveToNext()) {
+            while (cursor.moveToNext() && isServiceRunning) {
                 long id = cursor.getLong(0);
                 int type = cursor.getInt(1);
                 BaseTags tags = null;
@@ -263,6 +265,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     public void onStop(LifecycleOwner owner) {
         // App in background
         if (DBG) Log.d(TAG, "onStop: LifecycleOwner app in background, stopSelf");
+        cleanup();
         stopSelf();
     }
 
@@ -270,9 +273,11 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     public void onStart(LifecycleOwner owner) {
         // App in foreground
         if (DBG) Log.d(TAG, "onStart: LifecycleOwner app in foreground");
+        isServiceRunning = true;
     }
 
     private void cleanup() {
+        isServiceRunning = false;
         // Clear the scheduled tasks
         sScheduledTasks.clear();
         // Cancel the notification
@@ -282,7 +287,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     @Override
     public void onDestroy() {
         if (DBG) Log.d(TAG, "onDestroy()");
-        cleanup(); // Call cleanup here
+        cleanup();
         super.onDestroy();
     }
 }
