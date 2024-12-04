@@ -599,6 +599,9 @@ public class Trakt {
                     } else {
                         throw new AuthentificationError();
                     }
+                } else if (res.code() == 404) {
+                    log.error("exec request error: resource not found (404)");
+                    return null; // Handle 404 error specifically
                 } else {
                     throw new Exception(res.errorBody().toString());
                 }
