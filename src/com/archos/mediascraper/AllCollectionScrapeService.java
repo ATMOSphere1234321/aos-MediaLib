@@ -324,6 +324,7 @@ public class AllCollectionScrapeService extends IntentService implements Default
     public void onStop(LifecycleOwner owner) {
         // App in background
         log.debug("onStop: LifecycleOwner app in background stopSelf");
+        cleanup();
         stopSelf();
     }
 
