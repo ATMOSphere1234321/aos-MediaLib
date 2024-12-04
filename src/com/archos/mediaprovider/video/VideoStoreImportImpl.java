@@ -84,6 +84,8 @@ public class VideoStoreImportImpl {
     private final static boolean CRASH_ON_ERROR = false;
     private final static boolean CHECK_NFO = true;
 
+    private static volatile boolean mIsImportInterrupted = false;
+
     public VideoStoreImportImpl(Context context) {
         mContext = context;
         File sdCardFile = context.getExternalFilesDir(null);
@@ -114,6 +116,7 @@ public class VideoStoreImportImpl {
     }
 
     public void doFullImport() {
+        mIsImportInterrupted = false;
         int countStart = getLocalCount(mCr);
         log.debug("doFullImport: ImportState.VIDEO.setState " + (countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT));
         ImportState.VIDEO.setState(countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT);
@@ -150,6 +153,7 @@ public class VideoStoreImportImpl {
     }
 
     public void doIncrementalImport() {
+        mIsImportInterrupted = false;
         int countStart = getLocalCount(mCr);
         ImportState.VIDEO.setState(countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT);
         log.debug("doIncrementalImport: ImportState.VIDEO.setState " + (countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT));
@@ -208,7 +212,7 @@ public class VideoStoreImportImpl {
         // Still getting SQLiteBlobTooBigException due perhaps to large blobs in the database for some reasons
         try {
             int count = 0;
-            while (c.moveToNext() && count < WINDOW_SIZE) {
+            while (c.moveToNext() && count < WINDOW_SIZE && !mIsImportInterrupted) {
                 count++;
                 ImportState.VIDEO.setRemainingCount(remaining--);
                 log.debug("handleScanCursor: ImportState.VIDEO.setRemainingCount " + remaining + " count " + count);
@@ -300,7 +304,7 @@ public class VideoStoreImportImpl {
         if (c != null) c.close();
         log.info("handleScanCursor: media scanned:" + scanned + " nfo-scraped:" + scraped);
         if (scraped > 0)
-            TraktService.onNewVideo(context);
+            TraktService.onNewVideo(context); // done once for the full import
     }
 
     private static class Job {
@@ -343,6 +347,7 @@ public class VideoStoreImportImpl {
 
     /** removes file(s) defined by Uri */
     public void doRemove(Uri what) {
+        mIsImportInterrupted = false;
         if (what == null || !"file".equals(what.getScheme()))
             return;
         String path = what.getPath();
@@ -359,6 +364,7 @@ public class VideoStoreImportImpl {
     private static String WHERE_FILE = "_data = ?";
     /** executes metadata scan of files defined by Uri */
     public void doScan(Uri what) {
+        mIsImportInterrupted = false;
         log.debug("doScan: Scanning Metadata single uri: " + what);
         String path = what.getPath();
 
@@ -389,9 +395,10 @@ public class VideoStoreImportImpl {
     /** executes metadata scan of every unscanned file */
     private void doScan(ContentResolver cr, Context context, Blacklist blacklist) {
         log.debug("doScan: Scanning Metadata all unscanned files");
+        mIsImportInterrupted = false;
         Cursor c = null;
         int cursorCount = 0;
-        while (true) {
+        while (true && !mIsImportInterrupted) {
             try {
                 // for some reasons this does return a cursor with size > WINDOW_SIZE
                 // thus only process WINDOW_SIZE entries in handleScanCursor
@@ -703,7 +710,7 @@ public class VideoStoreImportImpl {
 
                     index += window;
                     if (allFiles != null) allFiles.close();
-                } while (window < numberOfRows && window > 0);
+                } while (window < numberOfRows && window > 0 && !mIsImportInterrupted);
             } else allFiles.close();
         }
         return imported;
@@ -732,7 +739,7 @@ public class VideoStoreImportImpl {
         int offset = 0;
         Cursor c = null;
         try {
-            while (true) {
+            while (true && !mIsImportInterrupted) {
                 try {
                     c = cr.query(VideoStoreInternal.FILES_IMPORT, COUNT_PROJ, null, null, BaseColumns._ID + " LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
                     if (c != null) {
@@ -766,7 +773,7 @@ public class VideoStoreImportImpl {
         int highestMaxId = 0;
         Cursor c = null;
         try {
-            while (true) {
+            while (true && !mIsImportInterrupted) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // API>=30 requires bundle to LIMIT
                         Bundle queryArgs = new Bundle();
@@ -818,7 +825,7 @@ public class VideoStoreImportImpl {
         int offset = 0;
         Cursor c = null;
         try {
-            while (true) {
+            while (true && !mIsImportInterrupted) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // API>=30 requires bundle to LIMIT
                         Bundle queryArgs = new Bundle();
@@ -987,5 +994,9 @@ public class VideoStoreImportImpl {
         }
         */
         return false;
+    }
+
+    public void interruptImport() {
+        mIsImportInterrupted = true;
     }
 }
