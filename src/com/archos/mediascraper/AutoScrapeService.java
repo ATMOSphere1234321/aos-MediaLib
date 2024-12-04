@@ -338,6 +338,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                 public int mNetworkOrScrapErrors; //when errors equals to number of files to scrap, stop looping.
                 boolean notScraped;
                 boolean noScrapeError;
+                int totalNumberOfFilesScraped = 0;
 
                 public void run() {
                     sIsScraping = true;
@@ -437,7 +438,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             log.trace("startScraping: NFO tags.save ID=" + ID);
                                             tags.save(AutoScrapeService.this, ID);
                                             DeleteFileCallback.DO_NOT_DELETE.clear();
-                                            TraktService.onNewVideo(AutoScrapeService.this);
                                         } else {
                                             log.trace("startScraping: oh oh NFO ID = -1 ");
                                         }
@@ -522,7 +522,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         if (result.tag.getTitle() != null)
                                             log.trace("startScraping: info " + result.tag.getTitle());
 
-                                        TraktService.onNewVideo(AutoScrapeService.this);
                                         if (exportContext != null) {
                                             // also auto-export all the data
 
@@ -571,6 +570,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             }
                             cursor.close();
                             numberOfRowsRemaining -= window;
+                            totalNumberOfFilesScraped+= totalNumberOfFilesScraped;
                         } while (numberOfRowsRemaining > 0);
                         if (numberOfRows == mNetworkOrScrapErrors) { //when as many errors, we assume we don't have the internet or that the scraper returns an error, do not loop
                             restartOnNextRound = false;
@@ -598,6 +598,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             WrapperChannelManager.refreshChannels(AutoScrapeService.this);
                         }
                     });
+                    if (totalNumberOfFilesScraped > 0) TraktService.onNewVideo(AutoScrapeService.this); // should be done only at the end to not resync in loop
                     log.debug("startScraping: call stopSelf");
                     stopSelf();
                 }
