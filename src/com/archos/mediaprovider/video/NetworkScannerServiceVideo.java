@@ -25,7 +25,6 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -39,14 +38,12 @@ import android.os.Message;
 import android.os.Process;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.app.ServiceCompat;
-import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
-import android.util.Log;
 import android.util.Pair;
 
 import com.archos.environment.ArchosUtils;
@@ -130,6 +127,10 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     private static final String notifChannelName = "NetworkScannerServiceVideo";
     private static final String notifChannelDescr = "NetworkScannerServiceVideo";
 
+    private volatile boolean isServiceRunning = true;
+    private Thread mScanThread;
+    private Thread mRemoveFilesThread;
+
     public static boolean startIfHandles(Context context, Intent broadcast) {
         log.debug("startIfHandles");
         String action = broadcast.getAction();
@@ -180,8 +181,13 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     }
     public synchronized static void notifyListeners() {
         if (sListener != null) {
-            for(ScannerListener listener : sListener)
-                listener.onScannerStateChanged();
+            for (ScannerListener listener : sListener) {
+                if (listener instanceof Fragment) {
+                    ((Fragment) listener).getActivity().runOnUiThread(() -> listener.onScannerStateChanged());
+                } else {
+                    listener.onScannerStateChanged();
+                }
+            }
         }
     }
 
@@ -300,6 +306,8 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 log.debug("handleMessage: MESSAGE_KILL");
                 if (msg.arg1 != -1) {
                     nm.cancel(NOTIFICATION_ID);
+                    sIsScannerAlive = false;
+                    notifyListeners();
                     stopSelf(msg.arg1);
                 }
                 break;
@@ -307,17 +315,33 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 uri = (Uri) msg.obj;
                 key = uri.toString();
                 log.debug("handleMessage: MESSAGE_DO_SCAN " + uri);
-                doScan(uri);
+                if (isServiceRunning) {
+                    mScanThread = new Thread(() -> {
+                        doScan(uri);
+                        // *** Send MESSAGE_KILL after doScan() completes ***
+                        if (isHandlerThreadAlive()) {
+                            mHandler.post(() -> mHandler.obtainMessage(MESSAGE_KILL, msg.arg1, msg.arg2).sendToTarget());
+                        }
+                    });
+                    mScanThread.start();
+                }
                 mScanRequests.remove(key);
-                mHandler.obtainMessage(MESSAGE_KILL, msg.arg1, msg.arg2).sendToTarget();
                 break;
             case MESSAGE_DO_UNSCAN:
                 uri = (Uri) msg.obj;
                 key = uri.toString();
                 log.debug("handleMessage: MESSAGE_DO_UNSCAN " + uri);
-                doRemoveFiles(uri);
+                if (isServiceRunning) {
+                    mRemoveFilesThread = new Thread(() -> {
+                        doRemoveFiles(uri);
+                        // *** Send MESSAGE_KILL after doRemoveFiles() completes ***
+                        if (isHandlerThreadAlive()) {
+                            mHandler.post(() -> mHandler.obtainMessage(MESSAGE_KILL, msg.arg1, msg.arg2).sendToTarget());
+                        }
+                    });
+                    mRemoveFilesThread.start();
+                }
                 mUnScanRequests.remove(key);
-                mHandler.obtainMessage(MESSAGE_KILL, msg.arg1, msg.arg2).sendToTarget();
                 break;
             default:
                 log.debug("handleMessage: message not found!");
@@ -447,7 +471,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                     if(upnpUri!=null&&!item._data.startsWith(upnpUri)) { // if this isn't in folder about to be listed, we won't need to delete it
                         item.needsDelete = false;
                     }
-                    log.debug("doScan: prescan item._data " + item._data);
+                    log.trace("doScan: prescan item._data " + item._data);
                     if(item.unique_id!=null && !item.unique_id.isEmpty())
                         prescanItemsMap.put(item.unique_id, item);
                     else
@@ -489,8 +513,8 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             // and cancel the Notification
             nm.cancel(NOTIFICATION_ID);
             log.trace("doScan: added:" + insertCount + " modified:" + updateCount + " deleted:" + deleteCount + " listed files " + mFoundFiles);
-            wifiLock.release();
-
+            if (wifiLock != null && wifiLock.isHeld())
+                wifiLock.release();
         } else if(mRecordOnFailPreference!=null){
             PreferenceManager.getDefaultSharedPreferences(this).edit().putInt(mRecordOnFailPreference, -1).commit();//unable to reach server
         }
@@ -564,7 +588,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             if (ArchosMediaFile.isHiddenFile(file)) return;
             // shortcut for blacklist check for trailer/sample, full should be isBlacklisted
             if (mBlacklist.isFilenameBlacklisted(file.getUri().getLastPathSegment())) return;
-            log.debug("FileVisitListener.onFile: File " + file.getUri().toString());
+            log.trace("FileVisitListener.onFile: File " + file.getUri().toString());
             String p = file.getUri().toString();
             PrescanItem existingItem = null;
             String uniqueId = "";
@@ -578,11 +602,11 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 existingItem = mPrescanItemsMap.get(p);
                 uniqueId = p;
             }
-            log.debug("FileVisitListener.onFile: existingItem " + existingItem);
+            log.trace("FileVisitListener.onFile: existingItem " + existingItem);
             if ((existingItem) != null) {
                 // file was already scanned, it does not need to be deleted
                 existingItem.needsDelete = false;
-                log.debug("FileVisitListener.onFile: File isn't new:" + file.getName());
+                log.trace("FileVisitListener.onFile: File isn't new:" + file.getName());
                 // check if it is untouched or needs an update
                 long knownDate = existingItem.date_modified;
                 long newDate = file.lastModified() / 1000;
@@ -594,11 +618,11 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 }
             } else if(!mAlreadyAddedUpnpFiles.contains(uniqueId)){
                 // file is new, add as insert
-                log.debug("FileVisitListener.onFile: File is new, serverId=" + mServerId + ", " + file.getUri().toString());
+                log.trace("FileVisitListener.onFile: File is new, serverId=" + mServerId + ", " + file.getUri().toString());
                 mAlreadyAddedUpnpFiles.add(uniqueId); // needed because main difference with usual indexing : a same file can be found twice in one round
                 mBulkHandler.addInsert(new FileScanInfo(file, mStorageId), mServerId);
             }
-            else log.debug("FileVisitListener.onFile: File already scanned " + file.getName());
+            else log.trace("FileVisitListener.onFile: File already scanned " + file.getName());
             // nfo are now handled in autoscrapeservice
         }
 
@@ -1112,12 +1136,24 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         return result;
     }
 
+    private boolean isHandlerThreadAlive() {
+        return mHandlerThread != null && mHandlerThread.isAlive();
+    }
+
     public void cleanup() {
         log.debug("cleanup");
         // Stop the handler thread safely
         if (mHandlerThread != null) {
             mHandlerThread.quitSafely(); // Safely quit the handler thread
             mHandlerThread = null; // Clear the reference
+        }
+        if (mScanThread != null) {
+            mScanThread.interrupt();
+            mScanThread = null;
+        }
+        if (mRemoveFilesThread != null) {
+            mRemoveFilesThread.interrupt();
+            mRemoveFilesThread = null;
         }
         //stop Upnp service if on background
         UpnpServiceManager.getSingleton(this).releaseStopLock();
@@ -1139,6 +1175,8 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     public void onStop(LifecycleOwner owner) {
         // App in background
         log.debug("onStop: LifecycleOwner app in background, stop service");
+        isServiceRunning = false;
+        cleanup();
         stopSelf();
     }
 
@@ -1146,5 +1184,6 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     public void onStart(LifecycleOwner owner) {
         // App in foreground
         log.debug("onStart: LifecycleOwner app in foreground");
+        isServiceRunning = true;
     }
 }
