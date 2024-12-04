@@ -858,7 +858,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Tagline.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Tagline.URI.ID, cr);
                 break;
@@ -868,7 +868,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Producer.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Producer.URI.ID, cr);
                 break;
@@ -878,7 +878,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Screenplay.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Screenplay.URI.ID, cr);
                 break;
@@ -888,7 +888,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Musiccomposer.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Musiccomposer.URI.ID, cr);
                 break;
@@ -898,7 +898,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Spokenlanguage.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Spokenlanguage.URI.ID, cr);
                 break;
@@ -908,7 +908,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Country.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Country.URI.ID, cr);
                 break;
@@ -938,7 +938,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Tagline.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Tagline.URI.ID, cr);
                 break;
@@ -948,7 +948,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Producer.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Producer.URI.ID, cr);
                 break;
@@ -958,7 +958,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Screenplay.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Screenplay.URI.ID, cr);
                 break;
@@ -968,7 +968,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Musiccomposer.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Musiccomposer.URI.ID, cr);
                 break;
@@ -978,7 +978,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Spokenlanguage.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Spokenlanguage.URI.ID, cr);
                 break;
@@ -988,7 +988,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Country.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Country.URI.ID, cr);
                 break;
@@ -998,7 +998,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.SeasonPlot.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.SeasonPlot.URI.ID, cr);
                 break;
@@ -1028,7 +1028,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Tagline.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Tagline.URI.ID, cr);
                 break;
@@ -1038,7 +1038,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Producer.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Producer.URI.ID, cr);
                 break;
@@ -1048,7 +1048,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Screenplay.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Screenplay.URI.ID, cr);
                 break;
@@ -1058,7 +1058,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Musiccomposer.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Musiccomposer.URI.ID, cr);
                 break;
@@ -1068,7 +1068,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Spokenlanguage.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Spokenlanguage.URI.ID, cr);
                 break;
@@ -1078,7 +1078,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Country.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Country.URI.ID, cr);
                 break;
