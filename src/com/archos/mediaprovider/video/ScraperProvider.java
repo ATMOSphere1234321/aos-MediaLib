@@ -41,6 +41,9 @@ import com.archos.mediascraper.ScraperImage;
 import com.archos.mediascraper.ScraperImage.Type;
 import com.archos.mediascraper.db.ScraperCursorFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -50,8 +53,7 @@ import java.util.Arrays;
  * Content provider for the scraper database
  */
 public class ScraperProvider extends ContentProvider {
-    private static final String TAG = "ScraperProvider";
-    private static final boolean DBG = false;
+    private static final Logger log = LoggerFactory.getLogger(ScraperProvider.class);
 
     // using offset to avoid collision with mediaprovider's matcher
     public static final int SCRAPER_PROVIDER_OFFSET = 10000;
@@ -366,6 +368,7 @@ public class ScraperProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
+        log.debug("delete: URI {} selection:{} selectionArgs:{}", uri.toString(), selection, Arrays.toString(selectionArgs));
         int changed = internalDelete(uri, selection, selectionArgs);
         if (changed > 0) {
             // since deleting stuff affects actors, studios, shows etc notify a change for everything.
@@ -380,7 +383,7 @@ public class ScraperProvider extends ContentProvider {
         String whereClause;
         String[] whereArgs;
         SQLiteDatabase db = mDbHolder.get();
-        if(DBG) Log.d(TAG, "Delete request with URI " + uri.toString());
+        log.debug("Delete request with URI {}, selection:{}, selectionArgs:{}", uri.toString(), selection, Arrays.toString(selectionArgs));
         try {
             switch (sUriMatcher.match(uri)) {
                 case MOVIE:
@@ -401,7 +404,7 @@ public class ScraperProvider extends ContentProvider {
                     throw new IllegalArgumentException("Unknown URI " + uri);
             }
         } catch (SQLiteConstraintException e) {
-            Log.d (TAG, "Delete Failed selection:" + selection + " selectionArgs:" + Arrays.toString(selectionArgs));
+            log.error("Delete Failed selection:{} selectionArgs:{}", selection, Arrays.toString(selectionArgs));
             return 0;
         }
     }
@@ -421,6 +424,7 @@ public class ScraperProvider extends ContentProvider {
     @Override
     public ContentProviderResult[] applyBatch(ArrayList<ContentProviderOperation> operations)
             throws OperationApplicationException {
+        log.debug("applyBatch: operations:{}", operations);
         SQLiteDatabase db = mDbHolder.get();
         db.beginTransaction();
         ContentProviderResult[] result = null;
@@ -475,7 +479,7 @@ public class ScraperProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        if(DBG) Log.d(TAG, "Insert request with URI " + uri.toString() + " values:" +values.toString());
+        log.debug("Insert request with URI {} values:{}", uri.toString(), values.toString());
 
         long rowId = -1;
         Uri noteUri = null;
@@ -528,7 +532,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Director.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Director.URI.ID, cr);
                 break;
@@ -538,7 +542,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Writer.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Writer.URI.ID, cr);
                 break;
@@ -548,7 +552,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Director.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Director.URI.ID, cr);
                 break;
@@ -558,7 +562,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Writer.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Writer.URI.ID, cr);
                 break;
@@ -568,7 +572,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Director.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Director.URI.ID, cr);
                 break;
@@ -578,7 +582,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Writer.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Writer.URI.ID, cr);
                 break;
@@ -588,7 +592,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Actor.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Actor.URI.ID, cr);
                 break;
@@ -598,7 +602,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Actor.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Actor.URI.ID, cr);
                 break;
@@ -608,7 +612,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Episode.Actor.EPISODE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Actor.URI.ID, cr);
                 break;
@@ -618,7 +622,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Genre.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Genre.URI.ID, cr);
                 break;
@@ -628,7 +632,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Genre.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Genre.URI.ID, cr);
                 break;
@@ -638,7 +642,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Movie.Studio.MOVIE, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Studio.URI.ID, cr);
                 break;
@@ -648,7 +652,7 @@ public class ScraperProvider extends ContentProvider {
                             ScraperStore.Show.Studio.SHOW, values);
                     rowId = 1; // inserting into views will not return a row
                 } catch (SQLException e) {
-                    Log.d(TAG, "Exception: ", e);
+                    log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Studio.URI.ID, cr);
                 break;
@@ -732,13 +736,14 @@ public class ScraperProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
             String sortOrder) {
+        log.debug("query: URI {} projection:{} selection:{} selectionArgs:{} sortOrder:{}",
+                uri.toString(), Arrays.toString(projection), selection, Arrays.toString(selectionArgs), sortOrder);
         Bundle extras = new Bundle();
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         Cursor c;
         String data = uri.getLastPathSegment();
         qb.setCursorFactory(new ScraperCursorFactory());
 
-        if(DBG) Log.d(TAG, "Query with URI " + uri.toString());
         boolean useId = false;
         switch (sUriMatcher.match(uri)) {
             case MOVIE_ALL:
@@ -1058,14 +1063,14 @@ public class ScraperProvider extends ContentProvider {
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
 
-        if(DBG) Log.d(TAG, "Query handling ended.");
+        log.debug("Query handling ended.");
         SQLiteDatabase db = mDbHolder.get();
         // TODO: try/catch used but this needs fixing!
         try {
             c = qb.query(db, projection, selection, selectionArgs, null,
                     null, sortOrder);
         } catch (Throwable t) {
-            Log.e(TAG, "query: qb.query failed with projection=" + projection + ", selection=" + selection + ", selectionArgs=" + selectionArgs, t);
+            log.error("query: qb.query failed with projection={}, selection={}, selectionArgs={}", projection, selection, selectionArgs, t);
             c = null;
         }
         if (c != null) {
@@ -1078,7 +1083,7 @@ public class ScraperProvider extends ContentProvider {
 
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        if (DBG) Log.d(TAG, "openFile " + uri + " mode:" + mode);
+        log.debug("openFile {} mode:{}", uri, mode);
         int match = sUriMatcher.match(uri);
         boolean thumb = uri.getQueryParameter("thumb") != null;
         String table = null;
@@ -1200,6 +1205,7 @@ public class ScraperProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values, String selection,
             String[] selectionArgs) {
+        log.debug("update: URI {} values:{} selection:{} selectionArgs:{}", uri, values, selection, selectionArgs);
         String table;
         switch (sUriMatcher.match(uri)) {
             case EPISODE_ID:
@@ -1262,7 +1268,7 @@ public class ScraperProvider extends ContentProvider {
 
     @Override
     public int bulkInsert(Uri uri, ContentValues[] values) {
-        if (DBG) Log.d(TAG, "bulkInsert");
+        log.debug("bulkInsert uri={}, values={}", uri, values);
         int result = 0;
         SQLiteDatabase db = mDbHolder.get();
         db.beginTransaction();
@@ -1276,7 +1282,7 @@ public class ScraperProvider extends ContentProvider {
     }
 
     private static void handleEpisodeFull(SQLiteQueryBuilder qb) {
-    	if(DBG) Log.d(TAG, "File is a TV show.");
+    	log.debug("File is a TV show.");
 
         qb.setTables(ScraperTables.EPISODE_TABLE_NAME +
                 " LEFT JOIN " + ScraperTables.FILMS_EPISODE_VIEW_NAME + " ON (" +
@@ -1297,7 +1303,7 @@ public class ScraperProvider extends ContentProvider {
     }
 
     private static void handleMovieFull(SQLiteQueryBuilder qb) {
-    	if(DBG) Log.d(TAG, "File is a movie.");
+    	log.debug("File is a movie.");
 
         qb.setTables(ScraperTables.MOVIE_TABLE_NAME +
                 " LEFT JOIN " + ScraperTables.FILMS_MOVIE_VIEW_NAME + " ON (" +
@@ -1328,7 +1334,7 @@ public class ScraperProvider extends ContentProvider {
     }
 
     private static void handleShowFull(SQLiteQueryBuilder qb) {
-    	if(DBG) Log.d(TAG, "File is a TV show.");
+    	log.debug("File is a TV show.");
 
         qb.setTables(ScraperTables.SHOW_TABLE_NAME +
                 " LEFT JOIN " +
