@@ -471,7 +471,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
         // break down the scan in batch of WINDOW_SIZE in order to avoid SQLiteBlobTooBigException: Row too big to fit into CursorWindow crash
         // note that the db is being modified during import
-        while (true) {
+        while (true && isServiceRunning) {
             try {
                 c = db.rawQuery("SELECT * FROM delete_files WHERE name IN (SELECT cover_movie FROM MOVIE UNION SELECT cover_show FROM SHOW UNION SELECT cover_episode FROM EPISODE) ORDER BY " + BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE, null);
                 cCount = c.getCount();
@@ -480,7 +480,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                     log.debug("processDeleteFileAndVobCallback: delete_files cover_movie no more data");
                     break; // break out if no more data
                 }
-                while (c.moveToNext()) {
+                while (c.moveToNext() && isServiceRunning) {
                     long id = c.getLong(0);
                     String path = c.getString(1);
                     long count = c.getLong(2);
@@ -508,7 +508,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         // note: seems that the delete is performed not as a table trigger anymore but elsewhere
         // break down the scan in batch of WINDOW_SIZE in order to avoid SQLiteBlobTooBigException: Row too big to fit into CursorWindow crash
         // note that the db is being modified during import
-        while (true) {
+        while (true && isServiceRunning) {
             try {
                 c = db.rawQuery("SELECT * FROM delete_files ORDER BY " + BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE, null);
                 cCount = c.getCount();
@@ -517,7 +517,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                     log.debug("processDeleteFileAndVobCallback: delete_files no more data");
                     break; // break out if no more data
                 }
-                while (c.moveToNext()) {
+                while (c.moveToNext() && isServiceRunning) {
                     long id = c.getLong(0);
                     String path = c.getString(1);
                     long count = c.getLong(2);
@@ -546,7 +546,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
         // break down the scan in batch of WINDOW_SIZE in order to avoid SQLiteBlobTooBigException: Row too big to fit into CursorWindow crash
         // note that the db is being modified during import
-        while (true) {
+        while (true && isServiceRunning) {
             try {
                 c = db.rawQuery("SELECT * FROM vob_insert ORDER BY " + BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE, null);
                 cCount = c.getCount();
@@ -556,7 +556,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                     log.debug("processDeleteFileAndVobCallback: vob_insert no more data");
                     break; // break out if no more data
                 }
-                while (c.moveToNext()) {
+                while (c.moveToNext() && isServiceRunning) {
                     long id = c.getLong(0);
                     String path = c.getString(1);
                     log.debug("processDeleteFileAndVobCallback: vob_insert " + String.valueOf(id) + " path " + path);
