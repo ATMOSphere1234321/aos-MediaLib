@@ -63,6 +63,7 @@ public class AllCollectionScrapeService extends IntentService implements Default
     private static final String notifChannelId = "AllCollectionScrapeService_id";
     private static final String notifChannelName = "AllCollectionScrapeService";
     private static final String notifChannelDescr = "AllCollectionScrapeService";
+    private volatile boolean isServiceRunning = true;
 
     private static Context mContext;
 
@@ -262,7 +263,7 @@ public class AllCollectionScrapeService extends IntentService implements Default
 
         if (cursor != null) {
             // do the processing
-            while (cursor.moveToNext()) {
+            while (cursor.moveToNext() && isServiceRunning) {
                 long collectionId = cursor.getLong(0);
                 log.debug("handleCursor: scraping " + collectionId);
                 // scrape collectionId
@@ -314,6 +315,7 @@ public class AllCollectionScrapeService extends IntentService implements Default
     }
 
     private void cleanup() {
+        isServiceRunning = false;
         // Clear the scheduled tasks
         sScheduledTasks.clear();
         // Cancel the notification
@@ -331,6 +333,7 @@ public class AllCollectionScrapeService extends IntentService implements Default
     @Override
     public void onStart(LifecycleOwner owner) {
         log.debug("onStart: LifecycleOwner app in foreground");
+        isServiceRunning = true;
         // App in foreground
     }
 }
