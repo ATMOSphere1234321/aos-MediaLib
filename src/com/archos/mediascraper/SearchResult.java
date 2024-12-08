@@ -36,6 +36,8 @@ public class SearchResult implements Parcelable {
 
     public static final int movie = 1;
     public static final int tvshow = 0;
+    private int mLevenshteinDistance;
+    private float mPopularity;
 
     // show should not be tainted with season/episode since it is an higher entity but need to know point of request
     private int mOriginSearchSeason, mOriginSearchEpisode;
@@ -90,6 +92,11 @@ public class SearchResult implements Parcelable {
     public void setOriginSearchSeason(int season) { mOriginSearchSeason = season; }
     public int getOriginSearchEpisode() { return mOriginSearchEpisode; }
     public void setOriginSearchEpisode(int episode) { mOriginSearchEpisode = episode; }
+
+    public int getLevenshteinDistance() { return mLevenshteinDistance; }
+    public void setLevenshteinDistance(int dst) { mLevenshteinDistance = dst; }
+    public float getPopularity() { return mPopularity; }
+    public void setPopularity(float pop) { mPopularity = pop; }
 
     public static final Parcelable.Creator<SearchResult> CREATOR = new Parcelable.Creator<SearchResult>() {
         public SearchResult createFromParcel(Parcel in) {

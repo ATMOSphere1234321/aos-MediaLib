@@ -112,6 +112,7 @@ public class SearchMovieParser2 {
             if (movie.original_title != null) result.setOriginalTitle(movie.original_title);
             result.setYear((year != null) ? String.valueOf(year) : null);
             result.setLanguage(language);
+            result.setPopularity((float)movie.popularity.doubleValue());
 
             // Put in lower priority any entry that has no movie banned i.e. .*missing/movie.jpg as banner
             isReleaseDateKnown = (movie.release_date != null);
@@ -120,31 +121,28 @@ public class SearchMovieParser2 {
             String originalTitle = result.getOriginalTitle();
             levenshteinDistanceTitle = title != null ? levenshteinDistance.apply(movieNameLC, title.toLowerCase()) : Integer.MAX_VALUE;
             levenshteinDistanceOriginalTitle = originalTitle != null ? levenshteinDistance.apply(movieNameLC, originalTitle.toLowerCase()) : Integer.MAX_VALUE;
+            result.setLevenshteinDistance(Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle));
             log.debug("getSearchMovieParserResult: between " + movieNameLC + " and " + result.getOriginalTitle().toLowerCase() + "/" + result.getTitle().toLowerCase() + " levenshteinDistanceTitle=" + levenshteinDistanceTitle + ", levenshteinDistanceOriginalTitle=" + levenshteinDistanceOriginalTitle);
 
             if (movie.poster_path == null || movie.poster_path.endsWith("missing/series.jpg") || movie.poster_path.endsWith("missing/movie.jpg") || movie.poster_path == "") {
                 log.debug("getSearchMovieParserResult: set aside " + movie.title + " because poster missing i.e. image=" + movie.poster_path);
-                searchMovieParserResult.resultsNoPoster.add(new Pair<>(result,
-                        Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle)));
+                searchMovieParserResult.resultsNoPoster.add(result);
             } else {
                 log.debug("getSearchMovieParserResult: " + movie.title + " has poster_path " + ScraperImage.TMPL + movie.poster_path);
                 result.setPosterPath(movie.poster_path);
                 if (movie.backdrop_path == null || movie.backdrop_path.endsWith("missing/series.jpg") || movie.backdrop_path.endsWith("missing/movie.jpg") || movie.backdrop_path == "") {
                     log.debug("getSearchMovieParserResult: set aside " + movie.title + " because banner missing i.e. banner=" + movie.backdrop_path);
-                    searchMovieParserResult.resultsNoBanner.add(new Pair<>(result,
-                            Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle)));
+                    searchMovieParserResult.resultsNoBanner.add(result);
                 } else {
                     log.debug("getSearchMovieParserResult: " + movie.title + " has backdrop_path " + ScraperImage.TMBL + movie.backdrop_path);
                     // TODO MARC: this generates the thumb by resizing the large image: pass the two
                     result.setBackdropPath(movie.backdrop_path);
                     if (! isReleaseDateKnown) {
                         log.debug("getSearchMovieParserResult: set aside " + movie.title + " because release date is missing");
-                        searchMovieParserResult.resultsNoAirDate.add(new Pair<>(result,
-                                Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle)));
+                        searchMovieParserResult.resultsNoAirDate.add(result);
                     } else {
                         // get the min of the levenshtein distance between cleaned file based show name and title and original title identified
-                        searchMovieParserResult.resultsProbable.add(new Pair<>(result,
-                                Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle)));
+                        searchMovieParserResult.resultsProbable.add(result);
                     }
                 }
             }

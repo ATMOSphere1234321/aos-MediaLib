@@ -29,10 +29,10 @@ public class SearchParserResult {
 
     private static final Logger log = LoggerFactory.getLogger(SearchParserResult.class);
 
-    List<Pair<SearchResult,Integer>> resultsNoAirDate;
-    List<Pair<SearchResult,Integer>> resultsNoPoster;
-    List<Pair<SearchResult,Integer>> resultsProbable;
-    List<Pair<SearchResult,Integer>> resultsNoBanner;
+    List<SearchResult> resultsNoAirDate;
+    List<SearchResult> resultsNoPoster;
+    List<SearchResult> resultsProbable;
+    List<SearchResult> resultsNoBanner;
 
     public SearchParserResult() {
         // contains list of results without air date
@@ -45,30 +45,44 @@ public class SearchParserResult {
         this.resultsProbable = new LinkedList<>();
     }
 
-    public static Comparator<Pair<SearchResult, Integer>> comparator = (sr1, sr2) -> Integer.compare(sr1.second, sr2.second);
+    public static Comparator<SearchResult> comparator = (sr1, sr2) -> {
+        // we want lowest levenshtein distance of title
+        if (sr1.getLevenshteinDistance() != sr2.getLevenshteinDistance()) {
+            return Integer.compare(sr1.getLevenshteinDistance(), sr2.getLevenshteinDistance());
+        }
+        // or highest popularity if it failed
+        if (sr1.getPopularity() != sr2.getPopularity()) {
+            return Float.compare(sr2.getPopularity(), sr1.getPopularity());
+        }
+        // Or newest if it failed
+        //NB: String not int
+        if (sr1.getYear() != null && sr2.getYear() != null)
+            return sr2.getYear().compareTo(sr1.getYear());
+        return 0;
+    };
 
     public List<SearchResult> getResults(int maxItems) {
         List<SearchResult> results = new LinkedList<>();
         log.debug("getResults: resultsProbable.size()=" + resultsProbable.size());
         if (resultsProbable.size()>0)
-            for (Pair<SearchResult,Integer> pair : resultsProbable)
+            for (SearchResult sr : resultsProbable)
                 if (maxItems < 0 || results.size() < maxItems)
-                    results.add(pair.first);
+                    results.add(sr);
         // skip videos without an air date only if resultsProbable is empty
         if (resultsNoAirDate.size()>0 && resultsProbable.size() == 0)
-            for (Pair<SearchResult,Integer> pair : resultsNoAirDate)
+            for (SearchResult sr : resultsNoAirDate)
                 if (maxItems < 0 || results.size() < maxItems)
-                    results.add(pair.first);
+                    results.add(sr);
         // do NOT skip videos without a banner but with a poster (otherwise shows like The Wrong Mans not found)
         if (resultsNoBanner.size()>0)
-            for (Pair<SearchResult,Integer> pair : resultsNoBanner)
+            for (SearchResult sr : resultsNoBanner)
                 if (maxItems < 0 || results.size() < maxItems)
-                    results.add(pair.first);
+                    results.add(sr);
         // skip videos without a poster only if resultsProbable is empty
         if (resultsNoPoster.size()>0 && resultsProbable.size() == 0)
-            for (Pair<SearchResult,Integer> pair : resultsNoPoster)
+            for (SearchResult sr : resultsNoPoster)
                 if (maxItems < 0 || results.size() < maxItems)
-                    results.add(pair.first);
+                    results.add(sr);
         log.debug("getResults: results.size()=" + results.size());
         return results;
     }
