@@ -67,8 +67,8 @@ public class SearchParserResult {
                 return sr2.getYear().compareTo(sr1.getYear());
             return 0;
         }
-        if (date1 == null) return -1; // date1 is considered less than date2
-        if (date2 == null) return 1;  // date2 is considered less than date1
+        if (date2 == null) return -1; // date1 is considered less than date2 (date1 has a year thus only consider this one)
+        if (date1 == null) return 1;  // date2 is considered less than date1 (date2 has a year this only consider this one)
         return Long.compare(date1.getTime(), date2.getTime());
     };
 
