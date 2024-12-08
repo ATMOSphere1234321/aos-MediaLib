@@ -58,7 +58,6 @@ public class SearchShowParser {
         int levenshteinDistanceTitle, levenshteinDistanceOriginalTitle;
         log.debug("getSearchShowParserResult: examining response of " + response.body().total_results + " entries in " + language + ", for " + searchInfo.getShowName() + " and specific year " + year);
 
-        // sort first tvshows by popularity so that distinction between levenstein distance is operated on popularity
         List<BaseTvShow> resultsTvShow = new ArrayList<>(response.body().results);
 
         boolean isAirDateKnown = false;
@@ -98,7 +97,7 @@ public class SearchShowParser {
                 levenshteinDistanceOriginalTitle = levenshteinDistance.apply(showNameLC, result.getOriginalTitle().toLowerCase());
                 result.setLevenshteinDistance(Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle));
                 result.setReleaseOrFirstAiredDate(series.first_air_date);
-                log.debug("getSearchShowParserResult: between " + showNameLC + " and " + result.getOriginalTitle().toLowerCase() + "/" + result.getTitle().toLowerCase() + " levenshteinDistanceTitle=" + levenshteinDistanceTitle + ", levenshteinDistanceOriginalTitle=" + levenshteinDistanceOriginalTitle);
+                log.debug("getSearchShowParserResult: between " + showNameLC + " and " + result.getOriginalTitle().toLowerCase() + "/" + result.getTitle().toLowerCase() + " levenshteinDistanceTitle=" + levenshteinDistanceTitle + ", levenshteinDistanceOriginalTitle=" + levenshteinDistanceOriginalTitle + ", popularity=" + result.getPopularity() + ", airdate=" + series.first_air_date + ", year=" + result.getYear());
 
                 if (series.poster_path == null || series.poster_path.endsWith("missing/series.jpg") || series.poster_path.endsWith("missing/movie.jpg") || series.poster_path == "") {
                     log.debug("getSearchShowParserResult: set aside " + series.name + " because poster missing i.e. image=" + series.poster_path);
@@ -131,7 +130,8 @@ public class SearchShowParser {
         Collections.sort(searchShowParserResult.resultsNoPoster, SearchParserResult.comparator);
         Collections.sort(searchShowParserResult.resultsNoAirDate, SearchParserResult.comparator);
 
-        log.debug("getSearchShowParserResult: applying Levenshtein distance resultsProbableSorted=" + searchShowParserResult.resultsProbable.toString());
+        // dump
+        log.trace("getSearchShowParserResult: applying Levenshtein distance resultsProbableSorted=" + searchShowParserResult.resultsProbable.toString());
         return searchShowParserResult;
     }
 }

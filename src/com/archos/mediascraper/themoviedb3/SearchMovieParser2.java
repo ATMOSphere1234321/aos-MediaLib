@@ -122,7 +122,7 @@ public class SearchMovieParser2 {
             Collections.sort(searchMovieParserResult.resultsNoPoster, SearchParserResult.comparator);
         if (searchMovieParserResult.resultsNoAirDate != null)
             Collections.sort(searchMovieParserResult.resultsNoAirDate, SearchParserResult.comparator);
-        log.debug("getSearchMovieParserResult: applying Levenshtein distance resultsProbableSorted=" + searchMovieParserResult.resultsProbable.toString());
+        log.trace("getSearchMovieParserResult: applying Levenshtein distance resultsProbableSorted=" + searchMovieParserResult.resultsProbable.toString());
         return searchMovieParserResult;
     }
 }
