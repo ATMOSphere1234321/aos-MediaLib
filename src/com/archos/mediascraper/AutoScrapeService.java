@@ -334,7 +334,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
         return mBinder;
     }
 
-
     protected void startScraping(final boolean rescrapAlreadySearched, final boolean onlyNotFound) {
         log.debug("startScraping: " + String.valueOf(mThread==null || !mThread.isAlive()) );
         nb.setContentTitle(getString(R.string.scraping_in_progress));
@@ -688,7 +687,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             log.debug("onStart: Rescanning everything due to dirty state");
             // Reset the dirty flag in SharedPreferences
             saveDirtyState(false);
-            startScraping(true, false); // Rescan everything
+            startScraping(false, false);
         }
     }
 
