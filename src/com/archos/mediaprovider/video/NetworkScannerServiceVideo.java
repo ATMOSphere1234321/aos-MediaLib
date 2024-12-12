@@ -833,39 +833,44 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         // inserts to do
         List<ContentValues> inserts = new ArrayList<ContentValues>();
 
-        Cursor c = cr.query(uri, PROJ_ID_DATA_SIZE, SEL_NEW_VIDS_N_SUBS, null, sortOrder);
-        if (c != null) {
-            String lastBucket = null;
-            while (c.moveToNext() & isServiceRunning) {
-                long id = c.getLong(0);
-                String file = c.getString(1);
-                long size = c.getLong(2);
-                String bucketId = c.getString(3);
-                int mediaType = c.getInt(4);
-                // if bucket switches, handle old bucket
-                if (!bucketId.equals(lastBucket)) {
-                    handleSubtitleBucket(videos, subs, inserts);
-                    // update current bucket & empty lists
-                    lastBucket = bucketId;
-                    videos.clear();
-                    subs.clear();
+        Cursor c = null;
+        try {
+            c = cr.query(uri, PROJ_ID_DATA_SIZE, SEL_NEW_VIDS_N_SUBS, null, sortOrder);
+            if (c != null) {
+                String lastBucket = null;
+                while (c.moveToNext() & isServiceRunning) {
+                    long id = c.getLong(0);
+                    String file = c.getString(1);
+                    long size = c.getLong(2);
+                    String bucketId = c.getString(3);
+                    int mediaType = c.getInt(4);
+                    // if bucket switches, handle old bucket
+                    if (!bucketId.equals(lastBucket)) {
+                        handleSubtitleBucket(videos, subs, inserts);
+                        // update current bucket & empty lists
+                        lastBucket = bucketId;
+                        videos.clear();
+                        subs.clear();
+                    }
+                    // add videos & subtitles to their lists
+                    switch (mediaType) {
+                        case VideoStore.Files.FileColumns.MEDIA_TYPE_VIDEO:
+                            videos.add(Pair.create(ArchosMediaFile.getFileTitle(file), Long.valueOf(id)));
+                            break;
+                        case VideoStore.Files.FileColumns.MEDIA_TYPE_SUBTITLE:
+                            subs.add(new SubtitleInfo(id, file, size));
+                            break;
+                        default:
+                            // should be impossible
+                            log.error("Bad MediaType:" + mediaType + " when scanning videos and subtitles");
+                            break;
+                    }
                 }
-                // add videos & subtitles to their lists
-                switch (mediaType) {
-                    case VideoStore.Files.FileColumns.MEDIA_TYPE_VIDEO:
-                        videos.add(Pair.create(ArchosMediaFile.getFileTitle(file), Long.valueOf(id)));
-                        break;
-                    case VideoStore.Files.FileColumns.MEDIA_TYPE_SUBTITLE:
-                        subs.add(new SubtitleInfo(id, file, size));
-                        break;
-                    default:
-                        // should be impossible
-                        log.error("Bad MediaType:" + mediaType + " when scanning videos and subtitles");
-                        break;
-                }
-
             }
-            c.close();
+        } catch (Exception e) {
+            log.error("Error querying subtitles", e);
+        } finally {
+            if (c != null) c.close();
         }
         // handle any remaining videos and subtitles
         handleSubtitleBucket(videos, subs, inserts);
