@@ -87,7 +87,11 @@ public class SearchShowParser {
                 result.setFile(searchInfo.getFile());
                 result.setOriginalTitle(series.original_name);
                 result.setExtra(extra);
-                result.setPopularity((float)series.popularity.doubleValue());
+                if (series.popularity != null) {
+                    result.setPopularity((float) series.popularity.doubleValue());
+                } else {
+                    result.setPopularity(null);
+                }
                 // Put in lower priority any entry that has no TV show banned i.e. .*missing/movie.jpg as banner
                 isAirDateKnown = (series.first_air_date != null);
                 String showNameLC = searchInfo.getShowName().toLowerCase();
