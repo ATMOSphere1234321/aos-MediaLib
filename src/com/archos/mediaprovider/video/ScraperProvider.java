@@ -459,9 +459,15 @@ public class ScraperProvider extends ContentProvider {
 
     private static final String[] ID_PROJ = { BaseColumns._ID };
     private static final String[] ID_PROJ_COLLECTION = { ScraperStore.MovieCollections.ID };
-    private final static long findScraperImage(SQLiteDatabase db, String table, ScraperImage.Type type, ContentValues cv) {
+    private static long findScraperImage(SQLiteDatabase db, String table, ScraperImage.Type type, ContentValues cv) {
         String selection = type.largeFileColumn + "=?";
         String[] selectionArgs = { cv.getAsString(type.largeFileColumn) };
+
+        if (selectionArgs[0] == null) {
+            log.error("findScraperImage: selectionArgs[0] is null for table: {}, type: {}", table, type);
+            return -1;
+        }
+
         long result = -1;
         Cursor cursor;
         if (table.equals(ScraperTables.MOVIE_COLLECTION_TABLE_NAME)) // movie collection table has different base id...
