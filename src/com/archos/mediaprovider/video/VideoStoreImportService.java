@@ -240,6 +240,12 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
         log.debug("onStartCommand: created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
 
+        if (!AppState.isForeGround()) {
+            cleanup();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         if (intent == null || intent.getAction() == null) {
             // do a full import here to make sure that we have initial data
             log.debug("onStartCommand: intent == null || intent.getAction() == null do MESSAGE_IMPORT_FULL");
