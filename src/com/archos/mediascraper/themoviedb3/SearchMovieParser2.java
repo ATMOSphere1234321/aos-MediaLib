@@ -75,8 +75,11 @@ public class SearchMovieParser2 {
             if (movie.original_title != null) result.setOriginalTitle(movie.original_title);
             result.setYear((year != null) ? String.valueOf(year) : null);
             result.setLanguage(language);
-            result.setPopularity((float)movie.popularity.doubleValue());
-
+            if (movie.popularity != null) {
+                result.setPopularity((float) movie.popularity.doubleValue());
+            } else {
+                result.setPopularity(null);
+            }
             // Put in lower priority any entry that has no movie banned i.e. .*missing/movie.jpg as banner
             isReleaseDateKnown = (movie.release_date != null);
             String movieNameLC = movieName.toLowerCase();
