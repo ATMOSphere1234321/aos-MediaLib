@@ -1331,7 +1331,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 }
             };
         String action = intent != null ? intent.getAction() : null;
-        if (action != null)
+        if (mBackgroundHandler != null && action != null)
             mBackgroundHandler.sendMessage(mBackgroundHandler.obtainMessage(MSG_INTENT, intent));
         return START_STICKY;
     }
