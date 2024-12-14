@@ -132,7 +132,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             if(broadcast.getExtras()!=null)
                 serviceIntent.putExtras(broadcast.getExtras()); //in case we have an extra... such as "recordLogExtra"
             if (AppState.isForeGround()) {
-                log.debug("startIfHandles: apps is foreground startForegroundService and pass intent to self");
+                log.debug("startIfHandles: apps is foreground startService and pass intent to self");
                 ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startIfHandles", "apps is foreground mContext.startService and pass intent to self");
                 context.startService(serviceIntent);
             }
@@ -237,14 +237,15 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         // intents are delivered here.
         log.debug("onStartCommand:" + intent + " flags:" + flags + " startId:" + startId + ((intent != null) ? ", getAction " + intent.getAction() : " getAction null"));
 
-        ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
-        log.debug("onStartCommand: created notification + startForeground " + NOTIFICATION_ID + " notification null? " + (n == null));
-
         if (!AppState.isForeGround()) {
+            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "aoo in background stopself, isForeground=" + AppState.isForeGround());
             cleanup();
             stopSelf();
             return START_NOT_STICKY;
         }
+
+        ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "created notification + startService " + NOTIFICATION_ID + " notification null? " + (n == null) + " isForeground=" + AppState.isForeGround());
+        log.debug("onStartCommand: created notification + startService " + NOTIFICATION_ID + " notification null? " + (n == null) + " isForeground=" + AppState.isForeGround());
 
         if (intent == null || intent.getAction() == null) {
             // do a full import here to make sure that we have initial data
@@ -331,12 +332,12 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         mContext = context;
         Intent intent = new Intent(context, VideoStoreImportService.class);
         if (AppState.isForeGround()) {
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in foreground calling ContextCompat.startForegroundService");
-            log.debug("startService: app in foreground calling ContextCompat.startForegroundService");
+            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in foreground calling startService");
+            log.debug("startService: app in foreground calling startService");
             context.startService(intent); // triggers an initial video import on local storage because files might have been created meanwhile
         } else {
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in background NOT calling ContextCompat.startForegroundService");
-            log.debug("startService: app in background NOT calling ContextCompat.startForegroundService");
+            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in background NOT calling startService");
+            log.debug("startService: app in background NOT calling startService");
         }
     }
 
@@ -624,11 +625,11 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                 intent.setAction(ArchosMediaIntent.ACTION_VIDEO_SCANNER_IMPORT_INCR);
                 if (AppState.isForeGround()) {
                     ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onChange", "app in foreground calling mContext.startService");
-                    log.debug("onChange: app in foreground calling ContextCompat.startForegroundService");
+                    log.debug("onChange: app in foreground calling startService");
                     mContext.startService(intent);
                 } else {
                     ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onChange", "app in background NOT calling mContext.startService");
-                    log.debug("onChange: app in background NOT calling mContext.startService");
+                    log.debug("onChange: app in background NOT calling startService");
                 }
             }
         }
