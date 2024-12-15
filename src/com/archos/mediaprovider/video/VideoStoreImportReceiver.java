@@ -19,15 +19,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import androidx.core.content.ContextCompat;
-
 import com.archos.environment.ArchosUtils;
-import com.archos.mediacenter.utils.AppState;
-import com.archos.mediaprovider.ArchosMediaCommon;
-import com.archos.mediaprovider.ArchosMediaIntent;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.sentry.SentryLevel;
 
@@ -47,18 +39,11 @@ public class VideoStoreImportReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (DBG) Log.d(TAG, "onReceive:" + intent);
-        if (AppState.isForeGround()) {
-            if (DBG) Log.d(TAG, "VideoStoreImportReceiver onReceive: application is in foreground, asking NetworkScannerServiceVideo via intent if intent supported");
-            // start network scan / removal service
-            NetworkScannerServiceVideo.startIfHandles(context, intent);
-            // in addition and all other cases inform import service about the event but only if this is something we handle
-            if (DBG) Log.d(TAG, "VideoStoreImportReceiver onReceive: application is in foreground, asking VideoStoreImportService via intent if intent supported");
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportReceiver.onReceive", "application is in foreground, asking VideoStoreImportService via intent if intent supported");
-            VideoStoreImportService.startIfHandles(context, intent);
-        } else {
-            if (DBG) Log.d(TAG, "VideoStoreImportReceiver onReceive: application is in background, do nothing");
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportReceiver.onReceive", "application is in background, do nothing");
-        }
+        ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportReceiver.onReceive", "start NetworkScannerServiceVideo and VideoStoreImportService via intent if intent supported");
+        // start network scan / removal service
+        NetworkScannerServiceVideo.startIfHandles(context, intent);
+        // in addition and all other cases inform import service about the event but only if this is something we handle
+        VideoStoreImportService.startIfHandles(context, intent);
     }
 
 }

@@ -39,9 +39,7 @@ import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.widget.Toast;
 
-import com.archos.mediacenter.utils.AppState;
 import com.archos.mediacenter.utils.trakt.Trakt.Status;
-import com.archos.mediacenter.utils.videodb.IndexHelper;
 import com.archos.mediacenter.utils.videodb.VideoDbInfo;
 import com.archos.medialib.R;
 import com.archos.environment.NetworkState;
@@ -64,22 +62,15 @@ import com.uwetrottmann.trakt5.entities.TraktList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.bp.DayOfWeek;
-import org.threeten.bp.Instant;
 import org.threeten.bp.LocalDateTime;
 import org.threeten.bp.OffsetDateTime;
-import org.threeten.bp.ZoneId;
 import org.threeten.bp.ZoneOffset;
-import org.threeten.bp.format.DateTimeFormatter;
-import org.threeten.bp.temporal.TemporalAdjusters;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 public class TraktService extends Service implements DefaultLifecycleObserver {
 
@@ -132,6 +123,8 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     public static final int FLAG_SYNC_FULL = FLAG_SYNC_TO_DB | FLAG_SYNC_TO_TRAKT | FLAG_SYNC_MOVIES | FLAG_SYNC_SHOWS;
 
     private static final long TRAKT_SYNC_DELAY = 30; // in sec
+
+    private static volatile boolean isForeground = false;
 
     private NetworkState networkState = null;
     private PropertyChangeListener propertyChangeListener = null;
@@ -1254,18 +1247,15 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
     @Override
     public void onCreate() {
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         mNetworkState = NetworkState.instance(this);
         mBackgroundHandlerThread  = new HandlerThread(TAG);
         mBackgroundHandlerThread.start();
         mBackgroundHandler = new TraktHandler(mBackgroundHandlerThread.getLooper(), this);
         mUiHandler = new Handler();
         mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        // handles foregroud/background for networkState add/remove Listener
-        AppState.addOnForeGroundListener(mForeGroundListener);
-        handleForeGround(AppState.isForeGround());
         super.onCreate();
-        // Register as a lifecycle observer
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
@@ -1403,65 +1393,64 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         public void watching(long videoID, float progress) {
             log.debug("watching: send INTENT_ACTION_WATCHING");
             Intent intent = prepareIntent(INTENT_ACTION_WATCHING, videoID, progress, null);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void watchingStop(long videoID, float progress) {
             log.debug("watchingStop: send INTENT_ACTION_WATCHING_STOP");
             Intent intent = prepareIntent(INTENT_ACTION_WATCHING_STOP, videoID, progress, null);
-            // do not check if isForeGround in this specific case in order to allow posting watch status when exiting
-            // video playback with home button to save state
-            //if (AppState.isForeGround()) mContext.startService(intent);
-            mContext.startService(intent);
+            // Should not check if isForeGround in this specific case in order to allow posting watch status when exiting
+            // video playback with home button to save state but with Android restrictions, do not do it because foreground services banned
+            if (isForeground) mContext.startService(intent);
         }
         public void watchingPause(long videoID, float progress) {
             log.debug("watchingPause: send INTENT_ACTION_WATCHING_PAUSE");
             Intent intent = prepareIntent(INTENT_ACTION_WATCHING_PAUSE, videoID, progress, null);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void watching(VideoDbInfo videoInfo, float progress) {
             log.debug("watching: send INTENT_ACTION_WATCHING");
             Intent intent = prepareIntent(INTENT_ACTION_WATCHING, videoInfo, progress, null);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void watchingStop(VideoDbInfo videoInfo, float progress) {
             log.debug("watchingStop: send INTENT_ACTION_WATCHING_STOP");
             Intent intent = prepareIntent(INTENT_ACTION_WATCHING_STOP, videoInfo, progress, null);
             // do not check if isForeGround in this specific case in order to allow posting watch status when exiting
             // video playback with home button to save state
-            //if (AppState.isForeGround()) mContext.startService(intent);
+            //if (isForeground) mContext.startService(intent);
             mContext.startService(intent);
         }
         public void watchingPause(VideoDbInfo videoInfo, float progress) {
             log.debug("watchingPause: send INTENT_ACTION_WATCHING_PAUSE");
             Intent intent = prepareIntent(INTENT_ACTION_WATCHING_PAUSE, videoInfo, progress, null);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void markAs(VideoDbInfo videoInfo, String traktAction) {
             log.debug("markAs: send INTENT_ACTION_MARK_AS");
             Intent intent = prepareIntent(INTENT_ACTION_MARK_AS, videoInfo, -1, traktAction);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void wipe() {
             log.debug("wipe: send INTENT_ACTION_WIPE");
             Intent intent = prepareIntent(INTENT_ACTION_WIPE, null, -1, null);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void wipeCollection() {
             log.debug("wipeCollection: send INTENT_ACTION_WIPE_COLLECTION");
             Intent intent = prepareIntent(INTENT_ACTION_WIPE_COLLECTION, null, -1, null);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void fullSync() {
             log.debug("fullSync: send INTENT_ACTION_SYNC");
             Intent intent = prepareIntent(INTENT_ACTION_SYNC, null, -1, null);
             intent.putExtra("flag_sync", FLAG_SYNC_FULL);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
         public void sync(int flag) {
             log.debug("sync: send INTENT_ACTION_SYNC");
             Intent intent = prepareIntent(INTENT_ACTION_SYNC, null, -1, null);
             intent.putExtra("flag_sync", flag);
-            if (AppState.isForeGround()) mContext.startService(intent);
+            if (isForeground) mContext.startService(intent);
         }
     }
 
@@ -1475,43 +1464,6 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     public static void onNewVideo(Context context) {
         if (Trakt.isTraktV2Enabled(context, PreferenceManager.getDefaultSharedPreferences(context)))
             new Client(context, null, false).sync(FLAG_SYNC_TO_DB_WATCHED|FLAG_SYNC_TO_TRAKT|FLAG_SYNC_MOVIES|FLAG_SYNC_SHOWS);
-    }
-
-    public static void init() {
-        AppState.addOnForeGroundListener(sForeGroundListener);
-    }
-
-    // this one is static for CustomApplication init
-    private static final AppState.OnForeGroundListener sForeGroundListener = new AppState.OnForeGroundListener() {
-        @Override
-        public void onForeGroundState(Context applicationContext, boolean foreground) {
-            if (foreground && NetworkState.isNetworkConnected(applicationContext))
-                TraktService.sync(applicationContext, TraktService.FLAG_SYNC_AUTO);
-        }
-    };
-
-    // this one is non static for service use
-    private final AppState.OnForeGroundListener mForeGroundListener = new AppState.OnForeGroundListener() {
-        @Override
-        public void onForeGroundState(Context applicationContext, boolean foreground) {
-            if(foreground) {
-                log.debug("mForeGroundListener: foreground");
-            }  else {
-                log.debug("mForeGroundListener: background");
-            }
-            handleForeGround(foreground);
-        }
-    };
-
-    protected void handleForeGround(boolean foreground) {
-        if (foreground) {
-            log.debug("handleForeGround: app now in ForeGround");
-            //addListener(false);
-            addListener();
-        } else {
-            log.debug("handleForeGround: app now in BackGround");
-            removeListener();
-        }
     }
 
     private void addListener() {
@@ -1536,6 +1488,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     public void onStop(LifecycleOwner owner) {
         // App in background
         log.debug("onStop: LifecycleOwner App in background");
+        isForeground = false;
         cleanup();
         stopSelf();
     }
@@ -1544,6 +1497,10 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     public void onStart(LifecycleOwner owner) {
         // App in foreground
         log.debug("onStart: LifecycleOwner App in foreground");
+        isForeground = true;
+        if (NetworkState.isNetworkConnected(getApplicationContext()))
+            TraktService.sync(getApplicationContext(), TraktService.FLAG_SYNC_AUTO);
+        addListener();
     }
 
 }

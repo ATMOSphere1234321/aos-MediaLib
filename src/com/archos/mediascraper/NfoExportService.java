@@ -34,7 +34,6 @@ import android.util.Log;
 
 import com.archos.filecorelibrary.MetaFile2;
 import com.archos.filecorelibrary.MetaFile2Factory;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.video.VideoStore;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
@@ -62,7 +61,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     private static final String notifChannelName = "NfoExportService";
     private static final String notifChannelDescr = "NfoExportService";
 
-    private volatile boolean isServiceRunning = true;
+    private static volatile boolean isForeground = false;
 
     /**
      * simple guard against multiple tasks of the same directory
@@ -102,12 +101,12 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
         Intent serviceIntent = new Intent(context, NfoExportService.class);
         serviceIntent.setAction(INTENT_EXPORT_FILE);
         serviceIntent.setData(directory);
-        if (AppState.isForeGround()) context.startService(serviceIntent);
+        if (isForeground) context.startService(serviceIntent);
     }
     public static void exportAll(Context context) {
         Intent serviceIntent = new Intent(context, NfoExportService.class);
         serviceIntent.setAction(INTENT_EXPORT_ALL);
-        if (AppState.isForeGround()) context.startService(serviceIntent);
+        if (isForeground) context.startService(serviceIntent);
     }
 
     public NfoExportService() {
@@ -204,7 +203,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     private void handleCursor(Cursor cursor) {
         if (cursor != null) {
             NfoWriter.ExportContext exportContext = new NfoWriter.ExportContext();
-            while (cursor.moveToNext() && isServiceRunning) {
+            while (cursor.moveToNext() && isForeground) {
                 long id = cursor.getLong(0);
                 int type = cursor.getInt(1);
                 BaseTags tags = null;
@@ -273,11 +272,11 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     public void onStart(LifecycleOwner owner) {
         // App in foreground
         if (DBG) Log.d(TAG, "onStart: LifecycleOwner app in foreground");
-        isServiceRunning = true;
+        isForeground = true;
     }
 
     private void cleanup() {
-        isServiceRunning = false;
+        isForeground = false;
         // Clear the scheduled tasks
         sScheduledTasks.clear();
         // Cancel the notification

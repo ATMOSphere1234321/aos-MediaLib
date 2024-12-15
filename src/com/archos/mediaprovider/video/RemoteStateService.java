@@ -23,7 +23,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.DeadSystemException;
 import android.provider.BaseColumns;
 import android.util.Pair;
 
@@ -36,7 +35,6 @@ import com.archos.filecorelibrary.jcifs.JcifsFileEditor;
 import com.archos.filecorelibrary.samba.SambaDiscovery;
 import com.archos.mediacenter.filecoreextension.upnp2.FileEditorFactoryWithUpnp;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.environment.NetworkState;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
 
@@ -52,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RemoteStateService extends IntentService implements UpnpServiceManager.Listener, DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(RemoteStateService.class);
 
-    private static volatile boolean isServiceRunning = true;
+    private static volatile boolean isForeground = false;
 
     private static final Uri NOTIFY_URI = VideoStore.ALL_CONTENT_URI;
     private static final Uri SERVER_URI = VideoStore.SmbServer.getContentUri();
@@ -94,7 +92,6 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     public void onCreate() {
         super.onCreate();
         log.debug("onCreate() "+this);
-
         // Register as a lifecycle observer
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
@@ -114,11 +111,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     protected void onHandleIntent(Intent intent) {
         log.debug("onHandleIntent " + intent);
         // prevent to be executed if app is in background
-        if (!AppState.isForeGround()) {
-            log.warn("onHandleIntent: app is in background exiting!");
-            stopSelf();
-            return;
-        }
+        if (!isForeground) return;
         if (ACTION_CHECK_SMB.equals(intent.getAction())) {
             log.debug("onHandleIntent: app is not in background, updating networkstate");
             NetworkState state = NetworkState.instance(this);
@@ -158,7 +151,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
             if (c != null) {
                 log.debug("found " + c.getCount() + " servers");
                 mServerDbUpdated = false;
-                while (c.moveToNext() && isServiceRunning) {
+                while (c.moveToNext() && isForeground) {
                     final long id = c.getLong(COLUMN_ID);
                     final String server = c.getString(COLUMN_DATA);
                     final int active = c.getInt(COLUMN_ACTIVE);
@@ -299,7 +292,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
         Cursor c = context.getContentResolver().query(VideoStore.SmbServer.getContentUri(), new String[]{"_id", "_data", "active"}, SELECTION, null, null);
         boolean active = false;
         if (c != null)
-            while (c.moveToNext() && active == false && isServiceRunning)
+            while (c.moveToNext() && !active && isForeground)
                 active = (c.getInt(2) == 1);
         return active;
     }
@@ -308,13 +301,13 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     public void onStop(LifecycleOwner owner) {
         // App in background
         log.debug("onStop: LifecycleOwner app in background, stopSelf");
-        isServiceRunning = false;
+        isForeground = false;
         stopSelf();
     }
 
     @Override
     public void onStart(LifecycleOwner owner) {
         log.debug("onStart: LifecycleOwner app in foreground");
-        isServiceRunning = true;
+        isForeground = true;
     }
 }

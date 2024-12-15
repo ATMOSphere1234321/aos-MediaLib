@@ -40,6 +40,10 @@ import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.os.RemoteException;
+
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.text.TextUtils;
@@ -49,7 +53,6 @@ import com.archos.filecorelibrary.FileEditor;
 import com.archos.filecorelibrary.FileUtils;
 import com.archos.mediacenter.filecoreextension.upnp2.FileEditorFactoryWithUpnp;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
 import com.archos.mediaprovider.ArchosMediaCommon;
@@ -82,10 +85,12 @@ import java.util.Random;
 
 import io.sentry.SentryLevel;
 
-public class VideoProvider extends ContentProvider {
+public class VideoProvider extends ContentProvider implements DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(VideoProvider.class);
 
     private final static boolean SKIP_THUMBNAILS = false;
+
+    private static volatile boolean isForeground = false;
 
     private DbHolder mDbHolder;
     private Handler mThumbHandler;
@@ -120,6 +125,9 @@ public class VideoProvider extends ContentProvider {
     public boolean onCreate() {
         log.debug("onCreate");
         final Context context = getContext();
+
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+
         mImageThumbFolder = context.getDir(IMAGE_THUMB_FOLDER_NAME, Context.MODE_PRIVATE).getPath();
 
         mVobHandler = new VobHandler(context);
@@ -156,9 +164,6 @@ public class VideoProvider extends ContentProvider {
                     }
                 }
             };
-        // handles foreground changes
-        AppState.addOnForeGroundListener(mForeGroundListener); // this starts VideoStoreImportService
-        handleForeGround(AppState.isForeGround());
 
         HandlerThread ht = new HandlerThread("thumbs thread", Process.THREAD_PRIORITY_BACKGROUND);
         ht.start();
@@ -1383,20 +1388,6 @@ public class VideoProvider extends ContentProvider {
         }
     }
 
-    private final AppState.OnForeGroundListener mForeGroundListener = (applicationContext, foreground) -> {
-        if (foreground) {
-            // should be done at each foreground to check if there are new videos (redo incremental import not full?)
-            log.debug("mForeGroundListener: app is foreground VideoStoreImportService.startService");
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoProvider.mForeGroundListener", "app is foreground VideoStoreImportService.startService");
-            VideoStoreImportService.startService(applicationContext);
-        }  else {
-            // no need to VideoStoreImportService.stopService(applicationContext) because service when active uses startForeground
-            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoProvider.mForeGroundListener", "app is background, let VideoStoreImportService continue: do not stopService");
-            log.debug("mForeGroundListener: app is background, let VideoStoreImportService continue: do not stopService");
-        }
-        handleForeGround(foreground);
-    };
-
     protected void handleForeGround(boolean foreground) {
         final Context context = getContext();
         if (context == null) {
@@ -1404,19 +1395,21 @@ public class VideoProvider extends ContentProvider {
             return;
         }
         if (foreground) {
-            log.trace("App now in ForeGround");
+            log.debug("handleForeGround: app is foreground VideoStoreImportService.startService");
+            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "handleForeGround", "app is foreground VideoStoreImportService.startService");
+            VideoStoreImportService.startService(getContext());
             UpnpServiceManager.restartUpnpServiceIfWasStartedBefore();
             // force check
             RemoteStateService.start(context);
             addNetworkListener();
         } else {
-            log.trace("App now in BackGround");
+            log.trace("handleForeGround: app now in BackGround");
             UpnpServiceManager.stopServiceIfLaunched();
             removeNetworkListener();
             try {
                 RemoteStateService.stop(context);
             } catch (Exception e) {
-                log.error("DeadSystemException caught while stopping RemoteStateService", e);
+                log.error("handleForeGround: DeadSystemException caught while stopping RemoteStateService", e);
             }
         }
     }
@@ -1437,6 +1430,21 @@ public class VideoProvider extends ContentProvider {
             networkState.removePropertyChangeListener(propertyChangeListener);
             mNetworkStateListenerAdded = false;
         }
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        isForeground = false;
+        handleForeGround(isForeground);
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
+        isForeground = true;
+        handleForeGround(isForeground);
     }
 }
 

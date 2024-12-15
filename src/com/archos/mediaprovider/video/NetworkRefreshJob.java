@@ -36,7 +36,6 @@ public class NetworkRefreshJob extends JobService implements DefaultLifecycleObs
     public void onCreate() {
         super.onCreate();
         log.debug("onCreate");
-
         // Register as a lifecycle observer
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }

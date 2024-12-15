@@ -16,7 +16,6 @@ package com.archos.mediascraper;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ContentValues;
 import android.content.Context;
@@ -34,14 +33,12 @@ import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 
 import android.os.Looper;
 import android.provider.BaseColumns;
 
-import androidx.lifecycle.ProcessLifecycleOwner;
-
-import com.archos.mediacenter.utils.AppState;
 import com.archos.mediacenter.utils.trakt.TraktService;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.DeleteFileCallback;
@@ -111,7 +108,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
     private static Boolean scrapeOnlyMovies = false;
 
-    private volatile boolean isServiceRunning = true;
+    private volatile static boolean isForeground = true;
     private static final String PREF_IS_SCRAPE_DIRTY = "is_scrape_dirty";
 
     /**
@@ -142,7 +139,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             saveDirtyState(true);
         }
         sIsScraping = false;
-        isServiceRunning = false;
+        isForeground = false;
         // Stop the scraping thread if it's running
         if (mThread != null) {
             mThread.interrupt();
@@ -238,7 +235,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
                         sNumberOfFilesRemainingToProcess = window;
 
-                        while (cursor.moveToNext() && isServiceRunning && !Thread.currentThread().isInterrupted()
+                        while (cursor.moveToNext() && isForeground && !Thread.currentThread().isInterrupted()
                                 && PreferenceManager.getDefaultSharedPreferences(AutoScrapeService.this).getBoolean(AutoScrapeService.KEY_ENABLE_AUTO_SCRAP, true)) {
                             if (sTotalNumberOfFilesRemainingToProcess > 0)
                                 nm.notify(NOTIFICATION_ID, nb.setContentText(getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess).build());
@@ -267,7 +264,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                         }
                         index += window;
                         cursor.close();
-                    } while (index < numberOfRows && isServiceRunning && !Thread.currentThread().isInterrupted());
+                    } while (index < numberOfRows && isForeground && !Thread.currentThread().isInterrupted());
                     sIsScraping = false;
                     cursor.close();
                     log.debug("startExporting: call stopSelf");
@@ -294,7 +291,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             @Override
             public void onChange(boolean selfChange) {
                 // Check if auto scraping is enabled and the app is in the foreground
-                if (PreferenceManager.getDefaultSharedPreferences(appContext).getBoolean(KEY_ENABLE_AUTO_SCRAP, true) && AppState.isForeGround()) {
+                if (PreferenceManager.getDefaultSharedPreferences(appContext).getBoolean(KEY_ENABLE_AUTO_SCRAP, true) && isForeground) {
                     // Check if a scraping operation is already in progress
                     if (isScraping()) {
                         log.debug("registerObserver.onChange: already scraping, not launching service!");
@@ -335,14 +332,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     }
 
     protected void startScraping(final boolean rescrapAlreadySearched, final boolean onlyNotFound) {
-        log.debug("startScraping: " + String.valueOf(mThread==null || !mThread.isAlive()) );
+        log.debug("startScraping: {}", String.valueOf(mThread == null || !mThread.isAlive()));
         nb.setContentTitle(getString(R.string.scraping_in_progress));
-
-        Intent notificationIntent = new Intent(Intent.ACTION_MAIN);
-        notificationIntent.setClassName(this.getPackageName(), "com.archos.mediacenter.video.autoscraper.AutoScraperActivity");
-        PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, notificationIntent,
-                ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT: PendingIntent.FLAG_UPDATE_CURRENT));
-        nb.setContentIntent(contentIntent);
 
         if(mThread==null || !mThread.isAlive()) {
             mThread = new Thread() {
@@ -404,7 +395,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
                             sNumberOfFilesRemainingToProcess = window;
                             restartOnNextRound = true;
-                            while (cursor.moveToNext() && isEnable(AutoScrapeService.this) && isServiceRunning && !Thread.currentThread().isInterrupted()) {
+                            while (cursor.moveToNext() && isEnable(AutoScrapeService.this) && isForeground && !Thread.currentThread().isInterrupted()) {
                                 // stop if disconnected while scraping
                                 if (!NetworkState.isLocalNetworkConnected(AutoScrapeService.this) && !NetworkState.isNetworkConnected(AutoScrapeService.this)) {
                                     cursor.close();
@@ -583,7 +574,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             cursor.close();
                             numberOfRowsRemaining -= window;
                             totalNumberOfFilesScraped+= totalNumberOfFilesScraped;
-                        } while (numberOfRowsRemaining > 0 && isServiceRunning && !Thread.currentThread().isInterrupted());
+                        } while (numberOfRowsRemaining > 0 && isForeground && !Thread.currentThread().isInterrupted());
                         if (numberOfRows == mNetworkOrScrapErrors) { //when as many errors, we assume we don't have the internet or that the scraper returns an error, do not loop
                             restartOnNextRound = false;
                             log.debug("startScraping: no internet or scraper errors, stop iterating");
@@ -601,7 +592,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             log.debug("startScraping: new entries to scrape found most likely added during scrape process, restartOnNextRound");
                         }
                         cursor.close();
-                    } while(restartOnNextRound && isServiceRunning && !Thread.currentThread().isInterrupted()
+                    } while(restartOnNextRound && isForeground && !Thread.currentThread().isInterrupted()
                             &&PreferenceManager.getDefaultSharedPreferences(AutoScrapeService.this).getBoolean(AutoScrapeService.KEY_ENABLE_AUTO_SCRAP, true)); //if we had something to do, we look for new videos
                     sIsScraping = false;
                     mHandler.post(new Runnable() {
@@ -682,7 +673,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     @Override
     public void onStart(LifecycleOwner owner) {
         log.debug("onStart: LifecycleOwner app in foreground");
-        isServiceRunning = true;
+        isForeground = true;
         if (isDirtyState()) {
             log.debug("onStart: Rescanning everything due to dirty state");
             // Reset the dirty flag in SharedPreferences

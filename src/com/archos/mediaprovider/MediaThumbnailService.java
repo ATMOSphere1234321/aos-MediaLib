@@ -26,10 +26,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.widget.Toast;
 
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.ProcessLifecycleOwner;
-
 import com.archos.environment.ArchosUtils;
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
@@ -39,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
 
-public class MediaThumbnailService extends Service implements DefaultLifecycleObserver {
+public class MediaThumbnailService extends Service {
 
     private static final Logger log = LoggerFactory.getLogger(MediaThumbnailService.class);
 
@@ -149,7 +145,6 @@ public class MediaThumbnailService extends Service implements DefaultLifecycleOb
     public void onCreate() {
         super.onCreate();
         log.debug("onCreate");
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
@@ -192,16 +187,5 @@ public class MediaThumbnailService extends Service implements DefaultLifecycleOb
             }
         }
         return bitmap;
-    }
-
-    public void onStop(LifecycleOwner owner) {
-        // App in background
-        log.debug("onStop: LifecycleOwner App in background");
-        stopSelf();
-    }
-
-    public void onStart(LifecycleOwner owner) {
-        // App in foreground
-        log.debug("onStart: LifecycleOwner App in foreground");
     }
 }

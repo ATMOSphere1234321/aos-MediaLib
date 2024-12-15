@@ -398,7 +398,7 @@ public class VideoStoreImportImpl {
         mIsImportInterrupted = false;
         Cursor c = null;
         int cursorCount = 0;
-        while (true && !mIsImportInterrupted) {
+        while (!mIsImportInterrupted) {
             try {
                 // for some reasons this does return a cursor with size > WINDOW_SIZE
                 // thus only process WINDOW_SIZE entries in handleScanCursor
@@ -621,7 +621,7 @@ public class VideoStoreImportImpl {
                 ArrayList<Long> ids = new ArrayList<>();
                 Cursor c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[] { "_id" }, null, null, null);
                 if (c != null) {
-                    while (c.moveToNext())
+                    while (c.moveToNext() && !mIsImportInterrupted)
                         ids.add(c.getLong(0));
                     c.close();
                 }
@@ -676,7 +676,7 @@ public class VideoStoreImportImpl {
                     int allFilesCount = allFiles.getCount();
                     if (allFiles != null && allFilesCount >0) {
                         log.debug("copyData: new batch cursor has size " + allFilesCount);
-                        while (allFiles.moveToNext()) {
+                        while (allFiles.moveToNext() && !mIsImportInterrupted) {
                             cursor_count++;
                             log.trace("copyData: processing cursor number=" + cursor_count + "/" + numberOfRows + ", " + DatabaseUtils.dumpCurrentRowToString(allFiles));
                             try {
@@ -739,7 +739,7 @@ public class VideoStoreImportImpl {
         int offset = 0;
         Cursor c = null;
         try {
-            while (true && !mIsImportInterrupted) {
+            while (!mIsImportInterrupted) {
                 try {
                     c = cr.query(VideoStoreInternal.FILES_IMPORT, COUNT_PROJ, null, null, BaseColumns._ID + " LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
                     if (c != null) {
@@ -773,7 +773,7 @@ public class VideoStoreImportImpl {
         int highestMaxId = 0;
         Cursor c = null;
         try {
-            while (true && !mIsImportInterrupted) {
+            while (!mIsImportInterrupted) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // API>=30 requires bundle to LIMIT
                         Bundle queryArgs = new Bundle();
@@ -825,7 +825,7 @@ public class VideoStoreImportImpl {
         int offset = 0;
         Cursor c = null;
         try {
-            while (true && !mIsImportInterrupted) {
+            while (!mIsImportInterrupted) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // API>=30 requires bundle to LIMIT
                         Bundle queryArgs = new Bundle();
@@ -845,7 +845,7 @@ public class VideoStoreImportImpl {
                     int count = 0;
 
                     if (c != null) {
-                        while (c.moveToNext() && count < WINDOW_SIZE) {
+                        while (c.moveToNext() && count < WINDOW_SIZE && !mIsImportInterrupted) {
                             count++;
                             sb.append(prefix).append(c.getString(0));
                             prefix = ",";

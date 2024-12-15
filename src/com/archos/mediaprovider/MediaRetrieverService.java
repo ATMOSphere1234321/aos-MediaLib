@@ -22,17 +22,13 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.ProcessLifecycleOwner;
-
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
 import com.archos.medialib.MediaMetadata;
 
 import java.lang.ref.WeakReference;
 
-public class MediaRetrieverService extends Service implements DefaultLifecycleObserver {
+public class MediaRetrieverService extends Service {
 
     private static final String TAG = "MediaRetrieverService";
     private static final boolean DBG = false;
@@ -71,7 +67,6 @@ public class MediaRetrieverService extends Service implements DefaultLifecycleOb
     public void onCreate() {
         super.onCreate();
         if (DBG) Log.d(TAG, "onCreate");
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
@@ -111,18 +106,4 @@ public class MediaRetrieverService extends Service implements DefaultLifecycleOb
         super.onStartCommand(intent, flags, startId);
         return START_NOT_STICKY;
     }
-
-    @Override
-    public void onStop(LifecycleOwner owner) {
-        // App in background
-        if (DBG) Log.d(TAG, "onStop: LifecycleOwner App in background");
-        stopSelf();
-    }
-
-    @Override
-    public void onStart(LifecycleOwner owner) {
-        // App in foreground
-        if (DBG) Log.d(TAG, "onStart: LifecycleOwner App in foreground");
-    }
-
 }

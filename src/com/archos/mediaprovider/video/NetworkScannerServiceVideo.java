@@ -53,7 +53,6 @@ import com.archos.mediacenter.filecoreextension.UriUtils;
 import com.archos.mediacenter.filecoreextension.upnp2.MetaFileFactoryWithUpnp;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpFile2;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.ArchosMediaCommon;
 import com.archos.mediaprovider.ArchosMediaFile;
@@ -61,17 +60,12 @@ import com.archos.mediaprovider.ArchosMediaFile.MediaFileType;
 import com.archos.mediaprovider.ArchosMediaIntent;
 import com.archos.mediaprovider.BulkInserter;
 import com.archos.mediaprovider.CPOExecutor;
-import com.archos.mediaprovider.NetworkScanner;
 import com.archos.mediaprovider.video.VideoStore.Files.FileColumns;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
 import com.archos.mediaprovider.video.VideoStore.Video.VideoColumns;
 import com.archos.mediascraper.BaseTags;
 import com.archos.mediascraper.NfoParser;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -127,7 +121,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     private static final String notifChannelName = "NetworkScannerServiceVideo";
     private static final String notifChannelDescr = "NetworkScannerServiceVideo";
 
-    private static volatile boolean isServiceRunning = true;
+    private static volatile boolean isForeground = false;
     private Thread mScanThread;
     private Thread mRemoveFilesThread;
 
@@ -143,7 +137,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             serviceIntent.setData(data);
             if(broadcast.getExtras()!=null)
                 serviceIntent.putExtras(broadcast.getExtras()); //in case we have an extra... such as "recordLogExtra"
-            if (AppState.isForeGround()) {
+            if (isForeground) {
                 log.debug("startIfHandles: apps is foreground startService and pass intent to self");
                 context.startService(serviceIntent);
             }
@@ -252,8 +246,6 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         // intents delivered here
         log.debug("onStartCommand:" + intent + " flags:" + flags + " startId:" + startId + ((intent != null) ? ", getAction " + intent.getAction() : " getAction null"));
 
-        log.debug("onStartCommand: created notification + startService " + NOTIFICATION_ID + " notification null? " + (n == null));
-
         if (intent == null || intent.getAction() == null)
             return START_NOT_STICKY;
         if(intent.getExtras()!=null) {
@@ -315,7 +307,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 uri = (Uri) msg.obj;
                 key = uri.toString();
                 log.debug("handleMessage: MESSAGE_DO_SCAN " + uri);
-                if (isServiceRunning) {
+                if (isForeground) {
                     mScanThread = new Thread(() -> {
                         doScan(uri);
                         // *** Send MESSAGE_KILL after doScan() completes ***
@@ -331,7 +323,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 uri = (Uri) msg.obj;
                 key = uri.toString();
                 log.debug("handleMessage: MESSAGE_DO_UNSCAN " + uri);
-                if (isServiceRunning) {
+                if (isForeground) {
                     mRemoveFilesThread = new Thread(() -> {
                         doRemoveFiles(uri);
                         // *** Send MESSAGE_KILL after doRemoveFiles() completes ***
@@ -468,7 +460,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 // hashmap to contain all knows files + data, keyed by path
                 HashMap<String, PrescanItem> prescanItemsMap = new HashMap<String, NetworkScannerServiceVideo.PrescanItem>();
                 if (prescan != null) {
-                    while (prescan.moveToNext() && isServiceRunning) {
+                    while (prescan.moveToNext() && isForeground) {
                         PrescanItem item = new PrescanItem(prescan);
                         if (upnpUri != null && !item._data.startsWith(upnpUri)) { // if this isn't in folder about to be listed, we won't need to delete it
                             item.needsDelete = false;
@@ -840,7 +832,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             c = cr.query(uri, PROJ_ID_DATA_SIZE, SEL_NEW_VIDS_N_SUBS, null, sortOrder);
             if (c != null) {
                 String lastBucket = null;
-                while (c.moveToNext() & isServiceRunning) {
+                while (c.moveToNext() & isForeground) {
                     long id = c.getLong(0);
                     String file = c.getString(1);
                     long size = c.getLong(2);
@@ -1151,7 +1143,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
 
     public void cleanup() {
         log.debug("cleanup");
-        isServiceRunning = false;
+        isForeground = false;
         // Stop the handler thread safely
         if (mHandlerThread != null) {
             mHandlerThread.quitSafely(); // Safely quit the handler thread
@@ -1166,7 +1158,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         }
         //stop Upnp service if on background
         UpnpServiceManager.getSingleton(this).releaseStopLock();
-        if(!AppState.isForeGround()){
+        if(! isForeground){
             UpnpServiceManager.stopServiceIfLaunched();
         }
         // Release any acquired locks (e.g., WifiLock)
@@ -1184,7 +1176,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     public void onStop(LifecycleOwner owner) {
         // App in background
         log.debug("onStop: LifecycleOwner app in background, stop service");
-        isServiceRunning = false;
+        isForeground = false;
         cleanup();
         stopSelf();
     }
@@ -1193,6 +1185,6 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     public void onStart(LifecycleOwner owner) {
         // App in foreground
         log.debug("onStart: LifecycleOwner app in foreground");
-        isServiceRunning = true;
+        isForeground = true;
     }
 }
