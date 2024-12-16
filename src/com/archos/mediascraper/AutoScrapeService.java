@@ -603,7 +603,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                     });
                     if (totalNumberOfFilesScraped > 0) TraktService.onNewVideo(AutoScrapeService.this); // should be done only at the end to not resync in loop
                     log.debug("startScraping: call stopSelf");
-                    stopSelf();
+                    nm.cancel(NOTIFICATION_ID);
                 }
             };
             mThread.start();
