@@ -121,7 +121,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
     private static final String notifChannelName = "NetworkScannerServiceVideo";
     private static final String notifChannelDescr = "NetworkScannerServiceVideo";
 
-    private static volatile boolean isForeground = false;
+    private static volatile boolean isForeground = true;
     private Thread mScanThread;
     private Thread mRemoveFilesThread;
 
