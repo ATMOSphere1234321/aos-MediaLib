@@ -90,7 +90,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
     private final static boolean SKIP_THUMBNAILS = false;
 
-    private static volatile boolean isForeground = false;
+    private static volatile boolean isForeground = true;
 
     private DbHolder mDbHolder;
     private Handler mThumbHandler;

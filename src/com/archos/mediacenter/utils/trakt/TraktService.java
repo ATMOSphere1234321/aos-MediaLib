@@ -124,7 +124,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
     private static final long TRAKT_SYNC_DELAY = 30; // in sec
 
-    private static volatile boolean isForeground = false;
+    private static volatile boolean isForeground = true;
 
     private NetworkState networkState = null;
     private PropertyChangeListener propertyChangeListener = null;

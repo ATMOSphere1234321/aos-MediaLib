@@ -61,7 +61,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     private static final String notifChannelName = "NfoExportService";
     private static final String notifChannelDescr = "NfoExportService";
 
-    private static volatile boolean isForeground = false;
+    private static volatile boolean isForeground = true;
 
     /**
      * simple guard against multiple tasks of the same directory

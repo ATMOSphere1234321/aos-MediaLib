@@ -50,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RemoteStateService extends IntentService implements UpnpServiceManager.Listener, DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(RemoteStateService.class);
 
-    private static volatile boolean isForeground = false;
+    private static volatile boolean isForeground = true;
 
     private static final Uri NOTIFY_URI = VideoStore.ALL_CONTENT_URI;
     private static final Uri SERVER_URI = VideoStore.SmbServer.getContentUri();

@@ -51,7 +51,7 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
 
     private static final Logger log = LoggerFactory.getLogger(NetworkAutoRefresh.class);
 
-    private static volatile boolean isForeground = false;
+    private static volatile boolean isForeground = true;
     private static Application mApplication;
 
     public static final String ACTION_RESCAN_INDEXED_FOLDERS = "com.archos.mediaprovider.video.NetworkAutoRefresh";
