@@ -389,7 +389,7 @@ public class NfoWriter {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("exportInternal: caught exception for uri {}", video, e);
         }
 
     }

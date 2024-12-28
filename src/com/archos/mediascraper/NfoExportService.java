@@ -30,8 +30,6 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
-import android.util.Log;
-
 import com.archos.filecorelibrary.MetaFile2;
 import com.archos.filecorelibrary.MetaFile2Factory;
 import com.archos.medialib.R;
@@ -39,12 +37,15 @@ import com.archos.mediaprovider.video.VideoStore;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
 import com.archos.mediaprovider.video.VideoStore.Video.VideoColumns;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NfoExportService extends IntentService implements DefaultLifecycleObserver {
+    private static final Logger log = LoggerFactory.getLogger(NfoExportService.class);
     private static final String TAG = "NfoExportService";
-    private final static boolean DBG = false;
 
     private static final String INTENT_EXPORT_FILE = "archos.mediascraper.intent.action.EXPORT_FILE";
     private static final String INTENT_EXPORT_ALL = "archos.mediascraper.intent.action.EXPORT_ALL";
@@ -111,14 +112,14 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
 
     public NfoExportService() {
         super(TAG);
-        if (DBG) Log.d(TAG, "NfoExportService");
+        log.debug("NfoExportService");
         setIntentRedelivery(true);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        if (DBG) Log.d(TAG, "onCreate");
+        log.debug("onCreate");
 
         // need to do that early to avoid ANR on Android 26+
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -172,7 +173,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     }
 
     private void exportAll() {
-        if (DBG) Log.d(TAG, "exportAll");
+        log.debug("exportAll");
         nb.setContentText(getString(R.string.nfo_export_exporting_all));
         nm.notify(NOTIFICATION_ID, nb.build());
         handleCursor(getAllCursor());
@@ -181,7 +182,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     }
 
     private void exportFile(Uri data) {
-        if (DBG) Log.d(TAG, "exportFile: " + data.getPath());
+        log.debug("exportFile: " + data.getPath());
         MetaFile2 file = null;
         try {
             file = MetaFile2Factory.getMetaFileForUrl(data);
@@ -215,7 +216,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
                         tags = TagsFactory.buildEpisodeTags(this, id);
                         break;
                     default:
-                        Log.w(TAG, "can't export file of type: " + type);
+                        log.warn("can't export file of type: {}", type);
                         break;
                 }
                 if (tags != null) {
@@ -263,7 +264,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     @Override
     public void onStop(LifecycleOwner owner) {
         // App in background
-        if (DBG) Log.d(TAG, "onStop: LifecycleOwner app in background, stopSelf");
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
         cleanup();
         stopSelf();
     }
@@ -271,7 +272,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     @Override
     public void onStart(LifecycleOwner owner) {
         // App in foreground
-        if (DBG) Log.d(TAG, "onStart: LifecycleOwner app in foreground");
+        log.debug("onStart: LifecycleOwner app in foreground");
         isForeground = true;
     }
 
@@ -285,7 +286,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
 
     @Override
     public void onDestroy() {
-        if (DBG) Log.d(TAG, "onDestroy()");
+        log.debug("onDestroy()");
         cleanup();
         super.onDestroy();
     }
