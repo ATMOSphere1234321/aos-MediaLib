@@ -58,12 +58,15 @@ public class SmbProxy extends Proxy{
             try {
                 file = MetaFile2Factory.getMetaFileForUrl(mUri);
             } catch (Exception e) {
-                e.printStackTrace();
+                // this is not really an error
+                log.trace("start: error getting metafile for url {}", mUri, e);
             }
-            if(file != null)
+            if(file != null) {
                 mStream = new StreamOverHttp(file, mimeType);
-            else
-                mStream = new StreamOverHttp(mUri, mimeType);
+            } else {
+                // sftp at least requires encodedUri
+                mStream = new StreamOverHttp(encodedUri, mimeType);
+            }
         } catch (IOException e) {
             return null;
         }
@@ -103,7 +106,6 @@ public class SmbProxy extends Proxy{
     }
 
     public int doesCurrentFileExists() {
-
         return mStream.doesCurrentFileExists();
     }
 }
