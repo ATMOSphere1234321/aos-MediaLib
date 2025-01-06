@@ -267,8 +267,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                     } while (index < numberOfRows && isForeground && !Thread.currentThread().isInterrupted());
                     sIsScraping = false;
                     cursor.close();
-                    log.debug("startExporting: call stopSelf");
-                    stopSelf();
+                    //log.debug("startExporting: call stopSelf");
+                    //stopSelf();
                 }
             };
             mExportingThread.start();
@@ -286,6 +286,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
      * @param context
      */
     public static void registerObserver(final Context context) {
+        log.debug("registerObserver");
         final Context appContext = context.getApplicationContext();
         appContext.getContentResolver().registerContentObserver(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, false, new ContentObserver(null) {
             @Override
@@ -602,7 +603,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                         }
                     });
                     if (totalNumberOfFilesScraped > 0) TraktService.onNewVideo(AutoScrapeService.this); // should be done only at the end to not resync in loop
-                    log.debug("startScraping: call stopSelf");
                     nm.cancel(NOTIFICATION_ID);
                 }
             };
