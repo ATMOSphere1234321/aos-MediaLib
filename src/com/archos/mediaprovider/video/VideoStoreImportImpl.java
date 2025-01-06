@@ -569,6 +569,9 @@ public class VideoStoreImportImpl {
             "format",
             FileColumns.PARENT
     };
+
+    // Note: adb pushed files are not visible by on an onchange because _size=NULL to get the right size, cold boot or trigger a mediascan after adb push...
+
     private final static String[] FILES_PROJECTION_BP = new String[]{
             BaseColumns._ID,
             MediaColumnsDATA,

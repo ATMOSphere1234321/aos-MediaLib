@@ -224,7 +224,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
     /** whether it's ok do do an import now, will mark db dirty if not */
     protected static boolean importOk() {
-        return ImportState.VIDEO.isDirty();
+        return ! ImportState.VIDEO.isDirty();
     }
 
     @Override
@@ -352,7 +352,6 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         log.debug("handleMessage:" + msg + " what:" + msg.what + " startid:" + msg.arg1);
         switch (msg.what) {
             case MESSAGE_KILL:
-                log.debug("handleMessage: MESSAGE_KILL: stopSelf");
                 if (ImportState.VIDEO.isInitialImport()) ImportState.VIDEO.setState(State.IDLE);
                 // this service used to be created through bind. So it couldn't be killed with stopself unless it was unbind
                 // (which wasn't done). To have the same behavior, do not stop service for now
@@ -429,6 +428,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         // this will also flush delete_files and vob_insert buffer tables
         processDeleteFileAndVobCallback();
         ImportState.VIDEO.setDirty(false);
+        log.debug("doImport: not dirty anymore");
         // notify all that we have new stuff
         Intent intent = new Intent(ArchosMediaIntent.ACTION_VIDEO_SCANNER_SCAN_FINISHED, null);
         intent.setPackage(ArchosUtils.getGlobalContext().getPackageName());
@@ -597,9 +597,12 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             // to avoid sending message to dead thread because mHandlerThread is no more, need to relaunch the service so that it is recreated in onCreate
             // happens really often
             if (importOk() && mHandler != null) {
+                log.debug("onChange: triggering VIDEO_SCANNER_IMPORT_INCR");
                 removeAllMessages(mHandler);
                 Message msg = mHandler.obtainMessage(MESSAGE_IMPORT_INCR, DONT_KILL_SELF, 0);
                 mHandler.sendMessageDelayed(msg, 1000);
+            } else {
+                log.debug("onChange: not triggering VIDEO_SCANNER_IMPORT_INCR, mHandler is " + (mHandler == null ? "null" : "not null"));
             }
             /*
             // happens really often
@@ -644,6 +647,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     }
 
     private void cleanup() {
+        log.debug("cleanup");
         // Stop the handler thread
         if (mHandlerThread != null) {
             mHandlerThread.quit();
@@ -653,7 +657,6 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         if (mImporter != null) {
             mImporter.interruptImport();
             mImporter.destroy();
-            mImporter = null;
         }
         // Unregister the ContentObserver
         if (mContentObserver != null) {
