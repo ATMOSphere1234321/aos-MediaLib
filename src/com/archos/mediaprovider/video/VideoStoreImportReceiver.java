@@ -19,6 +19,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.ProcessLifecycleOwner;
+
 import com.archos.environment.ArchosUtils;
 
 import io.sentry.SentryLevel;
@@ -41,6 +44,11 @@ public class VideoStoreImportReceiver extends BroadcastReceiver {
         if (DBG) Log.d(TAG, "onReceive:" + intent);
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportReceiver.onReceive", "start NetworkScannerServiceVideo and VideoStoreImportService via intent if intent supported");
         // start network scan / removal service
+        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+            // do not start services if app is in background
+            if (DBG) Log.d(TAG, "onReceive: app is in background, do not start services");
+            return;
+        }
         NetworkScannerServiceVideo.startIfHandles(context, intent);
         // in addition and all other cases inform import service about the event but only if this is something we handle
         VideoStoreImportService.startIfHandles(context, intent);

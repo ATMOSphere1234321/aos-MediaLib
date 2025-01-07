@@ -497,7 +497,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         // note: seems that the delete is performed not as a table trigger anymore but elsewhere
         // break down the scan in batch of WINDOW_SIZE in order to avoid SQLiteBlobTooBigException: Row too big to fit into CursorWindow crash
         // note that the db is being modified during import
-        while (true && isForeground) {
+        while (isForeground) {
             try {
                 c = db.rawQuery("SELECT * FROM delete_files ORDER BY " + BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE, null);
                 cCount = c.getCount();
@@ -535,7 +535,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
         // break down the scan in batch of WINDOW_SIZE in order to avoid SQLiteBlobTooBigException: Row too big to fit into CursorWindow crash
         // note that the db is being modified during import
-        while (true && isForeground) {
+        while (isForeground) {
             try {
                 c = db.rawQuery("SELECT * FROM vob_insert ORDER BY " + BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE, null);
                 cCount = c.getCount();

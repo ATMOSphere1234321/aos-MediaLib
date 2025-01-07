@@ -32,6 +32,7 @@ import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
@@ -185,6 +186,10 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if(! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+            log.debug("onStartCommand: app is in background, do not start services");
+            return START_NOT_STICKY;
+        }
         super.onStartCommand(intent, flags, startId);
         log.debug("onStartCommand");
         if (log.isDebugEnabled() && intent.getAction()==null) log.debug("onStartCommand: action is nul!!!");
@@ -412,8 +417,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                 // for now there is no error and file is not scraped
                                 notScraped = true;
                                 noScrapeError = true;
-                                log.trace("startScraping processing scrapUri " + scrapUri + ", with ID " + ID
-                                        + ", number of remaining files to be processed: " + sTotalNumberOfFilesRemainingToProcess);
+                                log.trace("startScraping processing scrapUri {}, with ID {}, number of remaining files to be processed: {}", scrapUri, ID, sTotalNumberOfFilesRemainingToProcess);
                                 if (sTotalNumberOfFilesRemainingToProcess > 0)
                                     nm.notify(NOTIFICATION_ID, nb.setContentText(getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess).build());
 
