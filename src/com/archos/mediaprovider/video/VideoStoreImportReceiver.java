@@ -44,7 +44,7 @@ public class VideoStoreImportReceiver extends BroadcastReceiver {
         if (DBG) Log.d(TAG, "onReceive:" + intent);
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportReceiver.onReceive", "start NetworkScannerServiceVideo and VideoStoreImportService via intent if intent supported");
         // start network scan / removal service
-        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
             // do not start services if app is in background
             if (DBG) Log.d(TAG, "onReceive: app is in background, do not start services");
             return;

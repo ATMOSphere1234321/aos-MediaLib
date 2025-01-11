@@ -186,7 +186,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if(! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+        if(! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
             log.debug("onStartCommand: app is in background, do not start services");
             return START_NOT_STICKY;
         }
