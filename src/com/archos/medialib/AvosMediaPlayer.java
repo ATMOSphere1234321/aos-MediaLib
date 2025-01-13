@@ -314,24 +314,27 @@ public class AvosMediaPlayer implements IMediaPlayer {
     }
 
     private native void nativeRelease();
-    public void release() {
-        stayAwake(false);
-        updateSurfaceScreenOn();
-        mOnPreparedListener = null;
-        mOnCompletionListener = null;
-        mOnInfoListener = null;
-        mOnErrorListener = null;
-        mOnBufferingUpdateListener = null;
-        mOnRelativePositionUpdateListener = null;
-        mOnSeekCompleteListener = null;
-        mOnVideoSizeChangedListener = null;
-        mOnNextTrackListener = null;
-        mOnSubtitleListener = null;
-        nativeRelease();
-        if (mSmbProxy != null) {
-            mSmbProxy.stop();
-            mSmbProxy = null;
-        }
+
+    public synchronized void release() {
+        new Thread(() -> {
+            stayAwake(false);
+            updateSurfaceScreenOn();
+            mOnPreparedListener = null;
+            mOnCompletionListener = null;
+            mOnInfoListener = null;
+            mOnErrorListener = null;
+            mOnBufferingUpdateListener = null;
+            mOnRelativePositionUpdateListener = null;
+            mOnSeekCompleteListener = null;
+            mOnVideoSizeChangedListener = null;
+            mOnNextTrackListener = null;
+            mOnSubtitleListener = null;
+            nativeRelease();
+            if (mSmbProxy != null) {
+                mSmbProxy.stop();
+                mSmbProxy = null;
+            }
+        }).start();
     }
 
     public native void prepareAsync() throws IllegalStateException;
@@ -345,9 +348,12 @@ public class AvosMediaPlayer implements IMediaPlayer {
     }
 
     private native void nativeStop() throws IllegalStateException;
-    public void stop() throws IllegalStateException {
-        stayAwake(false);
-        nativeStop();
+
+    public synchronized void stop() throws IllegalStateException {
+        new Thread(() -> {
+            stayAwake(false);
+            nativeStop();
+        }).start();
     }
 
     private native void nativePause() throws IllegalStateException;
