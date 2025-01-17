@@ -421,7 +421,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 wifiLock = wifiManager.createWifiLock(WIFI_MODE_FULL_HIGH_PERF, "ArchosNetworkIndexer");
 
             try {
-                if (!wifiLock.isHeld()) {  // Check if the lock is already held
+                if (wifiLock != null && !wifiLock.isHeld()) {  // Check if the lock is already held
                     wifiLock.acquire();
                 }
                 // send out a sticky broadcast telling the world that we started scanning
@@ -569,7 +569,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         public boolean onDirectory(MetaFile2 directory) {
             // hidden directories are not scanned
             if (ArchosMediaFile.isHiddenFile(directory)) {
-                log.debug("skipping " + directory + ", .hidden!");
+                log.debug("skipping " + (directory != null ? directory.getName() : "null") + ", .hidden!");
                 return false;
             }
 
