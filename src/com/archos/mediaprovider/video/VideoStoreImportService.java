@@ -116,7 +116,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     public static boolean startIfHandles(Context context, Intent broadcast) {
         String action = broadcast.getAction();
         log.debug("startIfHandles: action {}, data {}, extra {}", action, broadcast.getData(), broadcast.getAction());
-        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
+        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
             log.debug("startIfHandles: not in foreground, do nothing");
             return false;
         }
@@ -316,7 +316,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     public static void startService(Context context) {
         // this one is called only by VideoProvider at start or when app turns background->foreground
         log.debug("startService");
-        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) return;
+        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
         mContext = context;
         Intent intent = new Intent(context, VideoStoreImportService.class);
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in foreground calling startService");
