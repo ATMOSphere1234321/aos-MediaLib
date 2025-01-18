@@ -238,9 +238,9 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             removeAllMessages(mHandler);
             Message m;
             if (sActive) { // not first start
-                log.debug("onStartCommand: intent == null || intent.getAction() == null, sActive == true, do MESSAGE_IMPORT_FULL");
-                ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "intent null, sActive true do MESSAGE_IMPORT_FULL");
-                m = mHandler.obtainMessage(MESSAGE_IMPORT_FULL, DONT_KILL_SELF, 0);
+                log.debug("onStartCommand: intent == null || intent.getAction() == null, sActive == true, do MESSAGE_IMPORT_INCR");
+                ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "intent null, sActive true do MESSAGE_IMPORT_INCR");
+                m = mHandler.obtainMessage(MESSAGE_IMPORT_INCR, DONT_KILL_SELF, 0);
                 ImportState.VIDEO.setState(State.REGULAR_IMPORT);
             } else {
                 // do a full import here to make sure that we have initial data
