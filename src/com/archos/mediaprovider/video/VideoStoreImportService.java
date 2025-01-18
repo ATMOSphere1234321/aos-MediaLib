@@ -114,13 +114,13 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     }
 
     public static boolean startIfHandles(Context context, Intent broadcast) {
-        log.debug("startIfHandles");
+        String action = broadcast.getAction();
+        log.debug("startIfHandles: action {}, data {}, extra {}", action, broadcast.getData(), broadcast.getAction());
         if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
             log.debug("startIfHandles: not in foreground, do nothing");
             return false;
         }
         mContext = context;
-        String action = broadcast.getAction();
         if (Intent.ACTION_MEDIA_SCANNER_FINISHED.equals(action)
                 || ArchosMediaIntent.ACTION_VIDEO_SCANNER_STORAGE_PERMISSION_GRANTED.equals(action)
                 || Intent.ACTION_MEDIA_SCANNER_STARTED.equals(action)
@@ -140,7 +140,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             context.startService(serviceIntent);
             return true;
         }
-        log.debug("startIfHandles is false: do nothing with action " + action);
+        log.debug("startIfHandles is false: do nothing");
         return false;
     }
 
