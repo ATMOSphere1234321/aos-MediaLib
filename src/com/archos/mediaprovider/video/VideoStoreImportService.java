@@ -316,7 +316,8 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     public static void startService(Context context) {
         // this one is called only by VideoProvider at start or when app turns background->foreground
         log.debug("startService");
-        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) return;
+        // STARTED required instead of RESUMED because we need to start the service even if the app is in background otherwise scan of hdd does not work cf. #1374
+        if (! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
         mContext = context;
         Intent intent = new Intent(context, VideoStoreImportService.class);
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in foreground calling startService");
