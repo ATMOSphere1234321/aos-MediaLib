@@ -15,14 +15,14 @@
 
 package com.archos.mediaprovider.video;
 
-import android.app.IntentService;
-
+import android.app.Service;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.IBinder;
 import android.provider.BaseColumns;
 import android.util.Pair;
 
@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** handles visibility updates of smb://server/share type servers in the database */
-public class RemoteStateService extends IntentService implements UpnpServiceManager.Listener, DefaultLifecycleObserver {
+public class RemoteStateService extends Service implements UpnpServiceManager.Listener, DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(RemoteStateService.class);
 
     private static volatile boolean isForeground = true;
@@ -82,12 +82,6 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     private boolean mUpnpDiscoveryStarted;
     private boolean mServerDbUpdated;
 
-    public RemoteStateService() {
-        super(RemoteStateService.class.getSimpleName());
-        log.debug("SmbStateService CTOR");
-        setIntentRedelivery(true);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -108,16 +102,16 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     }
 
     @Override
-    protected void onHandleIntent(Intent intent) {
-        log.debug("onHandleIntent " + intent);
-        // prevent to be executed if app is in background
-        if (!isForeground) return;
-        if (ACTION_CHECK_SMB.equals(intent.getAction())) {
-            log.debug("onHandleIntent: app is not in background, updating networkstate");
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        log.debug("onStartCommand: " + intent);
+        if (!isForeground) return START_NOT_STICKY; // prevent to be executed if app is in background
+        if (intent != null && ACTION_CHECK_SMB.equals(intent.getAction())) {
             NetworkState state = NetworkState.instance(this);
             state.updateFrom();
             handleDb(this, state.isConnected(), state.hasLocalConnection());
         }
+        // Keep the service running
+        return START_STICKY;
     }
 
     /** use to issue a check of the smb:// state */
@@ -156,8 +150,9 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
                     final long id = c.getLong(COLUMN_ID);
                     final String server = c.getString(COLUMN_DATA);
                     final int active = c.getInt(COLUMN_ACTIVE);
+                    log.debug("handleDb: server: " + server + " active: " + active);
                     if(server.startsWith("sftp")||server.startsWith("ftp")||server.startsWith("webdav")||server.startsWith("sshj")) { //for distant folders, we don't check existence (for now)
-                        log.debug("ftp server is assumed to exist: " + server);
+                        log.debug("handleDb: ftp server is assumed to exist: " + server);
                         if (updateServerDb(id, cr, active, 1, now))
                             mServerDbUpdated = true;
                     } else if(!server.startsWith("upnp")) { // SMB goes there even if on cellular only
@@ -178,17 +173,17 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
                                 @Override
                                 public void run() {
                                     if (serverFile.exists()) {
-                                        log.debug("server exists: " + server);
+                                        log.debug("handleDb: server exists: " + server);
                                         if (updateServerDb(id, cr, active, 1, now))
                                             mServerDbUpdated = true;
                                     } else {
                                         String smbDiscoveryInfo = SambaDiscovery.getIpFromShareName(serverUri.getHost());
                                         if (smbDiscoveryInfo == null) {
-                                            log.debug("server does not exist: " + server);
+                                            log.debug("handleDb: server does not exist: " + server);
                                             if (updateServerDb(id, cr, active, 0, now))
                                                 mServerDbUpdated = true;
                                         } else {
-                                            log.debug("server exists in SambaDiscovery, not jcifs-ng: " + server);
+                                            log.debug("handleDb: server exists in SambaDiscovery, not jcifs-ng: " + server);
                                             if (updateServerDb(id, cr, active, 1, now))
                                                 mServerDbUpdated = true;
                                         }
@@ -196,7 +191,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
                                 }
                             }.start();
                         } else {
-                            log.debug("no local connectivity setting all smb servers inactive");
+                            log.debug("handleDb: no local connectivity setting all smb servers inactive");
                             setLocalServersInactive(context, cr);
                         }
                     } else if(server.startsWith("upnp")) {
@@ -205,25 +200,31 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
                 }
                 if(mUpnpId != null && !mUpnpId.isEmpty() &&hasLocalConnection){
                     if(!mUpnpDiscoveryStarted) {
+                        log.debug("handleDb: start upnp discovery");
                         //we start upnp discovery but we don't want to add the listener twice
                         UpnpServiceManager.startServiceIfNeeded(context).addListener(this);
                         mUpnpDiscoveryStarted=true;
+                    } else {
+                        log.debug("handleDb: upnp discovery already started");
                     }
                     onDeviceListUpdate(new ArrayList<Device>(UpnpServiceManager.startServiceIfNeeded(context).getDevices()));
+                } else {
+                    log.debug("handleDb: no upnp server listed, no need to launch upnp discovery to get state information");
                 }
                 c.close();
                 if (mServerDbUpdated) {
                     // notify about a change in the db
                     cr.notifyChange(NOTIFY_URI, null);
                 }
-            } else log.debug("server query returned NULL");
+            } else log.debug("handleDb: server query returned NULL");
         } else {
-            log.debug("no connectivity setting all smb servers inactive");
+            log.debug("handleDb: no connectivity setting all smb servers inactive");
             setAllServersInactive(context, cr);
         }
     }
 
     protected final static void setAllServersInactive(Context context, ContentResolver contentResolver) {
+        log.debug("setAllServersInactive");
         // no more servers.
         ContentValues cv = new ContentValues(1);
         cv.put(VideoStore.SmbServer.SmbServerColumns.ACTIVE, "0");
@@ -234,6 +235,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     }
 
     protected final static void setLocalServersInactive(Context context, ContentResolver contentResolver) {
+        log.debug("setLocalServersInactive");
         // no more local (smb+upnp) servers.
         ContentValues cv = new ContentValues(1);
         cv.put(VideoStore.SmbServer.SmbServerColumns.ACTIVE, "0");
@@ -310,5 +312,10 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     public void onStart(LifecycleOwner owner) {
         log.debug("onStart: LifecycleOwner app in foreground");
         isForeground = true;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null; // Not a bound service
     }
 }
