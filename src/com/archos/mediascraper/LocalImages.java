@@ -363,7 +363,7 @@ public class LocalImages {
             return null;
 
         Uri result = null;
-        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoJpgAppPublicDir(video));
+        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoAppPublicDir(video));
         String nameNoExt =  FileUtils.getFileNameWithoutExtension(video);
 
         if (parent != null && nameNoExt != null) {
@@ -393,7 +393,7 @@ public class LocalImages {
             return null;
 
         Uri result = null;
-        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoJpgAppPublicDir(video));
+        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoAppPublicDir(video));
         String nameNoExt =  FileUtils.getFileNameWithoutExtension(video);
 
         if (parent != null && nameNoExt != null) {
@@ -423,7 +423,7 @@ public class LocalImages {
             return null;
 
         Uri result = null;
-        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoJpgAppPublicDir(video));
+        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoAppPublicDir(video));
         String nameNoExt =  FileUtils.getFileNameWithoutExtension(video);
 
         if (parent != null && nameNoExt != null) {
@@ -453,7 +453,7 @@ public class LocalImages {
             return null;
 
         Uri result = null;
-        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoJpgAppPublicDir(video));
+        Uri parent = FileUtils.getParentUrl(FileUtils.relocateNfoAppPublicDir(video));
         String nameNoExt =  FileUtils.getFileNameWithoutExtension(video);
 
         if (parent != null && nameNoExt != null) {
