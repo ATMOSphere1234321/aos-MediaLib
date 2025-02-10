@@ -22,18 +22,24 @@ import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
+import android.os.Looper;
+import android.os.Message;
 import android.widget.Toast;
 
 import com.archos.environment.ArchosUtils;
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.ref.WeakReference;
+
 public class MediaThumbnailService extends Service {
 
-    private static boolean sFirst = true;
-    private static boolean DBG = false;
+    private static final Logger log = LoggerFactory.getLogger(MediaThumbnailService.class);
 
+    private static boolean sFirst = true;
 
     static class ServiceStub extends IMediaThumbnailService.Stub {
         MediaThumbnailService mService;
@@ -55,26 +61,39 @@ public class MediaThumbnailService extends Service {
 
     private final IBinder mBinder = new ServiceStub(this);
 
-    private final Handler mHandler = new Handler() {
-        public void handleMessage(android.os.Message msg) {
-            if (msg.what == TIMEOUT_MSG) {
-                Runtime.getRuntime().exit(-1);
+    private static class ThumbnailHandler extends Handler {
+        private final WeakReference<MediaThumbnailService> mServiceRef;
+
+        ThumbnailHandler(MediaThumbnailService service) {
+            super(Looper.getMainLooper());
+            mServiceRef = new WeakReference<>(service);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MediaThumbnailService service = mServiceRef.get();
+            if (service != null) {
+                if (msg.what == TIMEOUT_MSG) {
+                    Runtime.getRuntime().exit(-1);
+                }
             }
-        };
-    };
+        }
+    }
+
+    private Handler mHandler = new ThumbnailHandler(this);
 
     private static final Object sLock = new Object();
     
     public static IMediaThumbnailService sMediaThumbnailService = null;
 
-    static private ServiceConnection mServiceConnection = new ServiceConnection() {
+    static private final ServiceConnection mServiceConnection = new ServiceConnection() {
         public void onServiceDisconnected(ComponentName name) {
-            if (DBG) Log.d(TAG, "onServiceDisconnected");
+            log.debug("onServiceDisconnected");
             sMediaThumbnailService = null;
         }
         
         public void onServiceConnected(ComponentName name, IBinder service) {
-            if (DBG) Log.d(TAG, "onServiceConnected: " + name);
+            log.debug("onServiceConnected: {}", name);
             synchronized (sLock) {
                 sMediaThumbnailService = IMediaThumbnailService.Stub.asInterface(service);
                 sLock.notifyAll();
@@ -103,24 +122,39 @@ public class MediaThumbnailService extends Service {
             bind(ctx);
             if (sMediaThumbnailService == null) {
                 try {
-                    if (DBG) Log.d(TAG, "sMediaThumbnailService == null");
+                    log.debug("sMediaThumbnailService == null");
                     sLock.wait(3000);
                     if(sMediaThumbnailService == null&&sFirst) {
                         Toast.makeText(ArchosUtils.getGlobalContext(), "timeout: sMediaThumbnailService == null", Toast.LENGTH_LONG).show();
                         sFirst = false;
                     }
-                    if (DBG) Log.d(TAG, "bind_sync end of wait : sMediaThumbnailService == null "+(sMediaThumbnailService == null));
+                    log.debug("bind_sync end of wait : sMediaThumbnailService == null "+(sMediaThumbnailService == null));
 
                 } catch (InterruptedException e) {
-                    Log.w(TAG, "bind_sync interrupted");
                     if(sFirst)
-                    Toast.makeText(ArchosUtils.getGlobalContext(), "bind_sync interrupted", Toast.LENGTH_LONG).show();
+                        Toast.makeText(ArchosUtils.getGlobalContext(), "bind_sync interrupted", Toast.LENGTH_LONG).show();
                     sFirst = false;
-                    e.printStackTrace();
+                    log.error("bind_sync interrupted", e);
                 }
             }
             return sMediaThumbnailService;
         }
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        log.debug("onCreate");
+    }
+
+    @Override
+    public void onDestroy() {
+        if (mHandler != null) {
+            mHandler.removeCallbacksAndMessages(null); // Clear any pending messages from the handler
+        }
+        // Unbind from the service connection if it's still bound
+        release(this);
+        super.onDestroy();
     }
 
     @Override

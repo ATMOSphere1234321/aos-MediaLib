@@ -14,40 +14,118 @@
 
 package com.archos.mediascraper.themoviedb3;
 
-import android.util.Log;
 
+import com.archos.mediascraper.ScraperImage;
 import com.archos.mediascraper.SearchResult;
 import com.uwetrottmann.tmdb2.entities.BaseMovie;
 import com.uwetrottmann.tmdb2.entities.MovieResultsPage;
-import java.util.LinkedList;
+
+import org.apache.commons.text.similarity.LevenshteinDistance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import retrofit2.Response;
 
 public class SearchMovieParser2 {
+    private static final Logger log = LoggerFactory.getLogger(SearchMovieParser2.class);
 
-    private static final String TAG = SearchMovie2.class.getSimpleName();
-    private static final boolean DBG = false;
+    private final static boolean SORT_POPULARITY = true; // used only if year specified
+    private final static boolean SORT_YEAR = true; // used only if no year specified
 
-    public static List<SearchResult> getResult(Response<MovieResultsPage> response, Integer limit) {
-        List<SearchResult> results = new LinkedList<SearchResult>();
-        int i = 0;
-        for (BaseMovie movie : response.body().results) {
-            if (i < limit) {
-                SearchResult result = new SearchResult();
-                result.setMovie();
-                if (movie.id != null) result.setId(movie.id);
-                if (movie.original_title != null) result.setTitle(movie.original_title);
-                if (DBG) Log.d(TAG, "getResult: taking into account " + movie.original_title);
-                // add backdrop and poster here already if it exists because MovieIdImages can return empty results...
-                if (DBG) Log.d(TAG, "getResult: poster path " + movie.poster_path);
-                if (movie.poster_path != null) result.setPosterPath(movie.poster_path);
-                if (DBG) Log.d(TAG, "getResult: backdrop path " + movie.backdrop_path);
-                if (movie.backdrop_path != null) result.setBackdropPath(movie.backdrop_path);
-                results.add(result);
-            }
-            i++;
-        }
+    private final static LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
+
+    public static List<SearchResult> getResult(Response<MovieResultsPage> response, String movieName, String language, String year, Integer maxItems) {
+        List<SearchResult> results;
+        SearchParserResult searchMovieParserResult = new SearchParserResult();
+        if (response != null)
+            searchMovieParserResult = getSearchMovieParserResult(response, movieName, language, year);
+        results = searchMovieParserResult.getResults(maxItems);
         return results;
+    }
+
+    private static SearchParserResult getSearchMovieParserResult(Response<MovieResultsPage> response, String movieName, String language, String year) {
+        SearchParserResult searchMovieParserResult = new SearchParserResult();
+        int levenshteinDistanceTitle, levenshteinDistanceOriginalTitle;
+        log.debug("getSearchMovieParserResult: examining response of " + response.body().total_results + " entries in " + language + ", for " + movieName + " and specific year " + year);
+        // sort first movies by popularity so that distinction between levenstein distance is operated on popularity
+        List<BaseMovie> resultsMovie = new ArrayList<>(response.body().results);
+        if (resultsMovie == null) {
+            log.debug("getSearchMovieParserResult: no results");
+            return searchMovieParserResult;
+        }
+
+        boolean isReleaseDateKnown = false;
+        for (BaseMovie movie : resultsMovie) {
+            log.debug("getSearchMovieParserResult: " + movie.original_title + " releaseDate " + ((movie.release_date != null) ? movie.release_date.toString() : null));
+
+            SearchResult result = new SearchResult();
+            result.setMovie();
+            if (movie.id != null) result.setId(movie.id);
+            if (movie.title != null) result.setTitle(movie.title);
+            log.debug("getSearchMovieParserResult: taking into account " + movie.original_title);
+            // add backdrop and poster here already if it exists because MovieIdImages can return empty results...
+            log.debug("getSearchMovieParserResult: poster path " + movie.poster_path);
+            if (movie.poster_path != null) result.setPosterPath(movie.poster_path);
+            log.debug("getSearchMovieParserResult: backdrop path " + movie.backdrop_path);
+            if (movie.backdrop_path != null) result.setBackdropPath(movie.backdrop_path);
+            if (movie.original_title != null) result.setOriginalTitle(movie.original_title);
+            result.setYear((year != null) ? String.valueOf(year) : null);
+            result.setLanguage(language);
+            if (movie.popularity != null) {
+                result.setPopularity((float) movie.popularity.doubleValue());
+            } else {
+                result.setPopularity(null);
+            }
+            // Put in lower priority any entry that has no movie banned i.e. .*missing/movie.jpg as banner
+            isReleaseDateKnown = (movie.release_date != null);
+            String movieNameLC = movieName.toLowerCase();
+            String title = result.getTitle();
+            String originalTitle = result.getOriginalTitle();
+            levenshteinDistanceTitle = title != null ? levenshteinDistance.apply(movieNameLC, title.toLowerCase()) : Integer.MAX_VALUE;
+            levenshteinDistanceOriginalTitle = originalTitle != null ? levenshteinDistance.apply(movieNameLC, originalTitle.toLowerCase()) : Integer.MAX_VALUE;
+            result.setLevenshteinDistance(Math.min(levenshteinDistanceTitle, levenshteinDistanceOriginalTitle));
+            result.setReleaseOrFirstAiredDate(movie.release_date);
+            log.debug("getSearchMovieParserResult: between " + movieNameLC + " and " + result.getOriginalTitle().toLowerCase() + "/" + result.getTitle().toLowerCase() + " levenshteinDistanceTitle=" + levenshteinDistanceTitle + ", levenshteinDistanceOriginalTitle=" + levenshteinDistanceOriginalTitle);
+
+            if (movie.poster_path == null || movie.poster_path.endsWith("missing/series.jpg") || movie.poster_path.endsWith("missing/movie.jpg") || movie.poster_path == "") {
+                log.debug("getSearchMovieParserResult: set aside " + movie.title + " because poster missing i.e. image=" + movie.poster_path);
+                searchMovieParserResult.resultsNoPoster.add(result);
+            } else {
+                log.debug("getSearchMovieParserResult: " + movie.title + " has poster_path " + ScraperImage.TMPL + movie.poster_path);
+                result.setPosterPath(movie.poster_path);
+                if (movie.backdrop_path == null || movie.backdrop_path.endsWith("missing/series.jpg") || movie.backdrop_path.endsWith("missing/movie.jpg") || movie.backdrop_path == "") {
+                    log.debug("getSearchMovieParserResult: set aside " + movie.title + " because banner missing i.e. banner=" + movie.backdrop_path);
+                    searchMovieParserResult.resultsNoBanner.add(result);
+                } else {
+                    log.debug("getSearchMovieParserResult: " + movie.title + " has backdrop_path " + ScraperImage.TMBL + movie.backdrop_path);
+                    // TODO MARC: this generates the thumb by resizing the large image: pass the two
+                    result.setBackdropPath(movie.backdrop_path);
+                    if (! isReleaseDateKnown) {
+                        log.debug("getSearchMovieParserResult: set aside " + movie.title + " because release date is missing");
+                        searchMovieParserResult.resultsNoAirDate.add(result);
+                    } else {
+                        // get the min of the levenshtein distance between cleaned file based show name and title and original title identified
+                        searchMovieParserResult.resultsProbable.add(result);
+                    }
+                }
+            }
+        }
+        log.debug("getSearchMovieParserResult: resultsProbable=" + searchMovieParserResult.resultsProbable.toString());
+
+        // perform the levenshtein distance sort on all results
+        if (searchMovieParserResult.resultsProbable != null)
+            Collections.sort(searchMovieParserResult.resultsProbable, SearchParserResult.comparator);
+        if (searchMovieParserResult.resultsNoBanner != null)
+            Collections.sort(searchMovieParserResult.resultsNoBanner, SearchParserResult.comparator);
+        if (searchMovieParserResult.resultsNoPoster != null)
+            Collections.sort(searchMovieParserResult.resultsNoPoster, SearchParserResult.comparator);
+        if (searchMovieParserResult.resultsNoAirDate != null)
+            Collections.sort(searchMovieParserResult.resultsNoAirDate, SearchParserResult.comparator);
+        log.trace("getSearchMovieParserResult: applying Levenshtein distance resultsProbableSorted=" + searchMovieParserResult.resultsProbable.toString());
+        return searchMovieParserResult;
     }
 }

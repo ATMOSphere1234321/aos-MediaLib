@@ -103,6 +103,10 @@ public class ShowIdEpisodes {
                 if (tvSeasons != null) {
                     tvSeason = tvSeasons.get(tvEpisode.season_number);
                     if (tvSeason != null) {
+                        if (tvSeason.credits != null && tvSeason.credits.cast != null) {
+                            for (CastMember seasonStar : tvSeason.credits.cast)
+                                episodeTags.addActorIfAbsent(seasonStar.name, seasonStar.character);
+                        }
                         // note tvSeason.poster_path can be null when show has only one serie e.g. https://api.themoviedb.org/3/tv/93911/season/1?language=en&api_key=051012651ba326cf5b1e2f482342eaa2
                         if (tvSeason.poster_path != null) {
                             episodeTags.addDefaultPoster(ShowIdImagesParser.genPoster(showTags.getTitle(), tvSeason.poster_path, language, false, context));
@@ -143,10 +147,10 @@ public class ShowIdEpisodes {
                         && !language.equals("en")) { // missing overview in native language
                     if (globalEpisodes.get(tvEpisode.id) == null) { // missing: get whole serie
                         log.debug("getEpisodes: description in " + language + " missing for tvEpisode.name s" + tvEpisode.season_number + "e" + tvEpisode.episode_number + "fallback in en for the whole season");
-                        ShowIdSeasonSearchResult globalSeasonIdSearchResult = ShowIdSeasonSearch.getSeasonShowResponse(showId, tvEpisode.season_number, "en", adultScrape,tmdb);
+                        ShowIdSeasonSearchResult globalSeasonIdSearchResult = ShowIdSeasonSearch.getSeasonShowResponse(showId, tvEpisode.season_number, "en", adultScrape, tmdb);
                         // stack all episodes in en to find later the overview and name
                         if (globalSeasonIdSearchResult.status == ScrapeStatus.OKAY) {
-                            if (globalSeasonIdSearchResult.tvSeason != null) {
+                            if (globalSeasonIdSearchResult.tvSeason != null && globalSeasonIdSearchResult.tvSeason.episodes != null) {
                                 for (TvEpisode globalTvEpisode : globalSeasonIdSearchResult.tvSeason.episodes)
                                     globalEpisodes.put(globalTvEpisode.id, globalTvEpisode);
                             } else { // an error at this point is PARSER related

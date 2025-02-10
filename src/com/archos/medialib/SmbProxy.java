@@ -14,6 +14,8 @@
 
 package com.archos.medialib;
 
+import static com.archos.filecorelibrary.FileUtils.encodeUri;
+
 import android.net.Uri;
 
 import com.archos.filecorelibrary.MetaFile2;
@@ -22,38 +24,53 @@ import com.archos.filecorelibrary.MimeUtils;
 import com.archos.filecorelibrary.StreamOverHttp;
 import com.archos.mediacenter.filecoreextension.UriUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Map;
 
-import jcifs.smb.SmbFile;
-
 public class SmbProxy extends Proxy{
+
+    private static final Logger log = LoggerFactory.getLogger(SmbProxy.class);
     private StreamOverHttp mStream;
 
     protected SmbProxy(Uri uri) {
         super(uri);
     }
     public static boolean needToStream(String scheme){
-            return "smb".equalsIgnoreCase(scheme) || "ftp".equalsIgnoreCase(scheme)||"ftps".equalsIgnoreCase(scheme) || "sftp".equalsIgnoreCase(scheme) || UriUtils.isContentUri(Uri.parse(scheme+"://test"));
+            return "smb".equalsIgnoreCase(scheme) ||
+                    "ftp".equalsIgnoreCase(scheme) ||
+                    "ftps".equalsIgnoreCase(scheme) ||
+                    "sftp".equalsIgnoreCase(scheme) ||
+                    "sshj".equalsIgnoreCase(scheme) ||
+                    "webdav".equalsIgnoreCase(scheme) ||
+                    "webdavs".equalsIgnoreCase(scheme) ||
+                    "smbj".equalsIgnoreCase(scheme) ||
+                    UriUtils.isContentUri(Uri.parse(scheme+"://test"));
     }
     protected Uri start() {
         stop();
-        String mimeType = MimeUtils.guessMimeTypeFromExtension(mUri.getLastPathSegment());
+        Uri encodedUri = encodeUri(mUri);
+        String mimeType = MimeUtils.guessMimeTypeFromExtension(encodedUri.getLastPathSegment());
         MetaFile2 file = null;
         try {
             try {
                 file = MetaFile2Factory.getMetaFileForUrl(mUri);
             } catch (Exception e) {
-                e.printStackTrace();
+                // this is not really an error
+                log.trace("start: error getting metafile for url {}", mUri, e);
             }
-            if(file != null)
+            if(file != null) {
                 mStream = new StreamOverHttp(file, mimeType);
-            else
-                mStream = new StreamOverHttp(mUri, mimeType);
+            } else {
+                // sftp at least requires encodedUri
+                mStream = new StreamOverHttp(encodedUri, mimeType);
+            }
         } catch (IOException e) {
             return null;
         }
-        return mStream.getUri(file != null ? file.getName():mUri.getLastPathSegment());
+        return mStream.getUri(file != null ? file.getName():encodedUri.getLastPathSegment());
     }
     
     public void stop() {
@@ -89,7 +106,6 @@ public class SmbProxy extends Proxy{
     }
 
     public int doesCurrentFileExists() {
-
         return mStream.doesCurrentFileExists();
     }
 }

@@ -16,15 +16,12 @@ package com.archos.mediascraper;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
@@ -34,17 +31,20 @@ import android.os.Handler;
 import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
+
+import android.os.Looper;
 import android.provider.BaseColumns;
 
-import com.archos.mediacenter.utils.AppState;
 import com.archos.mediacenter.utils.trakt.TraktService;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.DeleteFileCallback;
 import com.archos.environment.NetworkState;
 import com.archos.mediaprovider.video.VideoStore;
-import com.archos.mediaprovider.video.VideoStoreInternal;
 import com.archos.mediaprovider.video.WrapperChannelManager;
 import com.archos.mediascraper.preprocess.SearchInfo;
 import com.archos.mediascraper.preprocess.SearchPreprocessor;
@@ -59,7 +59,7 @@ import java.io.IOException;
 /**
  * Created by alexandre on 20/05/15.
  */
-public class AutoScrapeService extends Service {
+public class AutoScrapeService extends Service implements DefaultLifecycleObserver {
     public static final String EXPORT_EVERYTHING = "export_everything";
     public static final String RESCAN_EVERYTHING = "rescan_everything";
     public static final String RESCAN_MOVIES = "rescan_movies";
@@ -75,7 +75,7 @@ public class AutoScrapeService extends Service {
     // window size used to split queries to db
     private final static int WINDOW_SIZE = 2000;
 
-    static boolean sIsScraping = false;
+    private static volatile boolean sIsScraping = false;
     static int sNumberOfFilesRemainingToProcess = 0;
     static int sTotalNumberOfFilesRemainingToProcess = 0;
     static int sNumberOfFilesScraped = 0;
@@ -96,7 +96,8 @@ public class AutoScrapeService extends Service {
     private boolean restartOnNextRound = false;
     private AutoScraperBinder mBinder;
     private Thread mExportingThread;
-    private Handler mHandler;
+    private static Handler mHandler = new Handler(Looper.getMainLooper());
+
     private static Context mContext;
 
     private static final int NOTIFICATION_ID = 4;
@@ -107,6 +108,9 @@ public class AutoScrapeService extends Service {
     private static final String notifChannelDescr = "AutoScrapeService";
 
     private static Boolean scrapeOnlyMovies = false;
+
+    private volatile static boolean isForeground = true;
+    private static final String PREF_IS_SCRAPE_DIRTY = "is_scrape_dirty";
 
     /**
      * Ugly implementation based on a static variable, guessing that there is only one instance at a time (seems to be true...)
@@ -127,14 +131,28 @@ public class AutoScrapeService extends Service {
     public static void startService(Context context) {
         log.debug("startService in foreground");
         mContext = context;
-        ContextCompat.startForegroundService(context, new Intent(context, AutoScrapeService.class));
+        context.startService(new Intent(context, AutoScrapeService.class));
     }
 
-    public void stopService() {
-        log.debug("stopService: stopForeground only");
+    public void cleanup() {
+        log.debug("cleanup");
+        if (mThread != null && mThread.isAlive()) {
+            saveDirtyState(true);
+        }
         sIsScraping = false;
+        isForeground = false;
+        // Stop the scraping thread if it's running
+        if (mThread != null) {
+            mThread.interrupt();
+            mThread = null;
+        }
+        // Stop the exporting thread if it's running
+        if (mExportingThread != null) {
+            mExportingThread.interrupt();
+            mExportingThread = null;
+        }
+        // Cancel the notification
         nm.cancel(NOTIFICATION_ID);
-        stopForeground(true);
     }
 
     // Used by system. Don't call
@@ -158,20 +176,22 @@ public class AutoScrapeService extends Service {
         }
         nb = new NotificationCompat.Builder(this, notifChannelId)
                 .setSmallIcon(R.drawable.stat_notify_scraper)
+                .setContentTitle(getString(R.string.scraping_in_progress))
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
-        log.debug("onCreate: startForeground");
-        startForeground(NOTIFICATION_ID, nb.build());
-
+        log.debug("onCreate: register lifecycle observer");
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
         mBinder = new AutoScraperBinder();
-        mHandler = new Handler();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if(! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+            log.debug("onStartCommand: app is in background, do not start services");
+            return START_NOT_STICKY;
+        }
         super.onStartCommand(intent, flags, startId);
-        log.debug("onStartCommand: startForeground");
-        startForeground(NOTIFICATION_ID, nb.build());
+        log.debug("onStartCommand");
         if (log.isDebugEnabled() && intent.getAction()==null) log.debug("onStartCommand: action is nul!!!");
         if (log.isDebugEnabled() && intent.getAction()!=null) log.debug("onStartCommand: action " + intent.getAction());
         if(intent!=null) {
@@ -220,7 +240,7 @@ public class AutoScrapeService extends Service {
 
                         sNumberOfFilesRemainingToProcess = window;
 
-                        while (cursor.moveToNext()
+                        while (cursor.moveToNext() && isForeground && !Thread.currentThread().isInterrupted()
                                 && PreferenceManager.getDefaultSharedPreferences(AutoScrapeService.this).getBoolean(AutoScrapeService.KEY_ENABLE_AUTO_SCRAP, true)) {
                             if (sTotalNumberOfFilesRemainingToProcess > 0)
                                 nm.notify(NOTIFICATION_ID, nb.setContentText(getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess).build());
@@ -244,16 +264,14 @@ public class AutoScrapeService extends Service {
                                 try {
                                     NfoWriter.export(fileUri, baseTags, exportContext);
                                 } catch (IOException e) {
-                                    log.error("caugth IOException: ", e);
+                                    log.error("caught IOException: ", e);
                                 }
                         }
                         index += window;
                         cursor.close();
-                    } while (index < numberOfRows);
+                    } while (index < numberOfRows && isForeground && !Thread.currentThread().isInterrupted());
                     sIsScraping = false;
                     cursor.close();
-                    log.debug("startExporting: call stopService");
-                    stopService();
                 }
             };
             mExportingThread.start();
@@ -261,9 +279,9 @@ public class AutoScrapeService extends Service {
     }
     @Override
     public void onDestroy() {
-        super.onDestroy();
         log.debug("onDestroy() " + this);
-        stopService();
+        cleanup();
+        super.onDestroy();
     }
 
     /**
@@ -271,28 +289,33 @@ public class AutoScrapeService extends Service {
      * @param context
      */
     public static void registerObserver(final Context context) {
+        log.debug("registerObserver");
         final Context appContext = context.getApplicationContext();
-        appContext.getContentResolver().registerContentObserver(VideoStore.ALL_CONTENT_URI, true, new ContentObserver(null) {
+        appContext.getContentResolver().registerContentObserver(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, false, new ContentObserver(null) {
             @Override
             public void onChange(boolean selfChange) {
-                if (PreferenceManager.getDefaultSharedPreferences(appContext).getBoolean(KEY_ENABLE_AUTO_SCRAP, true) && AppState.isForeGround()) {
-                    // only look if there is something to scrape if not yet in scrape process
+                // Check if auto scraping is enabled and the app is in the foreground
+                if (PreferenceManager.getDefaultSharedPreferences(appContext).getBoolean(KEY_ENABLE_AUTO_SCRAP, true) && isForeground) {
+                    // Check if a scraping operation is already in progress
                     if (isScraping()) {
-                        log.debug("registerObserver: already scraping, not launching service!");
+                        log.debug("registerObserver.onChange: already scraping, not launching service!");
                         return;
                     }
-                    // only launch AutoScrapeService if there is something not scraped to avoid notification popup
+                    
                     // Look for all the videos not yet processed and not located in the Camera folder
                     String[] selectionArgs = new String[]{ Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getPath() + "/Camera" + "/%" };
                     Cursor cursor = context.getContentResolver().query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, SCRAPER_ACTIVITY_COLS, WHERE_NOT_SCRAPED, selectionArgs, null);
-                    final int cursorGetCount = cursor.getCount();
-                    if (cursorGetCount > 0) {
-                        log.debug("registerObserver: onChange getting " + cursorGetCount + " videos not yet scraped, launching service.");
-                        AutoScrapeService.startService(appContext);
-                    } else {
-                        log.debug("registerObserver: onChange getting " + cursorGetCount + " videos not yet scraped -> not launching service!");
+
+                    if (cursor != null) {
+                        final int cursorGetCount = cursor.getCount();
+                        if (cursorGetCount > 0) {
+                            log.debug("registerObserver: onChange getting " + cursorGetCount + " videos not yet scraped, launching service.");
+                            AutoScrapeService.startService(appContext);
+                        } else {
+                            log.debug("registerObserver: onChange getting " + cursorGetCount + " videos not yet scraped -> not launching service!");
+                        }
+                        cursor.close();
                     }
-                    cursor.close();
                 }
             }
         });
@@ -312,16 +335,9 @@ public class AutoScrapeService extends Service {
         return mBinder;
     }
 
-
     protected void startScraping(final boolean rescrapAlreadySearched, final boolean onlyNotFound) {
-        log.debug("startScraping: " + String.valueOf(mThread==null || !mThread.isAlive()) );
+        log.debug("startScraping: {}", String.valueOf(mThread == null || !mThread.isAlive()));
         nb.setContentTitle(getString(R.string.scraping_in_progress));
-
-        Intent notificationIntent = new Intent(Intent.ACTION_MAIN);
-        notificationIntent.setClassName(this.getPackageName(), "com.archos.mediacenter.video.autoscraper.AutoScraperActivity");
-        PendingIntent contentIntent = PendingIntent.getBroadcast(this, 0, notificationIntent,
-                ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT: PendingIntent.FLAG_UPDATE_CURRENT));
-        nb.setContentIntent(contentIntent);
 
         if(mThread==null || !mThread.isAlive()) {
             mThread = new Thread() {
@@ -329,6 +345,7 @@ public class AutoScrapeService extends Service {
                 public int mNetworkOrScrapErrors; //when errors equals to number of files to scrap, stop looping.
                 boolean notScraped;
                 boolean noScrapeError;
+                int totalNumberOfFilesScraped = 0;
 
                 public void run() {
                     sIsScraping = true;
@@ -348,7 +365,7 @@ public class AutoScrapeService extends Service {
                         log.debug("startScraping: is AutoScrapeService enabled? " + isEnable(AutoScrapeService.this));
                     }
 
-                    do{
+                    do {
                         mNetworkOrScrapErrors = 0;
                         sNumberOfFilesScraped = 0;
                         sNumberOfFilesRemainingToProcess = 0;
@@ -382,13 +399,13 @@ public class AutoScrapeService extends Service {
 
                             sNumberOfFilesRemainingToProcess = window;
                             restartOnNextRound = true;
-                            while (cursor.moveToNext() && isEnable(AutoScrapeService.this)) {
+                            while (cursor.moveToNext() && isEnable(AutoScrapeService.this) && isForeground && !Thread.currentThread().isInterrupted()) {
                                 // stop if disconnected while scraping
                                 if (!NetworkState.isLocalNetworkConnected(AutoScrapeService.this) && !NetworkState.isNetworkConnected(AutoScrapeService.this)) {
                                     cursor.close();
                                     sNumberOfFilesRemainingToProcess = 0;
-                                    log.debug("startScraping disconnected from network calling stopService");
-                                    stopService();
+                                    log.debug("startScraping disconnected from network calling stopSelf");
+                                    stopSelf();
                                     return;
                                 }
 
@@ -400,8 +417,7 @@ public class AutoScrapeService extends Service {
                                 // for now there is no error and file is not scraped
                                 notScraped = true;
                                 noScrapeError = true;
-                                log.trace("startScraping processing scrapUri " + scrapUri + ", with ID " + ID
-                                        + ", number of remaining files to be processed: " + sTotalNumberOfFilesRemainingToProcess);
+                                log.trace("startScraping processing scrapUri {}, with ID {}, number of remaining files to be processed: {}", scrapUri, ID, sTotalNumberOfFilesRemainingToProcess);
                                 if (sTotalNumberOfFilesRemainingToProcess > 0)
                                     nm.notify(NOTIFICATION_ID, nb.setContentText(getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess).build());
 
@@ -428,7 +444,6 @@ public class AutoScrapeService extends Service {
                                             log.trace("startScraping: NFO tags.save ID=" + ID);
                                             tags.save(AutoScrapeService.this, ID);
                                             DeleteFileCallback.DO_NOT_DELETE.clear();
-                                            TraktService.onNewVideo(AutoScrapeService.this);
                                         } else {
                                             log.trace("startScraping: oh oh NFO ID = -1 ");
                                         }
@@ -513,7 +528,6 @@ public class AutoScrapeService extends Service {
                                         if (result.tag.getTitle() != null)
                                             log.trace("startScraping: info " + result.tag.getTitle());
 
-                                        TraktService.onNewVideo(AutoScrapeService.this);
                                         if (exportContext != null) {
                                             // also auto-export all the data
 
@@ -562,7 +576,8 @@ public class AutoScrapeService extends Service {
                             }
                             cursor.close();
                             numberOfRowsRemaining -= window;
-                        } while (numberOfRowsRemaining > 0);
+                            totalNumberOfFilesScraped+= totalNumberOfFilesScraped;
+                        } while (numberOfRowsRemaining > 0 && isForeground && !Thread.currentThread().isInterrupted());
                         if (numberOfRows == mNetworkOrScrapErrors) { //when as many errors, we assume we don't have the internet or that the scraper returns an error, do not loop
                             restartOnNextRound = false;
                             log.debug("startScraping: no internet or scraper errors, stop iterating");
@@ -580,7 +595,7 @@ public class AutoScrapeService extends Service {
                             log.debug("startScraping: new entries to scrape found most likely added during scrape process, restartOnNextRound");
                         }
                         cursor.close();
-                    } while(restartOnNextRound
+                    } while(restartOnNextRound && isForeground && !Thread.currentThread().isInterrupted()
                             &&PreferenceManager.getDefaultSharedPreferences(AutoScrapeService.this).getBoolean(AutoScrapeService.KEY_ENABLE_AUTO_SCRAP, true)); //if we had something to do, we look for new videos
                     sIsScraping = false;
                     mHandler.post(new Runnable() {
@@ -589,8 +604,8 @@ public class AutoScrapeService extends Service {
                             WrapperChannelManager.refreshChannels(AutoScrapeService.this);
                         }
                     });
-                    log.debug("startScraping: call stopService");
-                    stopService();
+                    if (totalNumberOfFilesScraped > 0) TraktService.onNewVideo(AutoScrapeService.this); // should be done only at the end to not resync in loop
+                    nm.cancel(NOTIFICATION_ID);
                 }
             };
             mThread.start();
@@ -648,4 +663,36 @@ public class AutoScrapeService extends Service {
             return getContentResolver().query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, SCRAPER_ACTIVITY_COLS, where, selectionArgs, sortOrder);
         }
     }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        cleanup();
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
+        isForeground = true;
+        if (isDirtyState()) {
+            log.debug("onStart: Rescanning everything due to dirty state");
+            // Reset the dirty flag in SharedPreferences
+            saveDirtyState(false);
+            startScraping(false, false);
+        }
+    }
+
+    private void saveDirtyState(boolean dirtyState) {
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .edit()
+                .putBoolean(PREF_IS_SCRAPE_DIRTY, dirtyState)
+                .apply();
+    }
+
+    private boolean isDirtyState() {
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PREF_IS_SCRAPE_DIRTY, false);
+    }
+
 }

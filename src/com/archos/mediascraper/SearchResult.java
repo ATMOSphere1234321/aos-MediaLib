@@ -21,6 +21,8 @@ import android.os.Parcelable;
 
 import com.archos.mediascraper.xml.BaseScraper2;
 
+import java.util.Date;
+
 public class SearchResult implements Parcelable {
     private int mType; // 0 tvshow, 1 movie
     private String mTitle;
@@ -40,6 +42,9 @@ public class SearchResult implements Parcelable {
 
     public static final int movie = 1;
     public static final int tvshow = 0;
+    private int mLevenshteinDistance;
+    private Float mPopularity;
+    private Date releaseOrFirstAiredDate;
 
     // show should not be tainted with season/episode since it is an higher entity but need to know point of request
     private int mOriginSearchSeason, mOriginSearchEpisode;
@@ -102,6 +107,13 @@ public class SearchResult implements Parcelable {
     public void setOriginSearchSeason(int season) { mOriginSearchSeason = season; }
     public int getOriginSearchEpisode() { return mOriginSearchEpisode; }
     public void setOriginSearchEpisode(int episode) { mOriginSearchEpisode = episode; }
+
+    public int getLevenshteinDistance() { return mLevenshteinDistance; }
+    public void setLevenshteinDistance(int dst) { mLevenshteinDistance = dst; }
+    public Float getPopularity() { return mPopularity; }
+    public void setPopularity(Float pop) { mPopularity = pop; }
+    public void setReleaseOrFirstAiredDate(Date date) { releaseOrFirstAiredDate =  date; }
+    public Date getReleaseOrFirstAiredDate() { return releaseOrFirstAiredDate; }
 
     public static final Parcelable.Creator<SearchResult> CREATOR = new Parcelable.Creator<SearchResult>() {
         public SearchResult createFromParcel(Parcel in) {

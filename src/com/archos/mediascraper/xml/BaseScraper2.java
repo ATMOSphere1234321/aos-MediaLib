@@ -29,7 +29,6 @@ import com.archos.mediascraper.SearchResult;
 import com.archos.mediascraper.preprocess.SearchInfo;
 import com.archos.mediascraper.preprocess.SearchPreprocessor;
 import com.archos.mediascraper.preprocess.TvShowSearchInfo;
-import com.archos.mediascraper.settings.ScraperSettings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +44,6 @@ import javax.xml.parsers.SAXParserFactory;
 
 public abstract class BaseScraper2 {
     private static final Logger log = LoggerFactory.getLogger(BaseScraper2.class);
-
-    public final static String LANGUAGES = "da|fi|nl|de|it|es|fr|pl|hu|el|tr|ru|he|ja|pt|zh|cs|sl|hr|ko|en|sv|no|vi|lt";
 
     protected final SAXParser mParser;
 
@@ -84,17 +81,6 @@ public abstract class BaseScraper2 {
      * @return the name this Scraper has
      */
     protected abstract String internalGetPreferenceName();
-
-    public final static ScraperSettings getSettings(int scraperType, Context context) {
-        switch (scraperType) {
-            case BaseTags.MOVIE:
-                return MovieScraper3.generatePreferences(context);
-            case BaseTags.TV_SHOW:
-                return ShowScraper4.generatePreferences(context);
-            default:
-                return null;
-        }
-    }
 
     /**
      * Request the detail for the first matching entry directly
@@ -163,10 +149,6 @@ public abstract class BaseScraper2 {
             ret = result.getScraper().getDetailsInternal(result, options);
         }
         return ret;
-    }
-
-    public String getLanguages() {
-        return LANGUAGES;
     }
 
     protected abstract ScrapeDetailResult getDetailsInternal(SearchResult result, Bundle options);

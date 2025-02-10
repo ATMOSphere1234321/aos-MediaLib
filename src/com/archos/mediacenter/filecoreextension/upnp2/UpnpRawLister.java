@@ -15,12 +15,11 @@
 package com.archos.mediacenter.filecoreextension.upnp2;
 
 import android.net.Uri;
-import android.util.Log;
 
+import com.archos.filecorelibrary.FileUtils;
 import com.archos.filecorelibrary.MetaFile2;
 import com.archos.filecorelibrary.RawLister;
-import com.archos.filecorelibrary.ftp.AuthenticationException;
-import com.archos.filecorelibrary.ftp.Session;
+import com.archos.filecorelibrary.AuthenticationException;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.SftpException;
 
@@ -35,6 +34,8 @@ import org.fourthline.cling.support.model.DIDLContent;
 import org.fourthline.cling.support.model.DIDLObject;
 import org.fourthline.cling.support.model.container.Container;
 import org.fourthline.cling.support.model.item.Item;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -49,7 +50,7 @@ import java.util.List;
  */
 public class UpnpRawLister extends RawLister  {
 
-    private final static String TAG = "UpnpRawLister";
+    private static final Logger log = LoggerFactory.getLogger(UpnpRawLister.class);
     private final Object mLock;
 
     /**
@@ -83,15 +84,15 @@ public class UpnpRawLister extends RawLister  {
         mUpnpServiceManager = UpnpServiceManager.getSingleton(null); //won't create, so we need to be sure it has already been created before
         mUri = uri;
         mLock = new Object();
-        Log.d(TAG, "UpnpRawLister() uri="+mUri);
-        Log.d(TAG, "UpnpRawLister() lastPath="+mUri.getLastPathSegment());
+        log.debug("UpnpRawLister() uri=" + mUri + " lastPath=" + FileUtils.getName(mUri));
         // Get Device from its hash key that is in the Uri
-        mDevice = mUpnpServiceManager.getDeviceByKey_blocking(Integer.valueOf(mUri.getHost()), 500);
+        mDevice = mUpnpServiceManager.getDeviceByKey_blocking(Integer.parseInt(mUri.getHost()), 500); // NPE on subs listing
 
         // Container ID is encoded at the end of the Uri, need to decode it here
         try {
-            if(mUri.getLastPathSegment()!=null)
-                mContainerId = URLDecoder.decode(mUri.getLastPathSegment(), "UTF-8");
+            String lastPathSegment = FileUtils.getName(mUri);
+            if(lastPathSegment!=null)
+                mContainerId = URLDecoder.decode(lastPathSegment, "UTF-8");
         } catch (UnsupportedEncodingException e) { /* does not happen, UTF-8 always available... */ }
     }
 
@@ -100,18 +101,17 @@ public class UpnpRawLister extends RawLister  {
 
         if(device.getDetails().getManufacturerDetails().getManufacturer().equals("Plex, Inc.")){
             return !container.getId().startsWith(parentID+"_");
-
         }
         return true;
     }
 
     public void listFiles(final Device device, final String containerId) {
-        Log.d(TAG, "listFiles "+device+"  containerId="+containerId);
+        log.debug("listFiles "+device+"  containerId="+containerId);
         Service service = device.findService(new UDAServiceId("ContentDirectory"));
         int ready = mUpnpServiceManager.execute(new Browse(service, containerId, BrowseFlag.DIRECT_CHILDREN) {
             @Override
             public void failure(ActionInvocation arg0, UpnpResponse arg1, String arg2) {
-                Log.d(TAG, "failure on " + arg0 + "\nresponse " + arg1 + ", " + arg2);
+                log.warn("failure on " + arg0 + "\nresponse " + arg1 + ", " + arg2);
                 synchronized (mLock) {
                     mLock.notify();
                 }

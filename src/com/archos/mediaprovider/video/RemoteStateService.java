@@ -15,21 +15,26 @@
 
 package com.archos.mediaprovider.video;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.IBinder;
 import android.provider.BaseColumns;
 import android.util.Pair;
 
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
+
 import com.archos.filecorelibrary.FileEditor;
+import com.archos.filecorelibrary.jcifs.JcifsFileEditor;
+import com.archos.filecorelibrary.samba.SambaDiscovery;
 import com.archos.mediacenter.filecoreextension.upnp2.FileEditorFactoryWithUpnp;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
-import com.archos.mediacenter.utils.AppState;
-import com.archos.mediaprovider.ArchosMediaCommon;
 import com.archos.environment.NetworkState;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
 
@@ -42,8 +47,10 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** handles visibility updates of smb://server/share type servers in the database */
-public class RemoteStateService extends IntentService implements UpnpServiceManager.Listener {
+public class RemoteStateService extends Service implements UpnpServiceManager.Listener, DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(RemoteStateService.class);
+
+    private static volatile boolean isForeground = true;
 
     private static final Uri NOTIFY_URI = VideoStore.ALL_CONTENT_URI;
     private static final Uri SERVER_URI = VideoStore.SmbServer.getContentUri();
@@ -58,46 +65,77 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     private static final int COLUMN_ACTIVE = 2;
 
     private static final String SELECTION_ID = BaseColumns._ID + "=?";
-    private static final String SELECTION_LOCAL_REMOTE = MediaColumns.DATA + " LIKE 'smb://%' OR "+MediaColumns.DATA + " LIKE 'upnp://%'";
-    private static final String SELECTION_DISTANT_REMOTE = MediaColumns.DATA + " LIKE 'ftps://%' OR "+MediaColumns.DATA  + " LIKE 'ftp://%' OR "+MediaColumns.DATA + " LIKE 'sftp://%'";
+    private static final String SELECTION_LOCAL_REMOTE =
+            MediaColumns.DATA + " LIKE 'smb://%' OR " +
+                    MediaColumns.DATA + " LIKE 'upnp://%' OR " +
+                    MediaColumns.DATA + " LIKE 'smbj://%'";
+    private static final String SELECTION_DISTANT_REMOTE =
+            MediaColumns.DATA + " LIKE 'ftps://%' OR " +
+                    MediaColumns.DATA + " LIKE 'ftp://%' OR " +
+                    MediaColumns.DATA + " LIKE 'sftp://%' OR " +
+                    MediaColumns.DATA + " LIKE 'sshj://%' OR " +
+                    MediaColumns.DATA + " LIKE 'webdav://%' OR " +
+                    MediaColumns.DATA + " LIKE 'webdavs://%'";
     private static final String SELECTION_ALL_NETWORK = SELECTION_LOCAL_REMOTE+" OR "+SELECTION_DISTANT_REMOTE;
     public static final String ACTION_CHECK_SMB = "archos.intent.action.CHECK_SMB";
     private ConcurrentHashMap<String, Pair<Long, Integer>> mUpnpId; //store name, id and active state
     private boolean mUpnpDiscoveryStarted;
     private boolean mServerDbUpdated;
 
-    public RemoteStateService() {
-        super(RemoteStateService.class.getSimpleName());
-        log.debug("SmbStateService CTOR");
-        setIntentRedelivery(true);
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        log.debug("onCreate() "+this);
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
-    protected void onHandleIntent(Intent intent) {
-        log.debug("onHandleIntent " + intent);
-        // prevent to be executed if app is in background
-        if (!AppState.isForeGround()) {
-            log.warn("onHandleIntent: app is in background exiting!");
-            return;
+    public void onDestroy() {
+        log.debug("onDestroy");
+        UpnpServiceManager.startServiceIfNeeded(this).removeListener(this);
+        if (mUpnpId != null) {
+            mUpnpId.clear();
+            mUpnpId = null;
         }
-        if (ACTION_CHECK_SMB.equals(intent.getAction())) {
-            log.debug("onHandleIntent: app is not in background, updating networkstate");
+        super.onDestroy();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        log.debug("onStartCommand: " + intent);
+        if (!isForeground) return START_NOT_STICKY; // prevent to be executed if app is in background
+        if (intent != null && ACTION_CHECK_SMB.equals(intent.getAction())) {
             NetworkState state = NetworkState.instance(this);
             state.updateFrom();
             handleDb(this, state.isConnected(), state.hasLocalConnection());
         }
+        // Keep the service running
+        return START_STICKY;
     }
 
     /** use to issue a check of the smb:// state */
     public static void start(Context context) {
+        log.debug("start");
+        if (!isForeground) return;
         Intent intent = new Intent(context, RemoteStateService.class);
         intent.setAction(ACTION_CHECK_SMB);
         context.startService(intent);
     }
 
+    public static void stop(Context context) {
+        log.debug("stop");
+        Intent intent = new Intent(context, RemoteStateService.class);
+        try {
+            context.stopService(intent);
+        } catch (Exception e) {
+            log.error("DeadSystemException caught while stopping RemoteStateService", e);
+        }
+    }
+
     protected void handleDb(Context context, boolean hasConnection, boolean hasLocalConnection) {
         if(mUpnpId==null) mUpnpId =new ConcurrentHashMap<>();
-        mUpnpId.clear();
+        else mUpnpId.clear();
         final ContentResolver cr = context.getContentResolver();
         log.debug("handleDb: hasConnection=" + hasConnection + ", hasLocalConnection=" + hasLocalConnection);
         if (hasConnection) {
@@ -108,67 +146,85 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
             if (c != null) {
                 log.debug("found " + c.getCount() + " servers");
                 mServerDbUpdated = false;
-                while (c.moveToNext()) {
+                while (c.moveToNext() && isForeground) {
                     final long id = c.getLong(COLUMN_ID);
                     final String server = c.getString(COLUMN_DATA);
                     final int active = c.getInt(COLUMN_ACTIVE);
-                    if(server.startsWith("sftp")||server.startsWith("ftp")) { //for distant folders, we don't check existence (for now)
-                        log.debug("ftp server is assumed to exist: " + server);
+                    log.debug("handleDb: server: " + server + " active: " + active);
+                    if(server.startsWith("sftp")||server.startsWith("ftp")||server.startsWith("webdav")||server.startsWith("sshj")) { //for distant folders, we don't check existence (for now)
+                        log.debug("handleDb: ftp server is assumed to exist: " + server);
                         if (updateServerDb(id, cr, active, 1, now))
                             mServerDbUpdated = true;
                     } else if(!server.startsWith("upnp")) { // SMB goes there even if on cellular only
                         if (hasLocalConnection) { // perform the check of the server existing only if hasLocalConnection
-                            final FileEditor serverFile = FileEditorFactoryWithUpnp.getFileEditorForUrl(Uri.parse(server + "/"), null);
+                            Uri serverUri = Uri.parse(server + "/");
+                            final FileEditor serverFile;
+                            // always use jcifs-ng to check if server exists
+                            if ("smb".equalsIgnoreCase(serverUri.getScheme()) || "smbj".equalsIgnoreCase(serverUri.getScheme()))
+                                serverFile = new JcifsFileEditor(serverUri);
+                            else serverFile = FileEditorFactoryWithUpnp.getFileEditorForUrl(serverUri, null);
                             if (serverFile == null) {
                                 log.warn("bad server [" + server + "]");
                                 continue;
                             }
-                            // TODO MARC this checks visibility of smb shares.
                             // To check: with mdns it might take long to get IP of server (there is no longer a resolver available)
                             // thus on netstate change it might think share is not available
                             new Thread() {
                                 @Override
                                 public void run() {
                                     if (serverFile.exists()) {
-                                        log.debug("server exists: " + server);
+                                        log.debug("handleDb: server exists: " + server);
                                         if (updateServerDb(id, cr, active, 1, now))
                                             mServerDbUpdated = true;
                                     } else {
-                                        log.debug("server does not exist: " + server);
-                                        if (updateServerDb(id, cr, active, 0, now))
-                                            mServerDbUpdated = true;
+                                        String smbDiscoveryInfo = SambaDiscovery.getIpFromShareName(serverUri.getHost());
+                                        if (smbDiscoveryInfo == null) {
+                                            log.debug("handleDb: server does not exist: " + server);
+                                            if (updateServerDb(id, cr, active, 0, now))
+                                                mServerDbUpdated = true;
+                                        } else {
+                                            log.debug("handleDb: server exists in SambaDiscovery, not jcifs-ng: " + server);
+                                            if (updateServerDb(id, cr, active, 1, now))
+                                                mServerDbUpdated = true;
+                                        }
                                     }
                                 }
                             }.start();
                         } else {
-                            log.debug("no local connectivity setting all smb servers inactive");
+                            log.debug("handleDb: no local connectivity setting all smb servers inactive");
                             setLocalServersInactive(context, cr);
                         }
                     } else if(server.startsWith("upnp")) {
                         mUpnpId.put(server,new Pair<>(id, active));
                     }
                 }
-                if(mUpnpId.size()>0&&hasLocalConnection){
+                if(mUpnpId != null && !mUpnpId.isEmpty() &&hasLocalConnection){
                     if(!mUpnpDiscoveryStarted) {
+                        log.debug("handleDb: start upnp discovery");
                         //we start upnp discovery but we don't want to add the listener twice
                         UpnpServiceManager.startServiceIfNeeded(context).addListener(this);
                         mUpnpDiscoveryStarted=true;
+                    } else {
+                        log.debug("handleDb: upnp discovery already started");
                     }
                     onDeviceListUpdate(new ArrayList<Device>(UpnpServiceManager.startServiceIfNeeded(context).getDevices()));
+                } else {
+                    log.debug("handleDb: no upnp server listed, no need to launch upnp discovery to get state information");
                 }
                 c.close();
                 if (mServerDbUpdated) {
                     // notify about a change in the db
                     cr.notifyChange(NOTIFY_URI, null);
                 }
-            } else log.debug("server query returned NULL");
+            } else log.debug("handleDb: server query returned NULL");
         } else {
-            log.debug("no connectivity setting all smb servers inactive");
+            log.debug("handleDb: no connectivity setting all smb servers inactive");
             setAllServersInactive(context, cr);
         }
     }
 
     protected final static void setAllServersInactive(Context context, ContentResolver contentResolver) {
+        log.debug("setAllServersInactive");
         // no more servers.
         ContentValues cv = new ContentValues(1);
         cv.put(VideoStore.SmbServer.SmbServerColumns.ACTIVE, "0");
@@ -179,6 +235,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     }
 
     protected final static void setLocalServersInactive(Context context, ContentResolver contentResolver) {
+        log.debug("setLocalServersInactive");
         // no more local (smb+upnp) servers.
         ContentValues cv = new ContentValues(1);
         cv.put(VideoStore.SmbServer.SmbServerColumns.ACTIVE, "0");
@@ -189,7 +246,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
     }
 
     protected final static boolean updateServerDb(long id, ContentResolver cr, int oldState,
-            int newState, long time) {
+                                                  int newState, long time) {
         log.debug("updateServerDb: id=" + id + ", oldState=" + oldState + ", newState=" + newState);
         if (oldState == newState) return false;
         ContentValues cv = new ContentValues();
@@ -200,7 +257,7 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
             cv.put(VideoStore.SmbServer.SmbServerColumns.LAST_SEEN, String.valueOf(time));
         }
         String[] selectionArgs = new String[] {
-            String.valueOf(id)
+                String.valueOf(id)
         };
         log.debug("DB: update server: " + id + " values:" + cv);
         int result = cr.update(SERVER_URI, cv, SELECTION_ID, selectionArgs);
@@ -213,17 +270,52 @@ public class RemoteStateService extends IntentService implements UpnpServiceMana
         final ContentResolver cr = getContentResolver();
         for(String deviceName : mUpnpId.keySet()){
             boolean isInList = false;
-           for(Device device : devices){
-               if(deviceName.startsWith("upnp://" + device.hashCode())){
-                   isInList = true;
-                   break;
-               }
-           }
+            for(Device device : devices){
+                if(deviceName.startsWith("upnp://" + device.hashCode())){
+                    isInList = true;
+                    break;
+                }
+            }
             log.debug("UPNP : is in list ?  "+deviceName+ " "+String.valueOf(isInList));
             long id = mUpnpId.get(deviceName).first;
             updateServerDb(id, cr, mUpnpId.get(deviceName).second, isInList?1:0, now);
             mUpnpId.put(deviceName, new Pair<>(id,isInList?1:0 ));
-       }
+        }
         cr.notifyChange(NOTIFY_URI, null);
+    }
+
+    public static boolean isNetworkShortcutAvailable(Uri uri, Context context) {
+        // server state should be tracked by RemoteStateService correctly and continuously
+        String server = uri.getHost();
+        String scheme = uri.getScheme();
+        int port = uri.getPort();
+        String SELECTION;
+        if (port != -1) SELECTION = "_data LIKE '" + scheme + "://" + server + ":" + port + "/%'";
+        else SELECTION = "_data LIKE '" + scheme + "://" + server + "/%'";
+        Cursor c = context.getContentResolver().query(VideoStore.SmbServer.getContentUri(), new String[]{"_id", "_data", "active"}, SELECTION, null, null);
+        boolean active = false;
+        if (c != null)
+            while (c.moveToNext() && !active && isForeground)
+                active = (c.getInt(2) == 1);
+        return active;
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        isForeground = false;
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
+        isForeground = true;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null; // Not a bound service
     }
 }

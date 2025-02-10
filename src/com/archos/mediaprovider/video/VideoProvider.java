@@ -21,6 +21,7 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
@@ -39,15 +40,20 @@ import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.os.RemoteException;
+
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.text.TextUtils;
 
+import com.archos.environment.ArchosUtils;
 import com.archos.filecorelibrary.FileEditor;
 import com.archos.filecorelibrary.FileUtils;
 import com.archos.mediacenter.filecoreextension.upnp2.FileEditorFactoryWithUpnp;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.medialib.IMediaMetadataRetriever;
 import com.archos.medialib.MediaFactory;
 import com.archos.mediaprovider.ArchosMediaCommon;
@@ -78,8 +84,14 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
 
-public class VideoProvider extends ContentProvider {
+import io.sentry.SentryLevel;
+
+public class VideoProvider extends ContentProvider implements DefaultLifecycleObserver {
     private static final Logger log = LoggerFactory.getLogger(VideoProvider.class);
+
+    private final static boolean SKIP_THUMBNAILS = false;
+
+    private static volatile boolean isForeground = true;
 
     private DbHolder mDbHolder;
     private Handler mThumbHandler;
@@ -114,6 +126,9 @@ public class VideoProvider extends ContentProvider {
     public boolean onCreate() {
         log.debug("onCreate");
         final Context context = getContext();
+
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+
         mImageThumbFolder = context.getDir(IMAGE_THUMB_FOLDER_NAME, Context.MODE_PRIVATE).getPath();
 
         mVobHandler = new VobHandler(context);
@@ -133,15 +148,13 @@ public class VideoProvider extends ContentProvider {
         };
         PreferenceManager.getDefaultSharedPreferences(context).registerOnSharedPreferenceChangeListener(mPreferencechChangeListener);
 
-        try {
-            log.debug("onCreate: try to VideoStoreImportService.start");
-            VideoStoreImportService.startService(context);
-        }catch(java.lang.IllegalStateException e){
-            log.warn("onCreate: VideoStoreImportService.startService failed!");
-        }
-
         // handles NetworkState changes
-        networkState = NetworkState.instance(context);
+        try {
+            networkState = NetworkState.instance(context);
+        } catch (Exception e) {
+            log.error("Exception caught during NetworkState initialization", e);
+            return false;
+        }
         if (propertyChangeListener == null)
             propertyChangeListener = new PropertyChangeListener() {
                 @Override
@@ -152,9 +165,6 @@ public class VideoProvider extends ContentProvider {
                     }
                 }
             };
-        // handles connectivity changes
-        AppState.addOnForeGroundListener(mForeGroundListener);
-        handleForeGround(AppState.isForeGround());
 
         HandlerThread ht = new HandlerThread("thumbs thread", Process.THREAD_PRIORITY_BACKGROUND);
         ht.start();
@@ -230,7 +240,7 @@ public class VideoProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projectionIn, String selection, String[] selectionArgs,
             String sort, CancellationSignal cancellationSignal) {
-        log.debug("QUERY " + uri);
+        log.debug("QUERY " + uri + ", selection=" + selection + ", selectionArgs=" + Arrays.toString(selectionArgs) + ", sort=" + sort);
         int table = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -254,10 +264,9 @@ public class VideoProvider extends ContentProvider {
         String groupby = uri.getQueryParameter("group");
         String having = uri.getQueryParameter("having");
 
-
         // query our custom files tables directly
         if (table == RAW) {
-            String tableName = uri.getLastPathSegment();
+            String tableName = FileUtils.getName(uri);
             return db.query(distinct, tableName, projectionIn, selection, selectionArgs, groupby, having, sort, limit, cancellationSignal);
         }
 
@@ -270,14 +279,14 @@ public class VideoProvider extends ContentProvider {
         switch (table) {
             case FILES_ID:
                 qb.appendWhere("_id=?");
-                prependArgs.add(uri.getLastPathSegment());
+                prependArgs.add(FileUtils.getName(uri));
                 //$FALL-THROUGH$
             case FILES:
                 qb.setTables(VideoOpenHelper.FILES_TABLE_NAME);
                 break;
             case VIDEO_MEDIA_ID:
                 qb.appendWhere("_id=?");
-                prependArgs.add(uri.getLastPathSegment());
+                prependArgs.add(FileUtils.getName(uri));
                 //$FALL-THROUGH$
             case VIDEO_MEDIA:
                 qb.setTables(VideoOpenHelper.VIDEO_VIEW_NAME);
@@ -285,7 +294,7 @@ public class VideoProvider extends ContentProvider {
             case VIDEO_LIST: {
                 qb.setTables(ListTables.VIDEO_LIST_TABLE);
                 qb.appendWhere(VideoStore.List.Columns.ID+"=?");
-                prependArgs.add(uri.getLastPathSegment());
+                prependArgs.add(FileUtils.getName(uri));
                 break;
             }
             case LIST:{
@@ -309,19 +318,25 @@ public class VideoProvider extends ContentProvider {
                 break;
             case SUBS_MEDIA_ID:
                 qb.appendWhere("_id=?");
-                prependArgs.add(uri.getLastPathSegment());
+                prependArgs.add(FileUtils.getName(uri));
                 //$FALL-THROUGH$
             case SUBS_MEDIA:
                 qb.setTables(VideoOpenHelper.SUBTITLES_TABLE_NAME);
                 break;
             case SUBS_MEDIA_VIDEO_ID:
                 qb.appendWhere("video_id=?");
-                prependArgs.add(uri.getLastPathSegment());
+                prependArgs.add(FileUtils.getName(uri));
                 qb.setTables(VideoOpenHelper.SUBTITLES_TABLE_NAME);
                 break;
             default:
                 throw new IllegalStateException("Unknown Uri : " + uri);
         }
+
+        // TOFIX: seen on sentry, projectionIn can be null, let's initialize it to empty array
+        if (projectionIn == null) {
+            projectionIn = new String[] {};
+        }
+
         Cursor c = qb.query(db, projectionIn, selection,
                 combine(prependArgs, selectionArgs), groupby, having, sort, limit, cancellationSignal);
 
@@ -390,7 +405,7 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        log.debug("INSRT " + uri + " PID:" + Process.myPid() + " TID:" + Process.myTid());
+        log.debug("INSRT " + uri + " PID:" + Process.myPid() + " TID:" + Process.myTid() + ", values=" + values);
         int match = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -401,7 +416,7 @@ public class VideoProvider extends ContentProvider {
 
         // insert into our custom files tables.
         if (match == RAW) {
-            String table = uri.getLastPathSegment();
+            String table = FileUtils.getName(uri);
             long rowId = db.insert(table, null, values);
             if (rowId > 0) {
                 Uri result = ContentUris.withAppendedId(uri, rowId);
@@ -439,7 +454,7 @@ public class VideoProvider extends ContentProvider {
                 break;
             }
             case VIDEO_LIST: {
-                int listId = Integer.valueOf(uri.getLastPathSegment());
+                int listId = Integer.valueOf(FileUtils.getName(uri));
                 values.put(VideoStore.VideoList.Columns.LIST_ID,listId);
                 db.insertWithOnConflict(ListTables.VIDEO_LIST_TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE);
                 newUri = uri;
@@ -545,7 +560,7 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        log.debug("DELTE " + uri);
+        log.debug("DELTE " + uri + ", selection=" + selection + ", selectionArgs=" + Arrays.toString(selectionArgs));
         int match = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -563,7 +578,7 @@ public class VideoProvider extends ContentProvider {
                 // those must be deleted in Android's db and the result imported
                 throw new IllegalStateException("delete not supported, has to be done via Android's MediaStore");
             case RAW:
-                String tableName = uri.getLastPathSegment();
+                String tableName = FileUtils.getName(uri);
                 int result = db.delete(tableName, selection, selectionArgs);
                 if (result > 0 && !db.inTransaction()) {
                     mCr.notifyChange(VideoStore.ALL_CONTENT_URI, null);
@@ -572,7 +587,7 @@ public class VideoProvider extends ContentProvider {
             case VIDEO_LIST:
                 selection+= " AND "+ VideoStore.VideoList.Columns.LIST_ID+" = ?";
                 List<String> whereArgs = new ArrayList<String>(Arrays.asList(selectionArgs));
-                whereArgs.add(uri.getLastPathSegment());
+                whereArgs.add(FileUtils.getName(uri));
                 result = db.delete(ListTables.VIDEO_LIST_TABLE, selection, whereArgs.toArray(new String[0]));
                 mCr.notifyChange(VideoStore.ALL_CONTENT_URI, null);
                 return result;
@@ -597,7 +612,7 @@ public class VideoProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues initialValues, String userWhere,
             String[] whereArgs) {
-        log.debug("UPDTE " + uri);
+        log.debug("UPDTE " + uri + ", userWhere=" + userWhere + ", whereArgs=" + Arrays.toString(whereArgs) + ", initialValues=" + initialValues);
         int count;
         // log.trace("update for uri="+uri+", initValues="+initialValues);
         int match = URI_MATCHER.match(uri);
@@ -610,7 +625,7 @@ public class VideoProvider extends ContentProvider {
 
         switch (match) {
             case RAW: {
-                String tableName = uri.getLastPathSegment();
+                String tableName = FileUtils.getName(uri);
                 if (VideoOpenHelper.FILES_TABLE_NAME.equals(tableName)) {
                     // if KEY_SCANNER is present that update was generated by our scanner
                     if (initialValues.containsKey(VideoStoreInternal.KEY_SCANNER)) {
@@ -628,7 +643,7 @@ public class VideoProvider extends ContentProvider {
             case VIDEO_LIST: {
                 userWhere+= " AND "+ VideoStore.VideoList.Columns.LIST_ID+" = ?";
                 List<String> whereArgs2 = new ArrayList<String>(Arrays.asList(whereArgs));
-                whereArgs2.add(uri.getLastPathSegment());
+                whereArgs2.add(FileUtils.getName(uri));
                 int result = db.update(ListTables.VIDEO_LIST_TABLE, initialValues, userWhere, whereArgs2.toArray(new String[0]));
                 mCr.notifyChange(VideoStore.ALL_CONTENT_URI, null);
                 return result;
@@ -767,18 +782,18 @@ public class VideoProvider extends ContentProvider {
 
             case VIDEO_MEDIA_ID:
                 out.table = VideoOpenHelper.FILES_TABLE_NAME;
-                where = "_id=" + uri.getLastPathSegment();
+                where = "_id=" + FileUtils.getName(uri);
                 break;
 
             case VIDEO_THUMBNAILS_ID:
-                where = "_id=" + uri.getLastPathSegment();
+                where = "_id=" + FileUtils.getName(uri);
                 //$FALL-THROUGH$
             case VIDEO_THUMBNAILS:
                 out.table = VideoOpenHelper.VIDEOTHUMBNAIL_TABLE_NAME;
                 break;
 
             case ARCHOS_SMB_SERVER_ID:
-                where = "_id=" + uri.getLastPathSegment();
+                where = "_id=" + FileUtils.getName(uri);
                 //$FALL-THROUGH$
             case ARCHOS_SMB_SERVER:
                 out.table = VideoOpenHelper.SMB_SERVER_TABLE_NAME;
@@ -893,7 +908,7 @@ public class VideoProvider extends ContentProvider {
     private boolean waitForThumbnailReady(Uri origUri) {
         log.debug("waitForThumbnailReady");
 
-        String origId = origUri.getLastPathSegment();
+        String origId = FileUtils.getName(origUri);
         String[] whereArgs = new String[] { origId };
         Cursor c = query(origUri, new String[] { BaseColumns._ID, MediaColumns.DATA,
                 VideoColumns.MINI_THUMB_MAGIC, VideoColumns.ARCHOS_THUMB_TRY}, LIGHT_INDEX_STORAGE_QUERY, whereArgs , null);
@@ -1281,9 +1296,13 @@ public class VideoProvider extends ContentProvider {
          * @param kind could be MINI_KIND or MICRO_KIND
          */
         public static Bitmap createVideoThumbnail(Context ctx, String filePath, int kind) {
-            Bitmap res = createVideoThumbnail_(ctx, filePath, kind);
-            log.debug("createVideoThumbnail: " + res);
-            return res;
+            if (SKIP_THUMBNAILS) {
+                return null;
+            } else {
+                Bitmap res = createVideoThumbnail_(ctx, filePath, kind);
+                log.debug("createVideoThumbnail: " + res);
+                return res;
+            }
         }
         private static class Result{
             Bitmap bm;
@@ -1370,30 +1389,30 @@ public class VideoProvider extends ContentProvider {
         }
     }
 
-    // TODO should it be done at each foreground? probably
-    private final AppState.OnForeGroundListener mForeGroundListener = (applicationContext, foreground) -> {
-        if(foreground) {
-            log.debug("mForeGroundListener: VideoStoreImportService.startService");
-            VideoStoreImportService.startService(applicationContext);
-        }  else {
-            log.debug("mForeGroundListener: VideoStoreImportService.stopService");
-            VideoStoreImportService.stopService(applicationContext);
-        }
-        handleForeGround(foreground);
-    };
-
     protected void handleForeGround(boolean foreground) {
+        log.debug("handleForeGround: foreground=" + foreground);
         final Context context = getContext();
+        if (context == null || ! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
+            log.error("handleForeGround: context is null or not foreground, return");
+            return;
+        }
         if (foreground) {
-            log.trace("App now in ForeGround");
+            log.debug("handleForeGround: app is foreground VideoStoreImportService.startService");
+            ArchosUtils.addBreadcrumb(SentryLevel.INFO, "handleForeGround", "app is foreground VideoStoreImportService.startService");
+            VideoStoreImportService.startService(getContext());
             UpnpServiceManager.restartUpnpServiceIfWasStartedBefore();
             // force check
             RemoteStateService.start(context);
             addNetworkListener();
         } else {
-            log.trace("App now in BackGround");
+            log.trace("handleForeGround: app now in BackGround");
             UpnpServiceManager.stopServiceIfLaunched();
             removeNetworkListener();
+            try {
+                RemoteStateService.stop(context);
+            } catch (Exception e) {
+                log.error("handleForeGround: DeadSystemException caught while stopping RemoteStateService", e);
+            }
         }
     }
 
@@ -1413,6 +1432,21 @@ public class VideoProvider extends ContentProvider {
             networkState.removePropertyChangeListener(propertyChangeListener);
             mNetworkStateListenerAdded = false;
         }
+    }
+
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        isForeground = false;
+        handleForeGround(isForeground);
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        log.debug("onStart: LifecycleOwner app in foreground");
+        isForeground = true;
+        handleForeGround(isForeground);
     }
 }
 

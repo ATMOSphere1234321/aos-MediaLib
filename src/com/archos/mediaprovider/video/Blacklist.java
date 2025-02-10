@@ -65,8 +65,9 @@ public class Blacklist {
     };
 
     private static final String[] BLACKLISTED_CAM_DIRS = {
-            "/WhatsApp", "/Android/media/com.whatsapp",
-            "/Android/data/org.courville.nova",
+            "/com.whatsapp", "/WhatsApp", "/Android/media/com.whatsapp",
+            "/Android/data",
+            //"/Android/data/org.courville.nova",
             "/DCIM", "/Camera",
             "/GooglePlus",
             "/Allo", "/Pictures",
@@ -75,6 +76,9 @@ public class Blacklist {
             "/com.facebook.orca",
             "/Movies/Instagram", "/Movies/Messenger",
             "/Movies/Twitter", "/tencent",
+            "/Android/media/com.zhiliaoapp.musically",
+            "/tiktok",
+            "/DCIM/TikTok",
     };
 
     public String[] getBlackListCamDirs() {
@@ -92,6 +96,7 @@ public class Blacklist {
         if (FileUtils.isLocal(file)) { // only makes sense if file is locale
             for (String blacklisted : BLACKLISTED_CAMERA)
                 if (filePath.startsWith(blacklisted)) return true;
+            // TODO not efficient to have getExtStorageManager because triggers updateAllVolumes but since not used not changing this
             List<String> extPathList = ExtStorageManager.getExtStorageManager().getExtSdcards();
             extPathList.add(Environment.getExternalStorageDirectory().getPath());
             for (String extPath: extPathList)
@@ -101,7 +106,7 @@ public class Blacklist {
                 if (filePath.startsWith(blacklisted)) return true;
         }
         // this one needs to be done on networkscannerservicevideo: the shortcut is done
-        return isFilenameBlacklisted(file.getLastPathSegment());
+        return isFilenameBlacklisted(FileUtils.getName(file));
     }
 
     public boolean isBlacklistedManual(Uri file) {
@@ -113,7 +118,7 @@ public class Blacklist {
                 if (filePath.startsWith(blacklisted)) return true;
         }
         // this one needs to be done on networkscannerservicevideo: the shortcut is done
-        return isFilenameBlacklisted(file.getLastPathSegment());
+        return isFilenameBlacklisted(FileUtils.getName(file));
     }
 
     public boolean isFilenameBlacklisted(String fileName) { // check if fileName contains sample|trailer
@@ -127,26 +132,30 @@ public class Blacklist {
     private static ArrayList<String> getBlacklisteds() {
         ArrayList<String> blacklisteds = new ArrayList<>();
         Cursor c = BlacklistedDbAdapter.VIDEO.queryAllBlacklisteds(mContext);
-        final int pathColumn = c.getColumnIndexOrThrow(BlacklistedDbAdapter.KEY_PATH);
-        try {
-            if (c.moveToFirst()) {
-                while (!c.isAfterLast()) {
-                    String blacklistedPath = c.getString(pathColumn);
-                    if (blacklistedPath != null) {
-                        blacklistedPath = Uri.parse(blacklistedPath).getPath();
-                        if (!blacklistedPath.endsWith("/"))
-                            blacklistedPath += "/";
-                        blacklisteds.add(blacklistedPath);
+        if (c != null) {
+            final int pathColumn = c.getColumnIndexOrThrow(BlacklistedDbAdapter.KEY_PATH);
+            try {
+                if (c.moveToFirst()) {
+                    while (!c.isAfterLast()) {
+                        String blacklistedPath = c.getString(pathColumn);
+                        if (blacklistedPath != null) {
+                            blacklistedPath = Uri.parse(blacklistedPath).getPath();
+                            if (!blacklistedPath.endsWith("/"))
+                                blacklistedPath += "/";
+                            blacklisteds.add(blacklistedPath);
+                        }
+                        c.moveToNext();
                     }
-                    c.moveToNext();
                 }
+            } catch (Exception e) {
+                // with c.close() we get with c.moveToFirst() IllegalStateException: Cannot perform this operation because the connection pool has been closed
+                // without c.close() we get with c.moveToFirst() CursorWindowAllocationException
+                Log.e(TAG, "getBlacklisteds: caught Exception", e);
+            } finally {
+                c.close();
             }
-        } catch (Exception e) {
-            // with c.close() we get with c.moveToFirst() IllegalStateException: Cannot perform this operation because the connection pool has been closed
-            // without c.close() we get with c.moveToFirst() CursorWindowAllocationException
-            Log.e(TAG, "getBlacklisteds: caught Exception", e);
-        } finally {
-            c.close();
+        } else {
+            Log.e(TAG, "getBlacklisteds: cursor is null!");
         }
         return blacklisteds;
     }

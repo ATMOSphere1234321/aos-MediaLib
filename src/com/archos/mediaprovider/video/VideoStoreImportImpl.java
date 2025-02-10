@@ -18,8 +18,10 @@ import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.OperationApplicationException;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
+import android.database.SQLException;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -77,9 +79,23 @@ public class VideoStoreImportImpl {
 
     private static final int WINDOW_SIZE = 2000;
     private static String BLACKLIST;
+    private static String sdCardPath = "";
+
+    private final static boolean CRASH_ON_ERROR = false;
+    private final static boolean CHECK_NFO = true;
+
+    private static volatile boolean mIsImportInterrupted = false;
 
     public VideoStoreImportImpl(Context context) {
         mContext = context;
+        File sdCardFile = context.getExternalFilesDir(null);
+        // sdCardFile seen on sentry (3744020792) to be null on MIBOX4 android 9
+        if (sdCardFile != null) {
+            sdCardPath = sdCardFile.getPath();
+        } else {
+            // take a wild probable guess
+            sdCardPath ="/storage/emulated/0";
+        }
         mCr = mContext.getContentResolver();
         mBlackList = Blacklist.getInstance(context);
         mMediaRetrieverServiceClient = new MediaRetrieverServiceClient(context);
@@ -100,6 +116,7 @@ public class VideoStoreImportImpl {
     }
 
     public void doFullImport() {
+        mIsImportInterrupted = false;
         int countStart = getLocalCount(mCr);
         log.debug("doFullImport: ImportState.VIDEO.setState " + (countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT));
         ImportState.VIDEO.setState(countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT);
@@ -107,45 +124,61 @@ public class VideoStoreImportImpl {
         // replace everything with new data
         int copy = copyData(mCr, null);
 
-        // delete everything that was not replaced, ! only if it is on primary local storage !
-        String existingFiles = getRemoteIdList(mCr);
-        int del = 0;
-
-        // set files not seen to hidden state. They might be deleted but we don't know for sure.
-        ContentValues cv = new ContentValues();
-        cv.put("volume_hidden", Long.valueOf(System.currentTimeMillis() / 1000));
-        mCr.update(VideoStoreInternal.FILES_IMPORT, cv, "_id NOT IN (" + existingFiles + ") AND volume_hidden = 0", null);
-
-        int countEnd = getLocalCount(mCr);
-        log.info("full import +:" + copy + " -:" + del + " " + countStart + "=>" + countEnd);
-
-        // then trigger scan of new data
-        doScan(mCr, mContext, mBlackList);
-
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            // External storage is available, proceed with your operation
+            // delete everything that was not replaced, ! only if it is on primary local storage !
+            String existingFiles = getRemoteIdList(mCr);
+            int del = 0;
+            // set files not seen to hidden state. They might be deleted but we don't know for sure.
+            ContentValues cvHidden = new ContentValues();
+            cvHidden.put("volume_hidden", Long.valueOf(System.currentTimeMillis() / 1000));
+            ContentValues cvPresent = new ContentValues();
+            cvPresent.put("volume_hidden", 0);
+            // mark not present videos as hidden
+            mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden, "_id NOT IN (" + existingFiles + ") AND volume_hidden = 0", null);
+            // mark videos present but hidden as present (solves a bug on shield with external USB storage indexed files hidden)
+            mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent, "_id IN (" + existingFiles + ") AND volume_hidden != 0", null);
+            int countEnd = getLocalCount(mCr);
+            log.info("full import +:" + copy + " -:" + del + " " + countStart + "=>" + countEnd);
+            // then trigger scan of new data
+            doScan(mCr, mContext, mBlackList);
+            // ...
+        } else {
+            // External storage is not available, handle this situation
+            log.error("doFullImport: external storage (volume: 'external_primary') is not available");
+        }
         ImportState.VIDEO.setState(State.IDLE);
         log.debug("doFullImport: ImportState.VIDEO.setState(State.IDLE)");
     }
 
     public void doIncrementalImport() {
+        mIsImportInterrupted = false;
         int countStart = getLocalCount(mCr);
         ImportState.VIDEO.setState(countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT);
         log.debug("doIncrementalImport: ImportState.VIDEO.setState " + (countStart == 0 ? State.INITIAL_IMPORT : State.REGULAR_IMPORT));
 
-        String existingFiles = getRemoteIdList(mCr);
-        int del = 0;
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            String existingFiles = getRemoteIdList(mCr);
+            int del = 0;
 
-        // 1. Hide files that are currently not visible, they might be removed at that point but we don't know for sure.
-        ContentValues cv = new ContentValues();
-        cv.put("volume_hidden", Long.valueOf(System.currentTimeMillis() / 1000));
-        mCr.update(VideoStoreInternal.FILES_IMPORT, cv, "_id NOT IN (" + existingFiles + ") AND volume_hidden = 0", null);
+            // 1. Hide files that are currently not visible, they might be removed at that point but we don't know for sure.
+            ContentValues cv = new ContentValues();
+            cv.put("volume_hidden", Long.valueOf(System.currentTimeMillis() / 1000));
+            mCr.update(VideoStoreInternal.FILES_IMPORT, cv, "_id NOT IN (" + existingFiles + ") AND volume_hidden = 0", null);
 
-        // 2. copy all remote files with higher id than our max id
-        String maxLocal = getMaxId(mCr);
-        int copy = copyData(mCr, maxLocal);
-        int countEnd = getLocalCount(mCr);
-        log.info("part import +:" + copy + " -:" + del + " " + countStart + "=>" + countEnd);
-        // then trigger scan of new data
-        doScan(mCr, mContext, mBlackList);
+            // 2. copy all remote files with higher id than our max id
+            String maxLocal = getMaxId(mCr);
+            int copy = copyData(mCr, maxLocal);
+            int countEnd = getLocalCount(mCr);
+            log.info("part import +:" + copy + " -:" + del + " " + countStart + "=>" + countEnd);
+            // then trigger scan of new data
+            doScan(mCr, mContext, mBlackList);
+        } else {
+            // External storage is not available, handle this situation
+            log.error("doIncrementalImport: external storage (volume: 'external_primary') is not available");
+        }
 
         ImportState.VIDEO.setState(State.IDLE);
         log.debug("doFullImport: ImportState.VIDEO.setState(State.IDLE)");
@@ -159,7 +192,10 @@ public class VideoStoreImportImpl {
     private static final String UPDATE_WHERE = "remote_id=?";
     /** scans every file in cursor and update database, also closes cursor */
     private void handleScanCursor(Cursor c, ContentResolver cr, Context context, Blacklist blacklist) {
-        if (c == null || c.getCount() == 0) {
+        // for some reasons doScan passes a a cursor with size > WINDOW_SIZE
+        // thus only process WINDOW_SIZE entries
+        int remaining = c.getCount();
+        if (c == null || remaining == 0) {
             if (c != null) c.close();
             log.debug("handleScanCursor: no media to scan");
             return;
@@ -167,91 +203,108 @@ public class VideoStoreImportImpl {
 
         int scanned = 0;
         int scraped = 0;
-        int remaining = c.getCount();
 
-        CPOExecutor operations = new CPOExecutor(VideoStore.AUTHORITY, cr, 500);
+        ArrayList<ContentProviderOperation> operations = new ArrayList<ContentProviderOperation>();
         long time = System.currentTimeMillis() / 1000L;
         String timeString = String.valueOf(time);
 
         NfoParser.ImportContext importContext = new NfoParser.ImportContext();
-        while (c.moveToNext()) {
-            ImportState.VIDEO.setRemainingCount(remaining--);
-            log.debug("doFullImport: ImportState.VIDEO.setRemainingCount " + remaining);
-            String id;
-            String path;
-            int scraperID;
-            try {
-                id = c.getString(0);
-                path = c.getString(1);
-                if (path.startsWith("/"))
-                    path = "file://" + path;
-                scraperID = c.getInt(2);
-            } catch (IllegalStateException ignored) {
-                 //we silently ignore empty lines - it means content has been deleted while scanning
-                continue;
-            }
-            Job job = new Job(path, id, blacklist);
-            log.debug("handleScanCursor: scanning " + job.mPath);
-            // update property with current file
-            ContentValues cv = null;
-            try {
-                cv = fromRetrieverService(job, timeString);
-            } catch (InterruptedException e) {
-                // won't happen but stopping as soon as we can would be desired
-                break;
-            } catch (MediaRetrieverServiceClient.ServiceManagementException e) {
-                // something is fishy with our service, abort and try again later.
-                break;
-            }
-
-            // using ContentProviderOperation so updates are done as single transaction
-            operations.add(
-                ContentProviderOperation.newUpdate(VideoStoreInternal.FILES)
-                        .withSelection(UPDATE_WHERE, new String[] { job.mId })
-                        .withValues(cv)
-                        .build()
-                    );
-            scanned++;
-
-            // .nfo auto-parsing
-            if (job.mRetrieve && scraperID <= 0) {
-                Uri videoFile = job.mPath;
-                if (videoFile != null) {
-                    log.debug("handleScanCursor: searching .nfo for " + videoFile);
-                    NfoParser.NfoFile nfo = NfoParser.determineNfoFile(videoFile);
-                    if (nfo != null && nfo.hasNfo()) {
-                        log.debug("handleScanCursor: .nfo found for " + videoFile + " : " + nfo.videoNfo);
-                        BaseTags tagForFile = NfoParser.getTagForFile(nfo, context, importContext);
-                        if (tagForFile != null) {
-                            log.debug("handleScanCursor: .nfo contains valid BaseTags for " + videoFile);
-                            long videoId = parseLong(job.mId, -1);
-                            if (videoId > 0) {
-                                tagForFile.save(context, videoId);
-                                log.debug("handleScanCursor: BaseTags saved for " + videoFile);
-                                scraped++;
+        // Still getting SQLiteBlobTooBigException due perhaps to large blobs in the database for some reasons
+        try {
+            int count = 0;
+            while (c.moveToNext() && count < WINDOW_SIZE && !mIsImportInterrupted) {
+                count++;
+                ImportState.VIDEO.setRemainingCount(remaining--);
+                log.debug("handleScanCursor: ImportState.VIDEO.setRemainingCount " + remaining + " count " + count);
+                String id;
+                String path;
+                int scraperID;
+                try {
+                    id = c.getString(0);
+                    path = c.getString(1);
+                    if (path.startsWith("/"))
+                        path = "file://" + path;
+                    scraperID = c.getInt(2);
+                } catch (IllegalStateException ignored) {
+                    log.error("handleScanCursor: IllegalStateException caught, content deleted while scanning?");
+                    //we silently ignore empty lines - it means content has been deleted while scanning
+                    continue;
+                }
+                Job job = new Job(path, id, blacklist);
+                log.debug("handleScanCursor: scanning " + job.mPath);
+                // update property with current file
+                ContentValues cv = null;
+                try {
+                    cv = fromRetrieverService(job, timeString);
+                } catch (InterruptedException e) {
+                    log.error("handleScanCursor: InterruptedException caught");
+                    // won't happen but stopping as soon as we can would be desired
+                    if (CRASH_ON_ERROR) throw new RuntimeException(e);
+                    break;
+                } catch (MediaRetrieverServiceClient.ServiceManagementException e) {
+                    log.error("handleScanCursor: MediaRetrieverServiceClient.ServiceManagementException caught");
+                    // something is fishy with our service, abort and try again later.
+                    if (CRASH_ON_ERROR) throw new RuntimeException(e);
+                    break;
+                }
+                // set the scan_state correctly so that it is not picked up again
+                // using ContentProviderOperation so updates are done as single transaction but at the applyBatch
+                operations.add(
+                        ContentProviderOperation.newUpdate(VideoStoreInternal.FILES)
+                                .withSelection(UPDATE_WHERE, new String[]{job.mId})
+                                .withValues(cv)
+                                .build()
+                );
+                scanned++;
+                if (CHECK_NFO) {
+                    // .nfo auto-parsing
+                    if (job.mRetrieve && scraperID <= 0) {
+                        Uri videoFile = job.mPath;
+                        if (videoFile != null) {
+                            log.debug("handleScanCursor: searching .nfo for " + videoFile);
+                            NfoParser.NfoFile nfo = NfoParser.determineNfoFile(videoFile);
+                            if (nfo != null && nfo.hasNfo()) {
+                                log.debug("handleScanCursor: .nfo found for " + videoFile + " : " + nfo.videoNfo);
+                                BaseTags tagForFile = NfoParser.getTagForFile(nfo, context, importContext);
+                                if (tagForFile != null) {
+                                    log.debug("handleScanCursor: .nfo contains valid BaseTags for " + videoFile);
+                                    long videoId = parseLong(job.mId, -1);
+                                    if (videoId > 0) {
+                                        tagForFile.save(context, videoId);
+                                        log.debug("handleScanCursor: BaseTags saved for " + videoFile);
+                                        scraped++;
+                                    }
+                                }
                             }
                         }
                     }
                 }
+                if (job.mMediaType == FileColumns.MEDIA_TYPE_VIDEO) {
+                    /* Process the FileName for more information */
+                    ContentValues cvExtra = VideoNameProcessor.extractValuesFromPath(path);
+                    operations.add(
+                            ContentProviderOperation.newUpdate(VideoStoreInternal.FILES)
+                                    .withSelection(UPDATE_WHERE, new String[]{job.mId})
+                                    .withValues(cvExtra)
+                                    .build()
+                    );
+                }
             }
-
-            if (job.mMediaType == FileColumns.MEDIA_TYPE_VIDEO) {
-                /* Process the FileName for more information */
-                ContentValues cvExtra = VideoNameProcessor.extractValuesFromPath(path);
-                operations.add(
-                        ContentProviderOperation.newUpdate(VideoStoreInternal.FILES)
-                                .withSelection(UPDATE_WHERE, new String[] { job.mId })
-                                .withValues(cvExtra)
-                                .build()
-                            );
+        } catch (Exception e) {
+            log.error("handleScanCursor: exception while moving to next cursor row!", e);
+            if (CRASH_ON_ERROR) throw new RuntimeException(e);
+        } finally {
+            try {
+                cr.applyBatch(VideoStore.AUTHORITY, operations);
+            } catch (RemoteException | OperationApplicationException e1) {
+                log.error("handleScanCursor: RemoteException or OperationApplicationException applying batch", e1);
+                if (CRASH_ON_ERROR) throw new RuntimeException(e1);
             }
         }
-
-        c.close();
-        operations.execute();
-        log.info("media scanned:" + scanned + " nfo-scraped:" + scraped);
+        if (c != null) c.close();
+        log.info("handleScanCursor: media scanned:" + scanned + " nfo-scraped:" + scraped);
         if (scraped > 0)
-            TraktService.onNewVideo(context);
+            TraktService.onNewVideo(context); // done once for the full import
     }
 
     private static class Job {
@@ -294,6 +347,7 @@ public class VideoStoreImportImpl {
 
     /** removes file(s) defined by Uri */
     public void doRemove(Uri what) {
+        mIsImportInterrupted = false;
         if (what == null || !"file".equals(what.getScheme()))
             return;
         String path = what.getPath();
@@ -310,6 +364,9 @@ public class VideoStoreImportImpl {
     private static String WHERE_FILE = "_data = ?";
     /** executes metadata scan of files defined by Uri */
     public void doScan(Uri what) {
+        mIsImportInterrupted = false;
+        log.debug("doScan: Scanning Metadata single uri: " + what);
+        if (what == null) return;
         String path = what.getPath();
 
         if (path.endsWith("/"))
@@ -338,35 +395,45 @@ public class VideoStoreImportImpl {
             + ") AND _id < " + VideoOpenHelper.SCANNED_ID_OFFSET;
     /** executes metadata scan of every unscanned file */
     private void doScan(ContentResolver cr, Context context, Blacklist blacklist) {
-        Cursor c = cr.query(VideoStoreInternal.FILES, ID_DATA_PROJ, WHERE_UNSCANNED, null, null);
-        final int numberOfRows = c.getCount();
-        int numberOfRowsRemaining = numberOfRows;
-        c.close();
-        int window = WINDOW_SIZE;
-        // break down the scan in batch of WINDOW_SIZE in order to avoid SQLiteBlobTooBigException: Row too big to fit into CursorWindow crash
-        // note that the db is being modified during import
-        do {
-            if (window > numberOfRows)
-                window = numberOfRows;
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) { // API>30 requires bundle to LIMIT
-                final Bundle bundle = new Bundle();
-                bundle.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, WHERE_UNSCANNED);
-                bundle.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, null);
-                bundle.putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, new String[]{BaseColumns._ID});
-                bundle.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING);
-                bundle.putInt(ContentResolver.QUERY_ARG_LIMIT, window);
-                bundle.putInt(ContentResolver.QUERY_ARG_OFFSET, 0);
-                c = cr.query(VideoStoreInternal.FILES, ID_DATA_PROJ, bundle, null);
-            } else {
-                c = cr.query(VideoStoreInternal.FILES, ID_DATA_PROJ,
-                        WHERE_UNSCANNED, null, BaseColumns._ID + " ASC LIMIT " + window);
+        log.debug("doScan: Scanning Metadata all unscanned files");
+        mIsImportInterrupted = false;
+        Cursor c = null;
+        int cursorCount = 0;
+        while (!mIsImportInterrupted) {
+            try {
+                // for some reasons this does return a cursor with size > WINDOW_SIZE
+                // thus only process WINDOW_SIZE entries in handleScanCursor
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) { // API>30 requires bundle to LIMIT
+                    final Bundle bundle = new Bundle();
+                    bundle.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, WHERE_UNSCANNED);
+                    bundle.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, null);
+                    bundle.putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, new String[]{BaseColumns._ID});
+                    bundle.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING);
+                    bundle.putInt(ContentResolver.QUERY_ARG_LIMIT, WINDOW_SIZE);
+                    bundle.putInt(ContentResolver.QUERY_ARG_OFFSET, 0);
+                    log.debug("doScan: >Q new batch fetching cursor with bundle=" + bundle.toString());
+                    c = cr.query(VideoStoreInternal.FILES, ID_DATA_PROJ, bundle, null);
+                } else {
+                    c = cr.query(VideoStoreInternal.FILES, ID_DATA_PROJ,
+                            WHERE_UNSCANNED, null, BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE);
+                }
+                if (c != null) cursorCount = c.getCount();
+                else cursorCount = 0;
+                log.debug("doScan: new batch fetching window=" + WINDOW_SIZE + " 0<= entries <=" + WINDOW_SIZE + ", new batch cursor has size " + cursorCount);
+                handleScanCursor(c, cr, context, blacklist);
+                if (cursorCount < WINDOW_SIZE) { // avoid infinite loop: trusts that handleScanCursor processes all entries
+                    log.debug("doScan: no more data after handleScanCursor, c.getCount()={}<WINDOW_SIZE={} exit loop", cursorCount, WINDOW_SIZE);
+                    break;
+                }
+            } catch (SQLException | IllegalStateException e) {
+                log.error("SQLException or IllegalStateException",e);
+                if (CRASH_ON_ERROR) throw new RuntimeException(e);
+                break;
+            } finally {
+                if (c != null) c.close();
             }
-            log.debug("doScan: new batch fetching window=" + window + " entries <=" + numberOfRows);
-            log.debug("doScan: new batch cursor has size " + c.getCount());
-            handleScanCursor(c, cr, context, blacklist);
-            numberOfRowsRemaining -= window;
-            c.close();
-        } while (numberOfRowsRemaining > 0);
+        }
+        if (c != null) c.close();
     }
 
     /** get MediaMetadata object or null for a path */
@@ -379,6 +446,7 @@ public class VideoStoreImportImpl {
 
     /** creates ContentValues via MediaRetrieverService, can't be null */
     private ContentValues fromRetrieverService(Job job, String timeString) throws InterruptedException, MediaRetrieverServiceClient.ServiceManagementException {
+        log.debug("fromRetrieverService: Scanning metadata of: " + job.mPath);
         ContentValues cv = new ContentValues();
         String path = job.mPath.toString();
         // tell mediaprovider that this update originates from here.
@@ -482,8 +550,8 @@ public class VideoStoreImportImpl {
         return ret;
     }
 
-    private static final String NOT_NETWORKINDEXED_BP = "storage_id & 1 AND _data NOT NULL AND _data != ''";
-    private static final String NOT_NETWORKINDEXED_AP = "_data NOT NULL AND _data != ''";
+    private static final String NOT_NETWORKINDEXED_BP = "storage_id & 1 AND _data NOT NULL AND _data != '' AND _size != '0'";
+    private static final String NOT_NETWORKINDEXED_AP = "_data NOT NULL AND _data != '' AND _size != '0'";
     private static final String WHERE_MIN_ID_BP = NOT_NETWORKINDEXED_BP + " AND _id > ?";
     private static final String WHERE_MIN_ID_AP = NOT_NETWORKINDEXED_AP + " AND _id > ?";
     private static final String WHERE_ALL_BP = NOT_NETWORKINDEXED_BP;
@@ -502,6 +570,9 @@ public class VideoStoreImportImpl {
             "format",
             FileColumns.PARENT
     };
+
+    // Note: adb pushed files are not visible by on an onchange because _size=NULL to get the right size, cold boot or trigger a mediascan after adb push...
+
     private final static String[] FILES_PROJECTION_BP = new String[]{
             BaseColumns._ID,
             MediaColumnsDATA,
@@ -523,22 +594,29 @@ public class VideoStoreImportImpl {
         String[] whereArgs = null;
         Cursor allFiles = null;
         ContentValues cv = null;
+        ExtStorageManager extStorageManager = ExtStorageManager.getExtStorageManager();
+        String[] projection;
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
             where = WHERE_ALL_AP + BLACKLIST;
+            projection = FILES_PROJECTION_AP;
             if (minId != null) {
                 where = WHERE_MIN_ID_AP + BLACKLIST;
                 whereArgs = new String[]{minId};
             }
-            allFiles = CustomCursor.wrap(cr.query(MediaStore.Files.getContentUri("external"),
-                    FILES_PROJECTION_AP, where, whereArgs, BaseColumns._ID));
         } else {
             where = WHERE_ALL_BP + BLACKLIST;
+            projection = FILES_PROJECTION_BP;
             if (minId != null)  {
                 where = WHERE_MIN_ID_BP + BLACKLIST;
                 whereArgs = new String[] { minId };
             }
+        }
+        try { // for some reasons external_primary is not readable on some devices hinting READ_EXTERNAL_STORAGE permission missing
             allFiles = CustomCursor.wrap(cr.query(MediaStore.Files.getContentUri("external"),
-                    FILES_PROJECTION_BP, where, whereArgs, BaseColumns._ID));
+                    projection, where, whereArgs, BaseColumns._ID));
+        } catch (IllegalArgumentException e) {
+            log.error("copyData: exception while querying external_primary, missing READ_EXTERNAL_STORAGE?", e);
+            if (CRASH_ON_ERROR) throw new RuntimeException(e);
         }
         if (allFiles != null) {
             int count = allFiles.getCount();
@@ -547,7 +625,7 @@ public class VideoStoreImportImpl {
                 ArrayList<Long> ids = new ArrayList<>();
                 Cursor c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[] { "_id" }, null, null, null);
                 if (c != null) {
-                    while (c.moveToNext())
+                    while (c.moveToNext() && !mIsImportInterrupted)
                         ids.add(c.getLong(0));
                     c.close();
                 }
@@ -596,17 +674,30 @@ public class VideoStoreImportImpl {
                     }
                     log.debug("copyData: new batch fetching cursor from index=" + index + ", window=" + window + " -> index+window=" + (index + window) + "<=" + numberOfRows);
 
-                    if (allFiles != null && allFiles.getCount() >0) {
-                        log.debug("copyData: new batch cursor has size " + allFiles.getCount());
-                        while (allFiles.moveToNext()) {
+                    String data;
+                    Integer storageId;
+
+                    int allFilesCount = allFiles.getCount();
+                    if (allFiles != null && allFilesCount >0) {
+                        log.debug("copyData: new batch cursor has size " + allFilesCount);
+                        while (allFiles.moveToNext() && !mIsImportInterrupted) {
                             cursor_count++;
-                            log.trace("copyData: processing cursor number=" + cursor_count + "/" + numberOfRows);
+                            log.trace("copyData: processing cursor number=" + cursor_count + "/" + numberOfRows + ", " + DatabaseUtils.dumpCurrentRowToString(allFiles));
                             try {
-                                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
+                                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) { // API26(O)+
                                     cv = new ContentValues(ccount + 1);
                                     DatabaseUtils.cursorRowToContentValues(allFiles, cv);
-                                    // since storage_id does not exist on P and above, set it to 1, not sure it is really used now
-                                    cv.put("storage_id", 1);
+                                    data = allFiles.getString(Math.max(allFiles.getColumnIndex(MediaColumnsDATA), 0));
+                                    if (data != null) {
+                                        if (data.startsWith(sdCardPath))
+                                            storageId = 1;
+                                        else
+                                            storageId = extStorageManager.getStorageId3(data);
+                                    } else {
+                                        storageId = 1;
+                                    }
+                                    log.trace("copyData: _data=" + data + " -> storageId=" + storageId);
+                                    cv.put("storage_id", storageId);
                                 } else {
                                     cv = new ContentValues(ccount);
                                     DatabaseUtils.cursorRowToContentValues(allFiles, cv);
@@ -623,8 +714,8 @@ public class VideoStoreImportImpl {
 
                     index += window;
                     if (allFiles != null) allFiles.close();
-                } while (window < numberOfRows && window > 0);
-            }
+                } while (window < numberOfRows && window > 0 && !mIsImportInterrupted);
+            } else allFiles.close();
         }
         return imported;
     }
@@ -648,49 +739,144 @@ public class VideoStoreImportImpl {
      */
     private static final String[] COUNT_PROJ = new String[] { "count(*)" };
     private static int getLocalCount (ContentResolver cr) {
-        Cursor c = cr.query(VideoStoreInternal.FILES_IMPORT, COUNT_PROJ, null, null, null);
         int result = 0;
-        if (c != null) {
-            if (c.moveToFirst()) {
-                result = c.getInt(0);
+        int offset = 0;
+        Cursor c = null;
+        try {
+            while (!mIsImportInterrupted) {
+                try {
+                    c = cr.query(VideoStoreInternal.FILES_IMPORT, COUNT_PROJ, null, null, BaseColumns._ID + " LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+                    if (c != null) {
+                        if (c.moveToFirst()) {
+                            result += c.getInt(0);
+                        }
+                        c.close();
+                    }
+                    if (c == null || c.getCount() < WINDOW_SIZE) break;
+                    offset += WINDOW_SIZE;
+                } catch (Exception e) {
+                    log.error("getLocalCount: exception while moving to next cursor row!", e);
+                    if (CRASH_ON_ERROR) throw new RuntimeException(e);
+                    break;
+                } finally {
+                    if (c != null) c.close();
+                }
             }
-            c.close();
+        } finally {
+            if (c != null) c.close();
         }
         return result;
     }
 
     private static final String[] MAX_ID_PROJ = new String[] { "max(_id)" };
     /** helper to find the max of _id (=newest in android's db) in our db */
-    private static String getMaxId (ContentResolver cr) {
-        Cursor c = cr.query(VideoStoreInternal.FILES_IMPORT, MAX_ID_PROJ, null, null, null);
+    private static String getMaxId(ContentResolver cr) {
+        int offset = 0;
         String result = null;
-        if (c != null) {
-            if (c.moveToFirst()) {
-                result = c.getString(0);
+        int maxId = 0;
+        int highestMaxId = 0;
+        Cursor c = null;
+        try {
+            while (!mIsImportInterrupted) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // API>=30 requires bundle to LIMIT
+                        Bundle queryArgs = new Bundle();
+                        queryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, null);
+                        queryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, null);
+                        queryArgs.putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, new String[]{BaseColumns._ID});
+                        queryArgs.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING);
+                        queryArgs.putInt(ContentResolver.QUERY_ARG_LIMIT, WINDOW_SIZE);
+                        queryArgs.putInt(ContentResolver.QUERY_ARG_OFFSET, offset);
+                        c = cr.query(VideoStoreInternal.FILES_IMPORT, MAX_ID_PROJ, queryArgs, null);
+                    } else {
+                        c = cr.query(VideoStoreInternal.FILES_IMPORT, MAX_ID_PROJ, null, null, BaseColumns._ID + " DESC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+                    }
+                    if (c != null && c.moveToFirst()) {
+                        result = c.getString(0);
+                        if (result != null) {
+                            maxId = Integer.parseInt(result);
+                            if (maxId > highestMaxId) {
+                                highestMaxId = maxId;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    if (c == null || c.getCount() < WINDOW_SIZE) break;
+                    offset += WINDOW_SIZE;
+                    c.close();
+                } catch (Exception e) {
+                    log.error("getMaxId: exception while querying", e);
+                    break;
+                } finally {
+                    if (c != null) c.close();
+                }
             }
-            c.close();
+        } finally {
+            if (c != null) c.close();
         }
-        return TextUtils.isEmpty(result) ? "0" : result;
+        log.debug("getMaxId: highestMaxId=" + highestMaxId);
+        return Integer.toString(highestMaxId);
     }
 
     private final static String[] REMOTE_LIST_PROJECTION = new String[] {
         BaseColumns._ID
     };
     /** helper to get a comma separated list of all ids */
-    private static String getRemoteIdList (ContentResolver cr) {
-        Cursor c = cr.query(MediaStore.Files.getContentUri("external"), REMOTE_LIST_PROJECTION, null, null, null);
+    private static String getRemoteIdList(ContentResolver cr) {
         StringBuilder sb = new StringBuilder();
         String prefix = "";
-        if (c != null) {
-            c.moveToFirst();
-            while (!c.isAfterLast()) {
-                sb.append(prefix).append(c.getString(0));
-                prefix = ",";
-                c.moveToNext();
+        int offset = 0;
+        Cursor c = null;
+        try {
+            while (!mIsImportInterrupted) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // API>=30 requires bundle to LIMIT
+                        Bundle queryArgs = new Bundle();
+                        queryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, null);
+                        queryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, null);
+                        queryArgs.putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, new String[]{BaseColumns._ID});
+                        queryArgs.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING);
+                        queryArgs.putInt(ContentResolver.QUERY_ARG_LIMIT, WINDOW_SIZE);
+                        queryArgs.putInt(ContentResolver.QUERY_ARG_OFFSET, offset);
+                        c = cr.query(MediaStore.Files.getContentUri("external"), REMOTE_LIST_PROJECTION, queryArgs, null);
+                    } else {
+                        c = cr.query(MediaStore.Files.getContentUri("external"),
+                                REMOTE_LIST_PROJECTION, null, null,
+                                BaseColumns._ID + " LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+                    }
+
+                    int count = 0;
+
+                    if (c != null) {
+                        while (c.moveToNext() && count < WINDOW_SIZE && !mIsImportInterrupted) {
+                            count++;
+                            sb.append(prefix).append(c.getString(0));
+                            prefix = ",";
+                        }
+                        log.debug("getRemoteIdList: count=" + count + " WINDOW_SIZE=" + WINDOW_SIZE + " offset=" + offset);
+                        if (count < WINDOW_SIZE) {
+                            c.close();
+                            break;
+                        }
+                        offset += WINDOW_SIZE;
+                        c.close();
+                    } else {
+                        break;
+                    }
+                } catch (Exception e) {
+                    log.error("getRemoteIdList: exception while moving to next cursor row!", e);
+                    if (CRASH_ON_ERROR) throw new RuntimeException(e);
+                    break;
+                } finally {
+                    if (c != null) c.close();
+                }
             }
-            c.close();
+        } finally {
+            if (c != null) c.close();
         }
         String result = sb.toString();
+        log.trace("getRemoteIdList: ids of files visible " + result);
         return TextUtils.isEmpty(result) ? "" : result;
     }
 
@@ -715,7 +901,7 @@ public class VideoStoreImportImpl {
         int offset = Uri.parse(path).getScheme()!=null?Uri.parse(path).getScheme().length()+3:1;//go after smb://
 
         // in case of smb, skip checking smb://SERVER/.nomedia since it makes jcifs-ng crash
-        if ("smb".equals(uri.getScheme())) // in case of smb server skip the serveur name since exists causes a crash with jcifs-ng
+        if ((uri.getScheme() != null) && uri.getScheme().startsWith("smb")) // in case of smb server skip the serveur name since exists causes a crash with jcifs-ng
             offset = path.indexOf('/', offset) + 1; // +1 moves past next slash
 
         while (offset >= 0) {
@@ -812,5 +998,9 @@ public class VideoStoreImportImpl {
         }
         */
         return false;
+    }
+
+    public void interruptImport() {
+        mIsImportInterrupted = true;
     }
 }

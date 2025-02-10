@@ -26,24 +26,26 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.NetworkOnMainThreadException;
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
-
-import android.util.Log;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.archos.filecorelibrary.MetaFile2;
 import com.archos.filecorelibrary.MetaFile2Factory;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.video.VideoStore;
 import com.archos.mediaprovider.video.VideoStore.MediaColumns;
 import com.archos.mediaprovider.video.VideoStore.Video.VideoColumns;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class NfoExportService extends IntentService {
+public class NfoExportService extends IntentService implements DefaultLifecycleObserver {
+    private static final Logger log = LoggerFactory.getLogger(NfoExportService.class);
     private static final String TAG = "NfoExportService";
-    private final static boolean DBG = false;
 
     private static final String INTENT_EXPORT_FILE = "archos.mediascraper.intent.action.EXPORT_FILE";
     private static final String INTENT_EXPORT_ALL = "archos.mediascraper.intent.action.EXPORT_ALL";
@@ -60,6 +62,7 @@ public class NfoExportService extends IntentService {
     private static final String notifChannelName = "NfoExportService";
     private static final String notifChannelDescr = "NfoExportService";
 
+    private static volatile boolean isForeground = true;
 
     /**
      * simple guard against multiple tasks of the same directory
@@ -95,29 +98,28 @@ public class NfoExportService extends IntentService {
         sScheduledTasks.remove(EXPORT_ALL_KEY);
     }
 
-
     public static void exportDirectory(Context context, Uri directory) {
         Intent serviceIntent = new Intent(context, NfoExportService.class);
         serviceIntent.setAction(INTENT_EXPORT_FILE);
         serviceIntent.setData(directory);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+        if (isForeground) context.startService(serviceIntent);
     }
     public static void exportAll(Context context) {
         Intent serviceIntent = new Intent(context, NfoExportService.class);
         serviceIntent.setAction(INTENT_EXPORT_ALL);
-        if (AppState.isForeGround()) ContextCompat.startForegroundService(context, serviceIntent);
+        if (isForeground) context.startService(serviceIntent);
     }
 
     public NfoExportService() {
         super(TAG);
-        if (DBG) Log.d(TAG, "NfoExportService");
+        log.debug("NfoExportService");
         setIntentRedelivery(true);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        if (DBG) Log.d(TAG, "onCreate");
+        log.debug("onCreate");
 
         // need to do that early to avoid ANR on Android 26+
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -134,14 +136,14 @@ public class NfoExportService extends IntentService {
                 .setContentText("")
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
-        startForeground(NOTIFICATION_ID, nb.build());
+        // Register as a lifecycle observer
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent != null ? intent.getAction() : null;
         Uri data = intent != null ? intent.getData() : null;
-        startForeground(NOTIFICATION_ID, nb.build());
         boolean processIntent = false;
         if (INTENT_EXPORT_FILE.equals(action)) {
             if (addDirTask(data))
@@ -171,16 +173,16 @@ public class NfoExportService extends IntentService {
     }
 
     private void exportAll() {
-        if (DBG) Log.d(TAG, "exportAll");
+        log.debug("exportAll");
         nb.setContentText(getString(R.string.nfo_export_exporting_all));
         nm.notify(NOTIFICATION_ID, nb.build());
         handleCursor(getAllCursor());
         removeAllTask();
-        stopForeground(true);
+        stopSelf();
     }
 
     private void exportFile(Uri data) {
-        if (DBG) Log.d(TAG, "exportFile: " + data.getPath());
+        log.debug("exportFile: " + data.getPath());
         MetaFile2 file = null;
         try {
             file = MetaFile2Factory.getMetaFileForUrl(data);
@@ -196,13 +198,13 @@ public class NfoExportService extends IntentService {
             handleCursor(getInDirectoryCursor(data));
         }
         removeDirTask(data);
-        stopForeground(true);
+        stopSelf();
     }
 
     private void handleCursor(Cursor cursor) {
         if (cursor != null) {
             NfoWriter.ExportContext exportContext = new NfoWriter.ExportContext();
-            while (cursor.moveToNext()) {
+            while (cursor.moveToNext() && isForeground) {
                 long id = cursor.getLong(0);
                 int type = cursor.getInt(1);
                 BaseTags tags = null;
@@ -214,7 +216,7 @@ public class NfoExportService extends IntentService {
                         tags = TagsFactory.buildEpisodeTags(this, id);
                         break;
                     default:
-                        Log.w(TAG, "can't export file of type: " + type);
+                        log.warn("can't export file of type: {}", type);
                         break;
                 }
                 if (tags != null) {
@@ -259,4 +261,33 @@ public class NfoExportService extends IntentService {
         return cr.query(URI, PROJECTION, SELECTION_FOLDER, selectionArgs, ORDER);
     }
 
+    @Override
+    public void onStop(LifecycleOwner owner) {
+        // App in background
+        log.debug("onStop: LifecycleOwner app in background, stopSelf");
+        cleanup();
+        stopSelf();
+    }
+
+    @Override
+    public void onStart(LifecycleOwner owner) {
+        // App in foreground
+        log.debug("onStart: LifecycleOwner app in foreground");
+        isForeground = true;
+    }
+
+    private void cleanup() {
+        isForeground = false;
+        // Clear the scheduled tasks
+        sScheduledTasks.clear();
+        // Cancel the notification
+        nm.cancel(NOTIFICATION_ID);
+    }
+
+    @Override
+    public void onDestroy() {
+        log.debug("onDestroy()");
+        cleanup();
+        super.onDestroy();
+    }
 }

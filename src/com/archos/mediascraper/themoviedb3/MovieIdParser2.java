@@ -181,11 +181,11 @@ public class MovieIdParser2 {
             result.addDefaultClearLogoFTV(mContext, enClearLogos.get(0));
         }
 
-        // TODO: missing certification i.e. setContentRating that should rely no CertificationService
-        if (movie.release_dates.results != null) {
+        // certification i.e. setContentRating that should rely no CertificationService
+        if (movie.release_dates != null && movie.release_dates.results != null) {
             for (int i = 0; i < movie.release_dates.results.size(); i++) {
                 ReleaseDatesResult releaseDatesResult = movie.release_dates.results.get(i);
-                if (releaseDatesResult.iso_3166_1.equals("US")) {
+                if (releaseDatesResult.release_dates != null && releaseDatesResult.iso_3166_1 != null && releaseDatesResult.iso_3166_1.equals("US")) {
                     for (int j = 0; j < releaseDatesResult.release_dates.size(); j++) {
                         ReleaseDate releaseDate = releaseDatesResult.release_dates.get(j);
                         result.setContentRating(releaseDate.certification);
@@ -213,20 +213,25 @@ public class MovieIdParser2 {
 
         if (movie.runtime != null) result.setRuntime(movie.runtime, TimeUnit.MINUTES);
 
-        List<ScraperTrailer> trailers = new ArrayList<>(movie.videos.results.size());
-        int i = 0;
-        for (Videos.Video trailer: movie.videos.results) {
-            if (i < limitTrailers) {
-                if (trailer.site != null && trailer.iso_639_1 != null && trailer.type !=null) {
-                    log.debug("getResult: addTrailers found " + trailer.name + " for service " + trailer.site + " of type " + trailer.type + " in " + trailer.iso_639_1);
-                    if (trailer.site.equals("YouTube") && ("Trailer".equals(trailer.type.toString())||"Teaser".equals(trailer.type.toString()))) {
-                        log.debug("getResult: addTrailers adding it " + trailer.name);
-                        ScraperTrailer videoTrailer = new ScraperTrailer(ScraperTrailer.Type.MOVIE_TRAILER, trailer.name, trailer.key, trailer.site, trailer.iso_639_1);
-                        trailers.add(videoTrailer);
-                        i++;
+        List<ScraperTrailer> trailers;
+        if (movie.videos != null && movie.videos.results != null) {
+            trailers = new ArrayList<>(movie.videos.results.size());
+            int i = 0;
+            for (Videos.Video trailer: movie.videos.results) {
+                if (i < limitTrailers) {
+                    if (trailer.site != null && trailer.iso_639_1 != null && trailer.type !=null) {
+                        log.debug("getResult: addTrailers found " + trailer.name + " for service " + trailer.site + " of type " + trailer.type + " in " + trailer.iso_639_1);
+                        if (trailer.site.equals("YouTube") && ("Trailer".equals(trailer.type.toString())||"Teaser".equals(trailer.type.toString()))) {
+                            log.debug("getResult: addTrailers adding it " + trailer.name);
+                            ScraperTrailer videoTrailer = new ScraperTrailer(ScraperTrailer.Type.MOVIE_TRAILER, trailer.name, trailer.key, trailer.site, trailer.iso_639_1);
+                            trailers.add(videoTrailer);
+                            i++;
+                        }
                     }
                 }
             }
+        } else {
+            trailers = new ArrayList<>();
         }
         result.setTrailers(trailers);
 

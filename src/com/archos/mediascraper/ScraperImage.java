@@ -25,7 +25,7 @@ import android.os.Environment;
 import android.provider.BaseColumns;
 import android.util.DisplayMetrics;
 
-
+import com.archos.filecorelibrary.FileUtils;
 import com.archos.mediaprovider.video.ScraperStore;
 
 import org.slf4j.Logger;
@@ -271,7 +271,7 @@ public class ScraperImage {
      * @return true if this is the poster or the backdrop for a TV show
      */
     public boolean isShow() {
-        return (mType==Type.SHOW_POSTER || mType==Type.SHOW_BACKDROP );
+        return (mType==Type.SHOW_POSTER || mType==Type.SHOW_BACKDROP);
     }
 
     public long save(Context context, long remoteId) {
@@ -279,7 +279,7 @@ public class ScraperImage {
         Uri insert = context.getContentResolver().insert(mType.baseUri, cv);
         long result = -1;
         if (insert != null)
-            result = Long.parseLong(insert.getLastPathSegment());
+            result = Long.parseLong(FileUtils.getName(insert));
         mId = result;
         return result;
     }
@@ -383,7 +383,7 @@ public class ScraperImage {
         return new File(getDir(mType, context), getFileName(url, mNameSeed, thumb)).getPath();
     }
 
-    private String getFileName(String url, String nameSeed, boolean thumb) {
+    private static String getFileName(String url, String nameSeed, boolean thumb) {
         // goal is to generate a stable + unique filename
         int urlHash;
         int seedHash;
@@ -438,6 +438,7 @@ public class ScraperImage {
                 break;
             case MOVIE_BACKDROP:
             case SHOW_BACKDROP:
+            case COLLECTION_BACKDROP:
                 ret = MediaScraper.getBackdropDirectory(context);
                 log.trace("getDir: for backdrop: " + ret.getPath());
                 break;
@@ -890,7 +891,7 @@ public class ScraperImage {
                 log.warn("setAsDefault: unknown type:" + mType);
                 break;
         }
-        if (updateUri != null) {
+        if (context != null && updateUri != null) {
             success = context.getContentResolver().update(updateUri, updateValues, selection, selectionArgs) > 0;
         }
         return success;

@@ -19,6 +19,7 @@ import android.util.Log;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class StringUtils {
@@ -296,6 +297,18 @@ public class StringUtils {
             input = input.substring(0, input.length() - 1);
         if (DBG) Log.d(TAG, "removeLastSegment output: " + input);
         return input;
+    }
+
+    public static String capitalizeFirstLetter(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return Character.toUpperCase(input.charAt(0)) + input.substring(1);
+    }
+
+    public static boolean stringContainsForced(String string) {
+        // return true if string contains "forced" case insensitive
+        return string != null && string.toLowerCase().contains("forced");
     }
 
     private StringUtils() {

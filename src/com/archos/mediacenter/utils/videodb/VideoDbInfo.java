@@ -32,7 +32,12 @@ import com.archos.mediascraper.ScrapeDetailResult;
 import com.archos.mediascraper.ScrapeStatus;
 import com.archos.mediascraper.ShowTags;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class VideoDbInfo implements Parcelable {
+
+    private static final Logger log = LoggerFactory.getLogger(VideoDbInfo.class);
 
     public VideoDbInfo() {}
 
@@ -216,13 +221,19 @@ public class VideoDbInfo implements Parcelable {
             result.duration = c.getInt(IDX_DURATION);
             result.resume = c.getInt(IDX_BOOKMARK);
             result.bookmark = c.getInt(IDX_ARCHOS_BOOKMARK);
+            result.lastTimePlayed = c.getLong(IDX_LAST_TIME_PLAYED);
             int playerParams = c.getInt(IDX_PLAYER_PARAMS);
-            result.audioTrack = VideoStore.paramsToAudioTrack(playerParams);
-            result.subtitleTrack = VideoStore.paramsToSubtitleTrack(playerParams);
+            // ensure that audioTrack is -1 if not played before (playParams is 0 if not played before but 0 could be a valid audioTrack if played before)
+            if (result.lastTimePlayed > 0) result.audioTrack = VideoStore.paramsToAudioTrack(playerParams);
+            else result.audioTrack = -1;
+            log.debug("fromCursor: lastTimePlayed={}, playerParams={}, paramsToAudioTrack={}, audioTrack={}", result.lastTimePlayed, playerParams, VideoStore.paramsToAudioTrack(playerParams), result.audioTrack);
+            // ensure that audioTrack is -1 if not played before (playParams is 0 if not played before but 0 could be a valid audioTrack if played before)
+            if (result.lastTimePlayed > 0) result.subtitleTrack = VideoStore.paramsToSubtitleTrack(playerParams);
+            else result.subtitleTrack = -1;
+            log.debug("fromCursor: result.lastTimePlayed={}, playerParams={}, paramsToSubtitleTrack={}, subtitleTrack={}", result.lastTimePlayed, playerParams, VideoStore.paramsToSubtitleTrack(playerParams), result.subtitleTrack);
             result.subtitleDelay = c.getInt(IDX_SUBTITLE_DELAY);
             result.subtitleRatio = c.getInt(IDX_SUBTITLE_RATIO);
             result.nbSubtitles = c.getInt(IDX_NB_SUBTITLES);
-            result.lastTimePlayed = c.getLong(IDX_LAST_TIME_PLAYED);
             result.traktSeen = c.getInt(IDX_TRAKT_SEEN);
             result.traktLibrary = c.getInt(IDX_TRAKT_LIBRARY);
             result.traktResume = c.getInt(IDX_TRAKT_RESUME);

@@ -18,7 +18,6 @@ package com.archos.mediascraper.preprocess;
 import android.net.Uri;
 import android.util.Pair;
 
-import com.archos.mediascraper.ShowUtils;
 import com.archos.mediascraper.StringUtils;
 
 import org.slf4j.Logger;
@@ -28,11 +27,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.archos.mediascraper.ShowUtils.cleanUpName;
-import static com.archos.mediascraper.preprocess.ParseUtils.BRACKETS;
 import static com.archos.mediascraper.preprocess.ParseUtils.getCountryOfOrigin;
 import static com.archos.mediascraper.preprocess.ParseUtils.parenthesisYearExtractor;
-import static com.archos.mediascraper.preprocess.ParseUtils.removeAfterEmptyParenthesis;
-import static com.archos.mediascraper.preprocess.ParseUtils.yearExtractor;
+import static com.archos.mediascraper.preprocess.ParseUtils.yearExtractorEndString;
 
 /**
  * Matches Tv Shows in folders like
@@ -71,40 +68,17 @@ class TvShowPathMatcher implements InputMatcher {
     private static final String SEASON = "(?:S|SEAS|SEASON)";
     private static final String EPISODE = "(?:E|EP|EPISODE)";
     private static final String SEASON_NUMBER = "20\\d{2}|\\d{1,2}";
-    private static final String EPISODE_NUMBER = "\\d{1,3}";
+    // for episodes beyond 999 (e.g. 1000) we need to allow 4 digits but force the first digit to be 1 to avoid year matching
+    private static final String EPISODE_NUMBER = "1?\\d{1,3}";
     private static final String NOT_DECIMAL = "(?!\\d).*";
     private static final String LETTER_NUMBER_SEP = "(?:[\\p{L}\\p{N}]++[\\s._-]*+)"; // contains no date between ()...
 
-    // /show-sXXeYY/filename.mkv formerly in TvShowFolderMatcher
-    private static final String SHOW_SXEY_FILE_PATH = CASE_INSENSITIVE + WHATEVER + SLASH + "(" + NOT_SLASH_GREEDY + ")" +
-            SEP_MANDATORY + SEASON + SEP_OPTIONAL + "(" + SEASON_NUMBER + ")" + SEP_OPTIONAL + EPISODE + "(" + EPISODE_NUMBER + ")" + NOT_DECIMAL
-            + SLASH + NOT_SLASH_GREEDY;
-
-    // TODO shorter way (?i).*\/([^\/]++)\/[^\/]*?(?:S|SEAS|SEASON)[\s._-]*+(\d{1,2})(?!\d)[^\/]*+\/[^\/]*?(?:E|EP|EPISODE)[\s._-]*+(\d{1,3})(?!\d)[^\/]*+
-
-    // NOK for /show-s01e02/garbage.mkv (?i).*\/((?:[^\/]*+[\s._-]*+)++)[\s._-]+?(?:S|SEAS|SEASON)[\s._-]*+(\d{1,2})[\s._-]*+(?:E|EP|EPISODE)[\s._-]*+(\d{1,3})\/[^\/]*+
-    // Show/sXX/blah-eYY-blah.mkv
+    // Compared to above use of NOT_DECIMAL "(?!\\d).*" which is adding .* at the end compared to orignal string
     private static final String SHOW_SEASON_EPISODE_PATH =
-            "(?i).*/((?:[\\p{L}\\p{N}]++[\\s._-]*+)++)/[^/]*?(?<![\\p{L}])(?:S|SEAS|SEASON)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+/[^/]*?(?<![\\p{L}])(?:E|EP|EPISODE)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+";
-
-    // TODO: better regex? (?i).*\/((?:[^\/]*+[\s._-]*+)++)\/[^\/]*?(?:S|SEAS|SEASON)[\s._-]*+(\d{1,2})(?!\d)[^\/]*+\/[^\/]*?(?:E|EP|EPISODE)[\s._-]*+(\d{1,2})(?!\d)[^\/]*+
-    // Show/blah-s02e01-blah.mkv
-    private static final String SHOW_SXEY_PATH =
-            "(?i).*/((?:[\\p{L}\\p{N}]++[\\s._-]*+)++)/[^/]*?(?<![\\p{L}])(?:S|SEAS|SEASON)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+/[^/]*?(?<![\\p{L}])(?:E|EP|EPISODE)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+";
-
-    // Show-sXX/eYY/blah.mkv
-    //private static final String SHOW_SXEY_FILE_PATH =
-    //        "(?i).*/((?:[\\p{L}\\p{N}]++[\\s._-]*+)++)/[^/]*?(?<![\\p{L}])(?:S|SEAS|SEASON)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+?(?<![\\p{L}])(?:E|EP|EPISODE)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+/[^/]*+";
-
-    // Show-sXXeYY/blah.mkv formerly in TvShowFolderMatcher
-    private static final String SHOWSXEY_GARBAGE_PATH =
-            "(?i).*/((?:[\\p{L}\\p{N}]++[\\s._-]*+)++)/[^/]*?(?<![\\p{L}])(?:S|SEAS|SEASON)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+?(?<![\\p{L}])(?:E|EP|EPISODE)[\\s._-]*+(\\d{1,2})(?!\\d)[^/]*+/[^/]*+";
-
-    // TODO WIP: replace PATTERN_ by PATTERNS
-    //private static final Pattern[] PATTERNS = {
-    //        Pattern.compile(SHOW_SEASON_EPISODE_PATH),
-    //        Pattern.compile(SHOWSXEY_GARBAGE_PATH),
-    //};
+            CASE_INSENSITIVE + WHATEVER + SLASH + "(" + LETTER_NUMBER_SEP + "++" + ")" + SLASH +
+                    NOT_SLASH_LAZY + PREVIOUS_NOT_LETTER + SEASON + SEP_OPTIONAL + "(" + SEASON_NUMBER + ")" +
+                    NOT_DECIMAL + NOT_SLASH_GREEDY + SLASH + NOT_SLASH_LAZY + PREVIOUS_NOT_LETTER + EPISODE +
+                    SEP_OPTIONAL + "(" + EPISODE_NUMBER + ")" + NOT_DECIMAL + NOT_SLASH_GREEDY;
 
     private static final Pattern PATTERN_ = Pattern.compile(SHOW_SEASON_EPISODE_PATH);
 
@@ -141,8 +115,16 @@ class TvShowPathMatcher implements InputMatcher {
             Pair<String, String>  nameCountry = getCountryOfOrigin(name);
             int season = StringUtils.parseInt(matcher.group(2), 0);
             int episode = StringUtils.parseInt(matcher.group(3), 0);
-            log.debug("getFileInputMatch: " + name + " season " + season + " episode " + episode + " year " + nameYear.second + " country " + nameCountry.second);
-            return new TvShowSearchInfo(file, nameCountry.first, season, episode, nameYear.second, nameCountry.second);
+            String year = nameYear.second;
+            if (year == null || year.isEmpty()) { // if year empty perhaps this is Eric.2024-s01e01, find year in the end of the string
+                nameYear = yearExtractorEndString(nameCountry.first);
+                if (nameYear.first != null && ! nameYear.first.isEmpty()) { // do it only if the remaining name is not empty
+                    name = nameYear.first;
+                    year = nameYear.second;
+                }
+            }
+            log.debug("getFileInputMatch: " + name + " season " + season + " episode " + episode + " year " + year + " country " + nameCountry.second);
+            return new TvShowSearchInfo(file, name, season, episode, year, nameCountry.second);
         } else {
             log.debug("getFileInputMatch: no match");
         }

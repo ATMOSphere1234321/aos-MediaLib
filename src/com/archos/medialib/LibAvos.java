@@ -84,7 +84,7 @@ public class LibAvos {
                                 if (DBG) Log.d(TAG, "Importing plugins lib "+file.getPath());
                                 while ((read = in.read(buffer)) != -1)
                                     out.write(buffer, 0, read);
-                                    canDeleteFile = true;
+                                canDeleteFile = true;
                             } catch (Exception e) {
                                 if (DBG) Log.d(TAG, "Error Copy");
                             } finally {
@@ -195,9 +195,9 @@ public class LibAvos {
 
         loadLibrary(ctx, "dav1d", armHasNeon, false);
         loadLibrary(ctx, "avutil", armHasNeon, false);
-        loadLibrary(ctx, "swresample", armHasNeon, false);
         loadLibrary(ctx, "avcodec", armHasNeon, false);
         loadLibrary(ctx, "avformat", armHasNeon, false);
+        loadLibrary(ctx, "swscale", armHasNeon, false);
         loadLibrary(ctx, "avfilter", armHasNeon, false);
 
         // not used anymore
@@ -252,6 +252,7 @@ public class LibAvos {
     }
 
     public static void setSubtitlePath(String path) {
+        if (DBG) Log.d("LibAvos", "setSubtitlePath: " + path);
         nativeSetSubtitlePath(path);
     }
 
@@ -274,6 +275,40 @@ public class LibAvos {
 
     public static void setPassthrough(int forcePassthrough) {
         nativeSetPassthrough(forcePassthrough);
+    }
+
+    public static void setHdmiSupportedAudioCodecs(long hdmiAudioCodecsFlag) {
+        nativeSetHdmiSupportedAudioCodecs(hdmiAudioCodecsFlag);
+    }
+
+    public static void setAudioSpeed(float audioSpeed) {
+        Log.d(TAG, "setAudioSpeed " + audioSpeed);
+        nativeSetAudioSpeed(audioSpeed);
+    }
+
+    public static void setAndroidFrameTiming(boolean enable) {
+        Log.d(TAG, "setAndroidFrameTiming " + enable);
+        nativeSetAndroidFrameTiming(enable);
+    }
+
+    public static void enableAudioSpeed(boolean enable) {
+        Log.d(TAG, "enableAudioSpeed " + enable);
+        nativeEnableAudioSpeed(enable);
+    }
+
+    public static void setStreamMaxIframeSize(int size) {
+        Log.d(TAG, "setStreamMaxIframeSize " + size);
+        nativeSetStreamMaxIframeSize(size);
+    }
+
+    public static void setStreamBufferSize(int size) {
+        Log.d(TAG, "setStreamBufferSize " + size);
+        nativeSetStreamBufferSize(size);
+    }
+
+    public static void parserSyncMode(int mode) {
+        Log.d(TAG, "parserSyncMode " + mode);
+        nativeParserSyncMode(mode);
     }
 
     public static void setDownmix(int downmix) {
@@ -299,6 +334,20 @@ public class LibAvos {
     private static native void nativeSetOutputSampleRate(int sampleRate);
 
     private static native void nativeSetPassthrough(int forcePassthrough);
+
+    private static native void nativeSetHdmiSupportedAudioCodecs(long hdmiAudioCodecsFlag);
+
+    private static native void nativeSetAudioSpeed(float audioSpeed);
+
+    private static native void nativeSetAndroidFrameTiming(boolean enable);
+
+    private static native void nativeEnableAudioSpeed(boolean enable);
+
+    private static native void nativeParserSyncMode(int mode);
+
+    private static native void nativeSetStreamBufferSize(int size);
+
+    private static native void nativeSetStreamMaxIframeSize(int size);
 
     private static native void nativeSetDownmix(int downmix);
 

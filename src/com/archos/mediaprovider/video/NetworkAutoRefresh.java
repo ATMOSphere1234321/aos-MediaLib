@@ -14,19 +14,24 @@
 
 package com.archos.mediaprovider.video;
 
+import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
 
 import com.archos.environment.ArchosUtils;
 import com.archos.filecorelibrary.ftp.Session;
 import com.archos.filecorelibrary.sftp.SFTPSession;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
-import com.archos.mediacenter.utils.AppState;
 import com.archos.mediacenter.utils.ShortcutDbAdapter;
 import com.archos.mediaprovider.ArchosMediaIntent;
 import com.archos.environment.NetworkState;
@@ -42,9 +47,12 @@ import java.util.List;
 /**
  * Created by alexandre on 26/06/15.
  */
-public class NetworkAutoRefresh extends BroadcastReceiver {
+public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLifecycleObserver {
 
     private static final Logger log = LoggerFactory.getLogger(NetworkAutoRefresh.class);
+
+    private static volatile boolean isForeground = true;
+    private static Application mApplication;
 
     public static final String ACTION_RESCAN_INDEXED_FOLDERS = "com.archos.mediaprovider.video.NetworkAutoRefresh";
     public static final String ACTION_FORCE_RESCAN_INDEXED_FOLDERS = "com.archos.mediaprovider.video.NetworkAutoRefresh_force";
@@ -93,10 +101,16 @@ public class NetworkAutoRefresh extends BroadcastReceiver {
             List<Uri> toUpdate = new ArrayList<>();
             if (cursor.getCount() > 0) {
                 int pathKey = cursor.getColumnIndex(ShortcutDbAdapter.KEY_PATH);
+                int rescanKey = cursor.getColumnIndex(ShortcutDbAdapter.KEY_RESCAN);
                 cursor.moveToFirst();
                 do {
                     Uri uri = Uri.parse(cursor.getString(pathKey));
-                    toUpdate.add(uri);
+                    int rescan = cursor.getInt(rescanKey);
+                    // if this uri is to be rescan automatically, add it to the list
+                    if (rescan == 1) {
+                        log.debug("onReceive: add to scan list " + uri);
+                        toUpdate.add(uri);
+                    }
                 }
                 while (cursor.moveToNext());
             }
@@ -127,15 +141,10 @@ public class NetworkAutoRefresh extends BroadcastReceiver {
             log.debug("onReceive: received rescan intent end");
         }
     }
-    private static final AppState.OnForeGroundListener sForeGroundListener = new AppState.OnForeGroundListener() {
-        @Override
-        public void onForeGroundState(Context applicationContext, boolean foreground) {
-            if (foreground&&autoRescanAtStart(applicationContext))
-                forceRescan(applicationContext);
-        }
-    };
-    public static void init() {
-        AppState.addOnForeGroundListener(sForeGroundListener);
+
+    public static void init(Application application) {
+        mApplication = application;
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(new NetworkAutoRefresh());
     }
 
     public static void forceRescan(Context context){
@@ -157,5 +166,20 @@ public class NetworkAutoRefresh extends BroadcastReceiver {
 
     public static int getRescanPeriod(Context context) {
         return PreferenceManager.getDefaultSharedPreferences(context).getInt(AUTO_RESCAN_PERIOD, 0);
+    }
+
+    @Override
+    public void onStart(@NonNull LifecycleOwner owner) {
+        log.debug("onStop: lifecycle foreground");
+        isForeground = true;
+        if (autoRescanAtStart(mApplication)) {
+            forceRescan(mApplication);
+        }
+    }
+
+    @Override
+    public void onStop(@NonNull LifecycleOwner owner) {
+        isForeground = false;
+        log.debug("onStop: lifecycle background");
     }
 }

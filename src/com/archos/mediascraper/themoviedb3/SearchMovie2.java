@@ -54,31 +54,38 @@ public class SearchMovie2 {
                 annee = null;
             }
         }
-        log.debug("search: quering tmdb for " + query + " year " + year + " in " + language);
+        log.debug("search: quering tmdb for " + query + " year " + annee + " in " + language);
         try {
             // by default no adult search
             response = searchService.movie(query, null, language,
-                    null, adultScrape, annee, null).execute();
+                    null, adultScrape, null, annee).execute();
+            // Check https://developer.themoviedb.org/docs/errors
             switch (response.code()) {
-                case 401: // auth issue
+                case 401 -> { // auth issue
                     log.debug("search: auth error");
                     myResult.result = SearchMovieResult.EMPTY_LIST;
                     myResult.status = ScrapeStatus.AUTH_ERROR;
                     MovieScraper3.reauth();
                     return myResult;
-                case 404: // not found
+                }
+                case 404 -> { // not found
                     myResult.status = ScrapeStatus.NOT_FOUND;
                     notFound = true;
                     log.debug("search: " + query + " not found");
-                    break;
-                default:
+                }
+                case 500, 503, 504 -> { // internal server error
+                    log.error("search: internal server error");
+                    myResult.result = SearchMovieResult.EMPTY_LIST;
+                    myResult.status = ScrapeStatus.ERROR;
+                }
+                default -> {
                     log.debug("search: found");
                     if (response.isSuccessful()) {
                         if (response.body() != null) {
                             log.debug("search: response body has " + response.body().total_results + " results");
-                            if (response.body().total_results == 0)
+                            if (response.body().total_results != null && response.body().total_results == 0)
                                 notFound = true;
-                            parserResult = SearchMovieParser2.getResult(response, resultLimit);
+                            parserResult = SearchMovieParser2.getResult(response, query, language, year, resultLimit);
                             myResult.result = parserResult;
                             myResult.status = ScrapeStatus.OKAY;
                         } else {
@@ -90,7 +97,7 @@ public class SearchMovie2 {
                         log.debug("search: response is not successful for " + query);
                         myResult.status = ScrapeStatus.ERROR_PARSER;
                     }
-                    break;
+                }
             }
         } catch (IOException e) {
             log.error("searchMovie: caught IOException");
