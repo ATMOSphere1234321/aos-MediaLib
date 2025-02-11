@@ -383,7 +383,7 @@ public class ScraperImage {
         return new File(getDir(mType, context), getFileName(url, mNameSeed, thumb)).getPath();
     }
 
-    private static String getFileName(String url, String nameSeed, boolean thumb) {
+    private String getFileName(String url, String nameSeed, boolean thumb) {
         // goal is to generate a stable + unique filename
         int urlHash;
         int seedHash;
