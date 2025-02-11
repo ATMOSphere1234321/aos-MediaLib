@@ -440,7 +440,7 @@ public class ScraperImage {
             case SHOW_BACKDROP:
             case COLLECTION_BACKDROP:
                 ret = MediaScraper.getBackdropDirectory(context);
-                log.trace("getDir: for backdrop: " + ret.getPath());
+                log.trace("getDir: for collection_backdrop: " + ret.getPath());
                 break;
             case SHOW_NETWORK:
                 ret = MediaScraper.getNetworkLogoDirectory(context);
@@ -460,10 +460,6 @@ public class ScraperImage {
             case SHOW_STUDIOLOGO:
                 ret = MediaScraper.getStudioLogoDirectory(context);
                 log.trace("getDir: for studiologo: " + ret.getPath());
-                break;
-            case COLLECTION_BACKDROP:
-                ret = MediaScraper.getBackdropDirectory(context);
-                log.trace("getDir: for collection_backdrop: " + ret.getPath());
                 break;
             case EPISODE_PICTURE:
                 ret = MediaScraper.getPictureDirectory(context);
