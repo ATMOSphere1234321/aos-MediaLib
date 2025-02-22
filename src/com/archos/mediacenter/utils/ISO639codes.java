@@ -462,18 +462,18 @@ public class ISO639codes {
             if (language != null && !language.isEmpty()) {
                 result = capitalizeFirstLetter(language);
                 if (format != null && !format.isEmpty()) {
-                    result += " (" + format + ")";
+                    result += "<small> (" + format + ")</small>";
                 }
                 if (!cleanString.isEmpty()) {
-                    result += ": " + cleanString;
+                    result += "<small>: " + cleanString + "</small>";
                 }
             } else {
                 if (!cleanString.isEmpty()) {
-                    result = cleanString;
+                    result = "<small>" + cleanString + "</small>";
                 }
                 if (format != null && !format.isEmpty()) {
                     if (result.isEmpty()) result = format;
-                    else result += " (" + format + ")";
+                    else result += "<small> (" + format + ")</small>";
                 }
             }
         }
