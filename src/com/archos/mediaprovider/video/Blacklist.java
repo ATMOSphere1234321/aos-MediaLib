@@ -85,7 +85,8 @@ public class Blacklist {
     private static final List<String> BLACKLISTED_DIRS = new ArrayList<>(Arrays.asList(
             "#recycle", // synology trash
             "#snapshot", // synology snapshots
-            "@Recycle" // qnap trash
+            "@Recycle", // qnap trash
+            ".recycle" // asustor trash
     ));
 
     public boolean isDirectoryBlacklisted(String directoryName) {
