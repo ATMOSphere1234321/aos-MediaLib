@@ -61,33 +61,37 @@ public class GlobalResumeView extends RelativeLayout {
         int rescaleWidth, rescaleHeight;
         int srcWidth = bm.getWidth();
         int srcHeight = bm.getHeight();
-        if (dstWidth >= dstHeight) {
-            float scaleFactor = (float)dstWidth / (float)srcWidth;
-            rescaleWidth = (int)(scaleFactor * (float)srcWidth);
-            rescaleHeight = (int)(scaleFactor * (float)srcHeight);
-            xOffset = 0;
-            yOffset = (rescaleHeight - dstHeight) / 2;
-            yOffset = Math.max(yOffset, 0);
-        } else {
-            float scaleFactor = (float)dstHeight / (float)srcHeight;
-            rescaleWidth = (int)(scaleFactor * (float)srcWidth);
-            rescaleHeight = (int)(scaleFactor * (float)srcHeight);
-            xOffset = (rescaleWidth - dstWidth) / 2;
-            xOffset = Math.max(xOffset, 0);
+
+        if (srcWidth * dstHeight > dstWidth * srcHeight) {
+            // Scale based on width
+            float scaleFactor = (float) dstHeight / (float) srcHeight;
+            rescaleWidth = (int) (scaleFactor * (float) srcWidth);
+            rescaleHeight = dstHeight;
+            xOffset = (rescaleWidth - dstWidth) / 2;  // Center crop horizontally
             yOffset = 0;
+        } else {
+            // Scale based on height
+            float scaleFactor = (float) dstWidth / (float) srcWidth;
+            rescaleWidth = dstWidth;
+            rescaleHeight = (int) (scaleFactor * (float) srcHeight);
+            xOffset = 0;
+            yOffset = (rescaleHeight - dstHeight) / 2;  // Center crop vertically
         }
+
         Bitmap sbm = Bitmap.createScaledBitmap(bm, rescaleWidth, rescaleHeight, true);
         if (sbm != bm) {
             bm.recycle();
         }
-        dstWidth = Math.min(rescaleWidth, dstWidth);
-        dstHeight = Math.min(rescaleHeight, dstHeight);
+
+        // Create a cropped bitmap from the scaled bitmap
         Bitmap cbm = Bitmap.createBitmap(sbm, xOffset, yOffset, dstWidth, dstHeight);
         if (cbm != sbm) {
             sbm.recycle();
         }
+
         setBackground(new BitmapDrawable(getResources(), cbm));
     }
+
 
     public void launchOpenAnimation(AnimatorListener listener) {
         ViewPropertyAnimator a = animate();
