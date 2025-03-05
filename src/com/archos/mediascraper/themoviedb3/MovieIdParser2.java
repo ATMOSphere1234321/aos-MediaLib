@@ -20,17 +20,14 @@ import android.util.Pair;
 
 import com.archos.medialib.R;
 import com.archos.mediascraper.MovieTags;
-import com.archos.mediascraper.ScrapeStatus;
 import com.archos.mediascraper.ScraperImage;
 import com.archos.mediascraper.ScraperTrailer;
 import com.uwetrottmann.tmdb2.entities.BaseCompany;
 import com.uwetrottmann.tmdb2.entities.CastMember;
 import com.uwetrottmann.tmdb2.entities.Country;
-import com.uwetrottmann.tmdb2.entities.Credits;
 import com.uwetrottmann.tmdb2.entities.CrewMember;
 import com.uwetrottmann.tmdb2.entities.Genre;
 import com.uwetrottmann.tmdb2.entities.Image;
-import com.uwetrottmann.tmdb2.entities.Images;
 import com.uwetrottmann.tmdb2.entities.Movie;
 import com.uwetrottmann.tmdb2.entities.ReleaseDate;
 import com.uwetrottmann.tmdb2.entities.ReleaseDatesResult;
@@ -55,12 +52,8 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import static com.archos.mediascraper.MovieTags.isCollectionAlreadyKnown;
-import static com.archos.mediascraper.themoviedb3.MovieCollectionImages.downloadCollectionImage;
 
 public class MovieIdParser2 {
 
@@ -181,7 +174,7 @@ public class MovieIdParser2 {
 
                         if (isImage) {
                             log.debug("contentType: " + contentType);
-                            result.addDefaultStudioLogoGITHUB(mContext, githubCompanyPath);
+                            result.addStudioLogosGITHUB(mContext, githubCompanyPath);
                         } else {
                             /* Fetch movie studio logos from tmdb if not found on github repo */
                             if (tmdbCompanyPath != null && !tmdbCompanyPath.isEmpty()) {

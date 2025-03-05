@@ -617,9 +617,9 @@ public class MovieTags extends VideoTags {
         addDefaultActorPhoto(image);
     }
 
-    /** Add this url image as the default movie studiologos */
-    public void addDefaultStudioLogoGITHUB(Context context, String path) {
-        log.debug("addDefaultStudioLogoGITHUB: studiologo " + ScraperImage.GSNL + path);
+    /** Add movie studio logo urls from github repo */
+    public void addStudioLogosGITHUB(Context context, String path) {
+        log.debug("addStudioLogosGITHUB: studiologo " + ScraperImage.GSNL + path);
         ScraperImage image = new ScraperImage(ScraperImage.Type.MOVIE_STUDIOLOGO, mTitle);
         image.setLargeUrl(ScraperImage.GSNL + path);
         image.setThumbUrl(ScraperImage.GSNL + path);
