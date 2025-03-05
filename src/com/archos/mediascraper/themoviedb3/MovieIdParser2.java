@@ -44,7 +44,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -155,12 +157,51 @@ public class MovieIdParser2 {
                 }
         } else log.debug("getResult: no actor_photo_path for " + movie.id);
 
+        /* Fetch movie studio logos */
         if (movie.production_companies != null) {
             for (int i = 0; i < movie.production_companies.size(); i++) {
-                log.debug("getResult: " + movie.id + " has studiologo_path=" + ScraperImage.GSNL + movie.production_companies.get(i).name.replaceAll(" ", "%20").replaceAll("\t", "") + ".png");
-                result.addDefaultStudioLogoGITHUB(mContext, movie.production_companies.get(i).name.replaceAll(" ", "%20").replaceAll("\t", "") + ".png");
+                String githubCompanyPath = movie.production_companies.get(i).name.replaceAll(" ", "%20").replaceAll("\t", "") + ".png";
+                String tmdbCompanyPath = movie.production_companies.get(i).logo_path;
+                String tmdbCompanyName = movie.production_companies.get(i).name;
+
+                String imageUrl = ScraperImage.GSNL + githubCompanyPath;
+
+                new Thread(() -> {
+                    try {
+                        URL url = new URL(imageUrl);
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setRequestMethod("HEAD");
+                        connection.setConnectTimeout(5000); // Set timeout to prevent hanging
+                        connection.setReadTimeout(5000);
+                        connection.connect();
+
+                        String contentType = connection.getContentType();
+                        boolean isImage = contentType != null && contentType.startsWith("image/"); // true if image is found on github repo
+                        Log.i("IS IMAGE", "" + isImage);
+
+                        if (isImage) {
+                            log.debug("contentType: " + contentType);
+                            result.addDefaultStudioLogoGITHUB(mContext, githubCompanyPath);
+                        } else {
+                            /* Fetch movie studio logos from tmdb if not found on github repo */
+                            if (tmdbCompanyPath != null && !tmdbCompanyPath.isEmpty()) {
+                                String tmdbCompanyImageUrl = ScraperImage.TMDB_IMAGE_URL + "h632"  + tmdbCompanyPath;
+                                log.debug("Fallback to TMDB: " + tmdbCompanyImageUrl);
+                                result.addStudioLogosTMDB(mContext, tmdbCompanyPath, tmdbCompanyName);
+                            } else {
+                                log.debug("No valid TMDB path for: " + tmdbCompanyName);
+                            }
+                        }
+
+                        connection.disconnect();
+                    } catch (IOException e) {
+                        log.error("Error checking image URL: " + imageUrl, e);
+                    }
+                }).start();
             }
-        } else log.debug("getResult: no networklogo_path for " + movie.id);
+        } else {
+            log.debug("getResult: no studiologo_path for " + movie.id);
+        }
 
         //set movie logo
         String apikey = "ac6ed0ad315f924847ff24fa4f555571";
