@@ -43,6 +43,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class ShowIdParser {
     private static final Logger log = LoggerFactory.getLogger(ShowIdParser.class);
@@ -148,10 +149,37 @@ public class ShowIdParser {
 
         log.debug("getResult: found title=" + serie.name);
 
-        if (serie.content_ratings != null && serie.content_ratings.results != null)
-            for (ContentRating results: serie.content_ratings.results)
-                if (results.iso_3166_1 != null && results.iso_3166_1.equals("US"))
-                    result.setContentRating(results.rating);
+        // set certification for series
+        // Get system language country code
+        String systemCountryCode = Locale.getDefault().getCountry();
+
+        if (serie.content_ratings != null && serie.content_ratings.results != null) {
+            String selectedRating = null;
+
+            // First, try to find the content rating for the system country
+            for (ContentRating results : serie.content_ratings.results) {
+                if (results.iso_3166_1 != null && results.iso_3166_1.equals(systemCountryCode)) {
+                    selectedRating = results.rating;
+                    break; // Stop searching once we find a match
+                }
+            }
+
+            // If no rating found, fall back to "US"
+            if (selectedRating == null) {
+                for (ContentRating results : serie.content_ratings.results) {
+                    if ("US".equals(results.iso_3166_1)) {
+                        selectedRating = results.rating;
+                        break; // Stop searching once we find "US" rating
+                    }
+                }
+            }
+
+            // Set the content rating if we found one
+            if (selectedRating != null) {
+                result.setContentRating(selectedRating);
+            }
+        }
+
 
         if (serie.external_ids != null) result.setImdbId(serie.external_ids.imdb_id);
         result.setOnlineId(serie.id);
