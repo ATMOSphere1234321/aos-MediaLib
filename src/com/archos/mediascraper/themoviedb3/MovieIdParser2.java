@@ -53,6 +53,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 public class MovieIdParser2 {
@@ -215,18 +216,47 @@ public class MovieIdParser2 {
             result.addDefaultClearLogoFTV(mContext, enClearLogos.get(0));
         }
 
-        // certification i.e. setContentRating that should rely no CertificationService
+        // set certification for movies
+        // Get system language country code
+        String systemCountryCode = Locale.getDefault().getCountry();
+
         if (movie.release_dates != null && movie.release_dates.results != null) {
-            for (int i = 0; i < movie.release_dates.results.size(); i++) {
-                ReleaseDatesResult releaseDatesResult = movie.release_dates.results.get(i);
-                if (releaseDatesResult.release_dates != null && releaseDatesResult.iso_3166_1 != null && releaseDatesResult.iso_3166_1.equals("US")) {
-                    for (int j = 0; j < releaseDatesResult.release_dates.size(); j++) {
-                        ReleaseDate releaseDate = releaseDatesResult.release_dates.get(j);
-                        result.setContentRating(releaseDate.certification);
+            String selectedCertification = null;
+
+            for (ReleaseDatesResult releaseDatesResult : movie.release_dates.results) {
+                if (releaseDatesResult.release_dates != null) {
+                    // Match the country code with iso_3166_1
+                    if (systemCountryCode.equals(releaseDatesResult.iso_3166_1)) {
+                        for (ReleaseDate releaseDate : releaseDatesResult.release_dates) {
+                            if (releaseDate.certification != null && !releaseDate.certification.isEmpty()) {
+                                selectedCertification = releaseDate.certification;
+                                break; // Found a match, exit loop
+                            }
+                        }
                     }
                 }
             }
+
+            // Fallback: If no certification was found for the system country, try US
+            if (selectedCertification == null) {
+                for (ReleaseDatesResult releaseDatesResult : movie.release_dates.results) {
+                    if (releaseDatesResult.release_dates != null && "US".equals(releaseDatesResult.iso_3166_1)) {
+                        for (ReleaseDate releaseDate : releaseDatesResult.release_dates) {
+                            if (releaseDate.certification != null && !releaseDate.certification.isEmpty()) {
+                                selectedCertification = releaseDate.certification;
+                                break; // Found a fallback, exit loop
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Set the content rating if we found one
+            if (selectedCertification != null) {
+                result.setContentRating(selectedCertification);
+            }
         }
+
 
         // setting multiple movie tags using a single pipeline (tagline, budget, revenue, runtime, vote_count, popularity, release date, original language)
         String pattern = "MMMM dd, yyyy";
