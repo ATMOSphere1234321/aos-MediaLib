@@ -627,33 +627,6 @@ public class MovieTags extends VideoTags {
         addDefaultStudioLogo(image);
     }
 
-    /** Add movie studio logos url and path from tmdb if not found on github repo */
-    public void addStudioLogosTMDB(Context context, String logopath, String logoname) {
-        if (logopath == null || logopath.isEmpty()) {
-            log.debug("addStudioLogosTMDB: logopath is null or empty, skipping.");
-            return;
-        }
-
-        // Sanitize logoname to avoid invalid file characters
-        logoname = logoname.replaceAll("[^a-zA-Z0-9.-]", " ");  // Replace invalid characters
-
-        ScraperImage image = new ScraperImage(ScraperImage.Type.MOVIE_STUDIOLOGO, mTitle);
-        String dir = context.getDir("scraper_studiologos", Context.MODE_PRIVATE).getAbsolutePath();
-
-        String fullUrl = ScraperImage.TMDB_IMAGE_URL + "h632" + logopath;
-        String filePath = dir + "/" + logoname + ".png";
-
-        image.setLargeUrl(fullUrl);
-        image.setThumbUrl(fullUrl);
-        image.setLargeFile(filePath);
-        image.setThumbFile(filePath);
-
-        image.generateFileNames(context);  // Ensure this does not override manually set paths
-
-        log.debug("addStudioLogosTMDB: Adding studio logo: " + fullUrl + " -> " + filePath);
-        addDefaultStudioLogo(image);
-    }
-
     /** Add this url image as the default movie ClearLogos */
     public void addDefaultClearLogoFTV(Context context, String path) {
         ScraperImage image = new ScraperImage(ScraperImage.Type.MOVIE_CLEARLOGO, mTitle);
