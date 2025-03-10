@@ -14,6 +14,8 @@
 
 package com.archos.mediascraper.themoviedb3;
 
+import static com.archos.mediascraper.TVMazeAPI.fetchRuntimeFromTVMaze;
+
 import android.content.Context;
 
 import com.archos.medialib.R;
@@ -221,11 +223,13 @@ public class ShowIdParser {
 
         // setting multiple series tags using a single pipeline (tagline, type, status, vote_count, popularity, runtime, original language)
         int runtime = 0;
-        if (serie.episode_run_time != null) {
-            for (int i = 0; i < serie.episode_run_time.size(); i++) {
-                runtime = serie.episode_run_time.get(0);
-            }
+        assert serie.episode_run_time != null;
+        if (!serie.episode_run_time.isEmpty()) {
+            runtime = serie.episode_run_time.get(0);
+        }else {
+            runtime = fetchRuntimeFromTVMaze(serie.external_ids.imdb_id);
         }
+
         String tmdbapikey = "?api_key=" + "0fd42d7cf783faf9a5eefeb78e1cc5c9";
         String baseTvUrl = "https://api.themoviedb.org/3/tv/";
         String lang = "&language=en-US";
