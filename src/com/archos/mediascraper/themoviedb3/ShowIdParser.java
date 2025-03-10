@@ -222,7 +222,7 @@ public class ShowIdParser {
         }
 
         // setting multiple series tags using a single pipeline (tagline, type, status, vote_count, popularity, runtime, original language)
-        int runtime = 0;
+        int runtime;
         assert serie.episode_run_time != null;
         if (!serie.episode_run_time.isEmpty()) {
             runtime = serie.episode_run_time.get(0);
