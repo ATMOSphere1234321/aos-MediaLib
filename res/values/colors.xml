@@ -90,5 +90,7 @@
     <color name="fab_dark_blue">#002139</color>
     <color name="deep_dark_blue">#000A12</color>
     <color name="deep_dark_blue_transparent">#AA000A12</color>
+
+    <color name="global_resume_button_focus">#61AAD7</color>
 </resources>
 

@@ -80,10 +80,10 @@
     <!-- ============ GLOBAL RESUME ============ -->
     <dimen name="global_resume_music_height">70dip</dimen>
     <dimen name="global_resume_video_height">170dip</dimen>
-    <dimen name="global_resume_playbutton_width">40dip</dimen>
-    <dimen name="global_resume_playbutton_height">40dip</dimen>
-    <dimen name="global_resume_icon_padding_left">30dip</dimen>
-    <dimen name="global_resume_icon_padding_right">10dip</dimen>
+    <dimen name="global_resume_playbutton_width">60dip</dimen>
+    <dimen name="global_resume_playbutton_height">60dip</dimen>
+    <dimen name="global_resume_icon_padding_left">10dip</dimen>
+    <dimen name="global_resume_icon_padding_right">5dip</dimen>
 
     <!-- ============ QUICK ACTION ============ -->
     <dimen name="popup_horizontal_offset">16dip</dimen>
