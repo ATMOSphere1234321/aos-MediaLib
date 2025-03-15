@@ -224,9 +224,8 @@ public class MovieIdParser2 {
         String pattern = "MMMM dd, yyyy";
         String releaseDate = "";
         if (movie.release_date != null) {
-            Date date = movie.release_date;
-            DateFormat df = new SimpleDateFormat(pattern);
-            releaseDate = df.format(date);
+            SimpleDateFormat formatter = new SimpleDateFormat(pattern, Locale.getDefault());
+            releaseDate = (movie.release_date != null) ? formatter.format(movie.release_date) : "";
         }
         String movieTag = movie.tagline + "=&%#" + movie.budget + "=&%#" + movie.revenue + "=&%#" + movie.runtime + "=&%#" + movie.vote_count + "=&%#" + movie.popularity + "=&%#" + releaseDate + "=&%#" + movie.original_language;
         result.addTaglineIfAbsent(movieTag);
