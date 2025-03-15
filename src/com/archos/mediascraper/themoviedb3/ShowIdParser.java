@@ -127,7 +127,7 @@ public class ShowIdParser {
         // Utilizing the unused series director as a pipeline for series created by tag
         if (serie.created_by != null) {
             for (Person person : serie.created_by)
-            result.addDirectorIfAbsent(person.name); // director = created_by
+                result.addDirectorIfAbsent(person.name); // director = created_by
         }
 
         // Utilizing the unused series writer as a pipeline for series actor
