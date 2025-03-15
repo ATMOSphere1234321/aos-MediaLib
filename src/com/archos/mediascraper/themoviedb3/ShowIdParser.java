@@ -244,23 +244,11 @@ public class ShowIdParser {
             e.printStackTrace();  // Log the error for debugging
         }
 
-        // set Spoken languages
-        String tmdbapikey = "?api_key=" + "0fd42d7cf783faf9a5eefeb78e1cc5c9";
-        String baseTvUrl = "https://api.themoviedb.org/3/tv/";
-        String lang = "&language=en-US";
-        String newUrl = baseTvUrl + serie.id + tmdbapikey + lang;
-        try {
-            JSONObject json = new JSONObject(readUrl(newUrl));
-            JSONArray jsonArray = json.getJSONArray("spoken_languages");
-            for (int i = 0; i < jsonArray.length(); i++) {
-                String languageCode = jsonArray.getJSONObject(i).getString("iso_639_1");
-                List<String> languages = serie.languages;
-                result.addSpokenlanguageIfAbsent(languageCode);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        // Fetch series spoken languages
+        if (serie.languages != null) {
+            for (String spokenLanguage :serie.languages)
+                result.addSpokenlanguageIfAbsent(spokenLanguage);
         }
-
 
         if (serie.networks != null) {
                 for (int i = 0; i < serie.networks.size(); i++) {
