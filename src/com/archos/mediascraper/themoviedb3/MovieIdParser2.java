@@ -227,8 +227,22 @@ public class MovieIdParser2 {
             SimpleDateFormat formatter = new SimpleDateFormat(pattern, Locale.getDefault());
             releaseDate = (movie.release_date != null) ? formatter.format(movie.release_date) : "";
         }
-        String movieTag = movie.tagline + "=&%#" + movie.budget + "=&%#" + movie.revenue + "=&%#" + movie.runtime + "=&%#" + movie.vote_count + "=&%#" + movie.popularity + "=&%#" + releaseDate + "=&%#" + movie.original_language;
-        result.addTaglineIfAbsent(movieTag);
+        try {
+            JSONObject movieTags = new JSONObject();
+            movieTags.put("tagline", movie.tagline);
+            movieTags.put("budget", movie.budget);
+            movieTags.put("revenue", movie.revenue);
+            movieTags.put("runtime", movie.runtime);
+            movieTags.put("vote_count", movie.vote_count);
+            movieTags.put("popularity", movie.popularity);
+            movieTags.put("release_date", releaseDate);
+            movieTags.put("original_language", movie.original_language);
+
+            result.addTaglineIfAbsent(movieTags.toString());  // Save JSON as a string
+        } catch (JSONException e) {
+            e.printStackTrace();  // Log the error for debugging
+        }
+
 
         // set Spoken languages
         if (movie.spoken_languages != null){
