@@ -221,7 +221,7 @@ public class ShowIdParser {
             result.addClearLogoFTV(mContext, enClearLogos.get(0));
         }
 
-        // setting multiple series tags using a single pipeline (tagline, type, status, vote_count, popularity, runtime, original language)
+        // Fetching multiple series tags using JSON formatting (tagline, type, status, vote_count, popularity, runtime, original language)
         int runtime;
         assert serie.episode_run_time != null;
         if (!serie.episode_run_time.isEmpty()) {
@@ -229,25 +229,32 @@ public class ShowIdParser {
         }else {
             runtime = fetchRuntimeFromTVMaze(serie.external_ids.imdb_id);
         }
+        try {
+            JSONObject seriesTags = new JSONObject();
+            seriesTags.put("tagline", serie.tagline);
+            seriesTags.put("type", serie.type);
+            seriesTags.put("status", serie.status);
+            seriesTags.put("vote_count", serie.vote_count);
+            seriesTags.put("popularity", serie.popularity);
+            seriesTags.put("runtime", runtime);
+            seriesTags.put("original_language", serie.original_language);
 
+            result.addTaglineIfAbsent(seriesTags.toString());  // Save JSON as a string
+        } catch (JSONException e) {
+            e.printStackTrace();  // Log the error for debugging
+        }
+
+        // set Spoken languages
         String tmdbapikey = "?api_key=" + "0fd42d7cf783faf9a5eefeb78e1cc5c9";
         String baseTvUrl = "https://api.themoviedb.org/3/tv/";
         String lang = "&language=en-US";
         String newUrl = baseTvUrl + serie.id + tmdbapikey + lang;
         try {
             JSONObject json = new JSONObject(readUrl(newUrl));
-            String tagline = json.getString("tagline"); // tagline is not available from UweTrottmann-tmdb-java
-            String tvTag = tagline + "=&%#" + serie.type + "=&%#" + serie.status + "=&%#" + serie.vote_count + "=&%#" + serie.popularity + "=&%#" + runtime + "=&%#" + serie.original_language;
-            result.addTaglineIfAbsent(tvTag);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        // set Spoken languages
-        try {
-            JSONObject json = new JSONObject(readUrl(newUrl));
             JSONArray jsonArray = json.getJSONArray("spoken_languages");
             for (int i = 0; i < jsonArray.length(); i++) {
                 String languageCode = jsonArray.getJSONObject(i).getString("iso_639_1");
+                List<String> languages = serie.languages;
                 result.addSpokenlanguageIfAbsent(languageCode);
             }
         } catch (Exception e) {
