@@ -120,21 +120,25 @@ public class ShowIdParser {
                 result.addDirectorIfAbsent(person.name); // director = created_by
         }
 
-        // Utilizing the unused series writer as a pipeline for series actor
-        List<String> Actors = new ArrayList<>();
-        String Actor = "";
+        // Utilizing the unused series writer as a pipeline for series actors
+        List<String> actorsList = new ArrayList<>();
         if (serie.credits != null) {
             if (serie.credits.cast != null) {
                 for (CastMember actor : serie.credits.cast) {
-                    assert actor.name != null;
-                    if (!actor.name.isEmpty()) {
-                        Actor = actor.name + "=&%#" + actor.character + "=&%#" + actor.profile_path;
-                        Actors.add(Actor);
-                        result.setWriters(Actors); // writer = actor
+                    try {
+                        JSONObject actorObject = new JSONObject();
+                        actorObject.put("name", actor.name);
+                        actorObject.put("character", actor.character);
+                        actorObject.put("profile_path", actor.profile_path);
+
+                        actorsList.add(actorObject.toString());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
                 }
             }
         }
+        result.setWriters(actorsList);
 
         result.setRating(Math.round(serie.vote_average.floatValue() * 10)/10.0f);
         result.setTitle(serie.name + (( year != null) ? " " + year : ""));

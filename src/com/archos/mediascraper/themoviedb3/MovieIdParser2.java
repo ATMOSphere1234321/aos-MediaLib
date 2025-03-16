@@ -128,7 +128,16 @@ public class MovieIdParser2 {
                     result.addActorIfAbsent(guestStar.name, guestStar.character);
             if (movie.credits.cast != null)
                 for (CastMember actor : movie.credits.cast)
-                    result.addActorIfAbsent(actor.name, actor.character + "=&%#" + actor.profile_path);
+                    try {
+                        JSONObject actorObject = new JSONObject();
+                        actorObject.put("name", actor.name);
+                        actorObject.put("character", actor.character);
+                        actorObject.put("profile_path", actor.profile_path);
+
+                        result.addActorIfAbsent(actorObject.toString());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
             if (movie.credits.crew != null)
                 for (CrewMember crew : movie.credits.crew) {
                     assert crew.job != null;
