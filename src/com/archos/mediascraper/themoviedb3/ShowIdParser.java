@@ -93,10 +93,10 @@ public class ShowIdParser {
             DateFormat df = new SimpleDateFormat(pattern);
 
             for (TvSeason season : serie.seasons) {
-                String airdate = (season.air_date != null) ? df.format(season.air_date) : "No season air date";
-                String overview = (season.overview != null) ? season.overview : "No season overview";
-                String name = (season.name != null) ? season.name : "No season name";
-                String seasonNumber = (season.season_number != null) ? String.valueOf(season.season_number) : "No season number";
+                String airdate = (season.air_date != null) ? df.format(season.air_date) : "";
+                String overview = (season.overview != null) ? season.overview : "";
+                String name = (season.name != null) ? season.name : "";
+                String seasonNumber = (season.season_number != null) ? String.valueOf(season.season_number) : "";
 
                 try {
                     JSONObject seasonTags = new JSONObject();
