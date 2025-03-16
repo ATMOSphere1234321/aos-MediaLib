@@ -86,43 +86,33 @@ public class ShowIdParser {
             log.warn("getResult: " + serie.name + " has no overview/plot");
         }
 
-        // setting multiple season tags (season number, season  overview, season name, season air date)
-        List<String> SeasonPlots = new ArrayList<>();
-        String seasonPlot;
+        // Setting multiple season tags (season number, season overview, season name, season air date)
+        List<String> seasonTagsList = new ArrayList<>();
         if (serie.seasons != null) {
+            String pattern = "MMMM dd, yyyy";
+            DateFormat df = new SimpleDateFormat(pattern);
+
             for (TvSeason season : serie.seasons) {
-                String pattern = "MMMM dd, yyyy";
-                DateFormat df = new SimpleDateFormat(pattern);
-                String airdate = "";
-                String overview = "";
-                String seasonNumber = "";
-                String name = "";
-                if (season.air_date != null){
-                    Date date = season.air_date;
-                    airdate = df.format(date);
-                } else{
-                    airdate = "No season air date";
+                String airdate = (season.air_date != null) ? df.format(season.air_date) : "No season air date";
+                String overview = (season.overview != null) ? season.overview : "No season overview";
+                String name = (season.name != null) ? season.name : "No season name";
+                String seasonNumber = (season.season_number != null) ? String.valueOf(season.season_number) : "No season number";
+
+                try {
+                    JSONObject seasonTags = new JSONObject();
+                    seasonTags.put("airdate", airdate);
+                    seasonTags.put("overview", overview);
+                    seasonTags.put("seasonNumber", seasonNumber);
+                    seasonTags.put("name", name);
+
+                    seasonTagsList.add(seasonTags.toString()); // Append the new season JSON string
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
-                if (season.overview != null){
-                    overview = season.overview;
-                } else{
-                    overview = "No season overview";
-                }
-                if (season.name != null){
-                    name = season.name;
-                } else{
-                    name = "No season name";
-                }
-                if (season.season_number != null){
-                    seasonNumber = String.valueOf(season.season_number);
-                } else{
-                    seasonNumber = "No season number";
-                }
-                seasonPlot = seasonNumber + "=&%#" + overview + "=&%#" + name + "=&%#" + airdate + "&&&&####";
-                SeasonPlots.add(seasonPlot);
-                result.setSeasonPlots(SeasonPlots);
             }
         }
+        result.setSeasonPlots(seasonTagsList); // Update the list once, after all seasons are processed
+
 
         // Utilizing the unused series director as a pipeline for series created by tag
         if (serie.created_by != null) {
