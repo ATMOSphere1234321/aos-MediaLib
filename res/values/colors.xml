@@ -92,5 +92,10 @@
     <color name="deep_dark_blue_transparent">#AA000A12</color>
 
     <color name="global_resume_button_focus">#61AAD7</color>
+
+    <color name="yellow_category_list_selector_light">#E9B20F</color>
+    <color name="yellow_category_list_selector_deep">#CA9803</color>
+    <color name="blue_category_list_text_pressed">#097509</color>
+
 </resources>
 
