@@ -101,7 +101,7 @@ public class GlobalResumeView extends RelativeLayout {
         BitmapShader shader = new BitmapShader(cbm, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
 
         // Create a ShapeDrawable with rounded corners
-        float px = 20;
+        float px = 8;
         float density = getResources().getDisplayMetrics().density;
         float radius = px * density;
 
