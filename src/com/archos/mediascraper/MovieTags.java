@@ -599,7 +599,7 @@ public class MovieTags extends VideoTags {
 
     /** Add this url image as the default show backdrop */
     public void addDefaultBackdropTMDB(Context context, String path) {
-        log.debug("addDefaultPosterTMDB: backdrop " + ScraperImage.TMBL + path);
+        log.debug("addDefaultBackdropTMDB: backdrop " + ScraperImage.TMBL + path);
         ScraperImage image = new ScraperImage(ScraperImage.Type.MOVIE_BACKDROP, mTitle);
         image.setLargeUrl(ScraperImage.TMBL + path);
         image.setThumbUrl(ScraperImage.TMBT + path);

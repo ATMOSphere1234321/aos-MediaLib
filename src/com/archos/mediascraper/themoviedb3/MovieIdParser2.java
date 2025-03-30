@@ -294,7 +294,7 @@ public class MovieIdParser2 {
         List<ScraperImage> clearlogos = new ArrayList<>();
         List<String> tempClearLogos = new ArrayList<>();
 
-        //set series clearlogos
+        //set movie clearlogos
         try {
             JSONObject json = new JSONObject(readUrl(url));
             JSONArray jsonArray = json.getJSONArray("hdmovielogo");
