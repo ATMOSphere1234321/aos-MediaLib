@@ -24,11 +24,17 @@ import android.graphics.RectF;
 import android.graphics.BitmapShader;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RoundRectShape;
 import android.util.AttributeSet;
 import android.view.ViewPropertyAnimator;
 import android.widget.RelativeLayout;
+
+import androidx.core.content.ContextCompat;
+
+import com.archos.medialib.R;
 
 
 public class GlobalResumeView extends RelativeLayout {
@@ -117,7 +123,19 @@ public class GlobalResumeView extends RelativeLayout {
         shapeDrawable.setBounds(0, 0, dstWidth, dstHeight);
         shapeDrawable.draw(canvas);
 
-        setBackground(new BitmapDrawable(getResources(), roundedBitmap));
+        // Create BitmapDrawable from the generated rounded bitmap
+        BitmapDrawable imageDrawable = new BitmapDrawable(getResources(), roundedBitmap);
+
+        // Load stroke drawable
+        Drawable strokeDrawable = ContextCompat.getDrawable(getContext(), R.drawable.browser_resume_stroke);
+
+        // Combine both using LayerDrawable
+        Drawable[] layers = new Drawable[2];
+        layers[0] = imageDrawable;      // Bottom layer: the image
+        layers[1] = strokeDrawable;     // Top layer: the stroke
+
+        LayerDrawable layerDrawable = new LayerDrawable(layers);
+        setBackground(layerDrawable);
     }
 
     public void launchOpenAnimation(AnimatorListener listener) {
