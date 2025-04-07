@@ -150,4 +150,12 @@ public class GlobalResumeView extends RelativeLayout {
         setScaleY(1f);
         setAlpha(1f);
     }
+
+    public void clearImage() {
+        setBackground(null);
+        if (mImage != null) {
+            mImage.recycle();
+            mImage = null;
+        }
+    }
 }
