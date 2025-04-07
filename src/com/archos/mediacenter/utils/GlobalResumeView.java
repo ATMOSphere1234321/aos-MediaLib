@@ -158,4 +158,12 @@ public class GlobalResumeView extends RelativeLayout {
             mImage = null;
         }
     }
+
+    @Override
+    public boolean performClick() {
+        // Call super to handle accessibility events
+        super.performClick();
+        // Add any custom logic here if needed
+        return true;
+    }
 }
