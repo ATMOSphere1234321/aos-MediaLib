@@ -97,5 +97,8 @@
     <color name="yellow_category_list_selector_deep">#CA9803</color>
     <color name="blue_category_list_text_pressed">#097509</color>
 
+    <color name="yellow_light">#E9B20F</color>
+    <color name="red">#FF0000</color>
+
 </resources>
 
