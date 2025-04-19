@@ -72,6 +72,8 @@
 
     <color name="grid_item_background">#ff012643</color>
 
+    <color name="browser_list_dark">#01192C</color>
+
     <color name="video_info_list_item_background">#10ffffff</color>
     
     <color name="video_info_next_prev_button_focused">#3333b5e5</color>
