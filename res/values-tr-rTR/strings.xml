@@ -90,6 +90,7 @@
     <string name="tv_show_genre_talk_show">Talk Show</string>
     <string name="tv_show_genre_thriller">Gerilim</string>
     <string name="tv_show_genre_travel">Seyahat</string>
+    <string name="tv_show_genre_war">Savaş</string>
     <string name="tv_show_genre_western">Batı</string>
     <!-- There are official translations for the tmdb movie genres -->
     <string name="movie_genre_action">Aksiyon</string>
