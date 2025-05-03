@@ -1477,7 +1477,7 @@ public final class ScraperTables {
         STUDIOS_TABLE_NAME + "." +
         ScraperStore.Studio.ID + " AS " + ScraperStore.Show.Studio.STUDIO + " FROM " +
         PRODUCES_SHOW_TABLE_NAME + " LEFT JOIN " + STUDIOS_TABLE_NAME +
-        " ON (" + PRODUCES_SHOW_TABLE_NAME + "." + PRODUCES_SHOW_ID_SHOW +
+        " ON (" + PRODUCES_SHOW_TABLE_NAME + "." + PRODUCES_SHOW_ID_STUDIO +
         " = " + STUDIOS_TABLE_NAME + "." + ScraperStore.Studio.ID + ")";
 
     private static final String PRODUCES_SHOW_VIEW_INSERT_TRIGGER =

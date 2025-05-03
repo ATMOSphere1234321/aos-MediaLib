@@ -21,6 +21,7 @@ import android.content.Context;
 import com.archos.medialib.R;
 import com.archos.mediascraper.ScraperImage;
 import com.archos.mediascraper.ShowTags;
+import com.uwetrottmann.tmdb2.entities.BaseCompany;
 import com.uwetrottmann.tmdb2.entities.CastMember;
 import com.uwetrottmann.tmdb2.entities.ContentRating;
 import com.uwetrottmann.tmdb2.entities.CrewMember;
@@ -185,6 +186,11 @@ public class ShowIdParser {
         if (serie.networks != null){
             for (Network network : serie.networks)
                 result.addNetworkIfAbsent(network.name, '|', ',');
+        }
+
+        if (serie.production_companies != null){
+            for (BaseCompany baseCompany : serie.production_companies)
+                result.addStudioIfAbsent(baseCompany.name, '|', ',');
         }
 
         result.setPremiered(serie.first_air_date);
