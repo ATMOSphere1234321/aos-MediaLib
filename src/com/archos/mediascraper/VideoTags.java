@@ -28,6 +28,9 @@ public abstract class VideoTags extends BaseTags {
     protected List<String> mGenres = new ArrayList<String>();
     protected String mGenresFormatted;
 
+    protected final List<String> mNetworks = new ArrayList<String>();
+    protected String mNetworksFormatted;
+
     public VideoTags() {
         super();
     }
@@ -95,14 +98,43 @@ public abstract class VideoTags extends BaseTags {
         return mStudios.contains(name);
     }
 
+    public List<String> getNetworks() { return mNetworks; }
+
+    public String getNetworksFormatted() {
+        ensureFormattedNetworks();
+        return mNetworksFormatted;
+    }
+
+    private void ensureFormattedNetworks() {
+        if (mNetworksFormatted == null && mNetworks != null && !mNetworks.isEmpty()) {
+            mNetworksFormatted = TextUtils.join(", ", mNetworks);
+        }
+    }
+
+    public void addNetworkIfAbsent(String network, char... splitCharacters) {
+        addIfAbsentSplitNTrim(network, mNetworks, splitCharacters);
+    }
+
+    public void setNetworksFormatted(String networks) { mNetworksFormatted = networks; }
+
+    public boolean networkExists(String name) {
+        return mNetworks.contains(name);
+    }
+
+    public void addAllNetworks(List<String> networks){
+        mNetworks.addAll(networks);
+    }
+
     @Override
     public String toString() {
-        return super.toString() + " / GENRES=" + mGenres + " / STUDIOS=" + mStudios;
+        return super.toString() + " / GENRES=" + mGenres + " / STUDIOS=" + mStudios + " / NETWORKS=" + mNetworks;
     }
 
     private void readFromParcel(Parcel in) {
         in.readStringList(mStudios);
         in.readStringList(mGenres);
+        // --- Add this line for networks ---
+        in.readStringList(mNetworks);
     }
 
     @Override
@@ -110,6 +142,8 @@ public abstract class VideoTags extends BaseTags {
         super.writeToParcel(out, flags);
         out.writeStringList(mStudios);
         out.writeStringList(mGenres);
+        // --- Add this line for networks ---
+        out.writeStringList(mNetworks);
     }
 
     public void addAllGenres(List<String> genres){

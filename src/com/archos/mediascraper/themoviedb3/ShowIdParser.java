@@ -182,8 +182,10 @@ public class ShowIdParser {
         log.debug("getResult: onlineId=" + serie.id + ", imdbId=" + serie.external_ids.imdb_id);
         result.setGenres(getLocalizedGenres(serie.genres));
 
-        for (Network network : serie.networks)
-            result.addStudioIfAbsent(network.name, '|', ',');
+        if (serie.networks != null){
+            for (Network network : serie.networks)
+                result.addNetworkIfAbsent(network.name, '|', ',');
+        }
 
         result.setPremiered(serie.first_air_date);
 

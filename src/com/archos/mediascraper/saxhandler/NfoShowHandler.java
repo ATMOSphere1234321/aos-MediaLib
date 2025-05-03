@@ -53,6 +53,7 @@ public class NfoShowHandler extends BasicHandler {
     private static final int THUMB = 13;
     private static final int FANART = 14;
     private static final int IMDBID = 15;
+    private static final int NETWORK = 16;
 
     static {
         STRINGS.addKey("tvshow", ROOT);
@@ -63,6 +64,7 @@ public class NfoShowHandler extends BasicHandler {
         STRINGS.addKey("mpaa", MPAA);
         STRINGS.addKey("premiered", PREMIERED);
         STRINGS.addKey("studio", STUDIO);
+        STRINGS.addKey("network", NETWORK);
         STRINGS.addKey("id", ID);
         STRINGS.addKey("genre", GENRE);
         STRINGS.addKey("actor", ACTOR);
@@ -143,6 +145,7 @@ public class NfoShowHandler extends BasicHandler {
                     case MPAA:
                     case PREMIERED:
                     case STUDIO:
+                    case NETWORK:
                     case ID:
                     case GENRE:
                     case IMDBID:
@@ -204,6 +207,9 @@ public class NfoShowHandler extends BasicHandler {
                         break;
                     case STUDIO:
                         mResult.addStudioIfAbsent(getString(), NfoParser.STRING_SPLITTERS);
+                        break;
+                    case NETWORK:
+                        mResult.addNetworkIfAbsent(getString(), NfoParser.STRING_SPLITTERS);
                         break;
                     case ID:
                         mResult.setOnlineId(getLong());

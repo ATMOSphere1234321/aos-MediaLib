@@ -183,6 +183,7 @@ public class MovieTags extends VideoTags {
         values.put(ScraperStore.Movie.COUNTRIES_FORMATTED, getCountriesFormatted());
         values.put(ScraperStore.Movie.GERNES_FORMATTED, getGenresFormatted());
         values.put(ScraperStore.Movie.STUDIOS_FORMATTED, getStudiosFormatted());
+        values.put(ScraperStore.Movie.NETWORKS_FORMATTED, getNetworksFormatted());
 
         // build list of operations
         ArrayList<ContentProviderOperation> allOperations = new ArrayList<ContentProviderOperation>();
@@ -195,6 +196,13 @@ public class MovieTags extends VideoTags {
             cop = ContentProviderOperation.newInsert(ScraperStore.Studio.URI.MOVIE);
             cop.withValue(ScraperStore.Movie.Studio.NAME, studio);
             cop.withValueBackReference(ScraperStore.Movie.Studio.MOVIE, 0);
+            allOperations.add(cop.build());
+        }
+
+        for(String network: mNetworks) {
+            cop = ContentProviderOperation.newInsert(ScraperStore.Network.URI.MOVIE);
+            cop.withValue(ScraperStore.Movie.Network.NAME, network);
+            cop.withValueBackReference(ScraperStore.Movie.Network.MOVIE, 0);
             allOperations.add(cop.build());
         }
 

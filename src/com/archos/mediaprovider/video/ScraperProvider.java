@@ -110,6 +110,13 @@ public class ScraperProvider extends ContentProvider {
     private static final int EPISODESHOWCOMBINED_ALL = SCRAPER_PROVIDER_OFFSET + 100;
     private static final int EPISODESHOWCOMBINED_ID = SCRAPER_PROVIDER_OFFSET + 101;
 
+    private static final int NETWORK = SCRAPER_PROVIDER_OFFSET + 102;
+    private static final int NETWORK_ID = SCRAPER_PROVIDER_OFFSET + 103;
+    private static final int NETWORK_ALL = SCRAPER_PROVIDER_OFFSET + 104;
+    private static final int NETWORK_MOVIE = SCRAPER_PROVIDER_OFFSET + 105;
+    private static final int NETWORK_SHOW = SCRAPER_PROVIDER_OFFSET + 106;
+    private static final int NETWORK_NAME = SCRAPER_PROVIDER_OFFSET + 107;
+
     private static final int ALL_VIDEOS_ALL = SCRAPER_PROVIDER_OFFSET + 110;
 
     private static final int SEASONS = SCRAPER_PROVIDER_OFFSET + 120;
@@ -490,6 +497,22 @@ public class ScraperProvider extends ContentProvider {
                 STUDIO_SHOW);
         sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Studio.URI.NAME) + "*",
                 STUDIO_NAME);
+
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.BASE),
+                NETWORK);
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.ALL),
+                NETWORK_ALL);
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.MOVIE),
+                NETWORK_MOVIE);
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.MOVIE) + "#",
+                NETWORK_MOVIE);
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.SHOW),
+                NETWORK_SHOW);
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.SHOW) + "#",
+                NETWORK_SHOW);
+        sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.Network.URI.NAME) + "*",
+                NETWORK_NAME);
+
         sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.EpisodeShowCombined.URI.ALL),
                 EPISODESHOWCOMBINED_ALL);
         sUriMatcher.addURI(ScraperStore.AUTHORITY, getPath(ScraperStore.EpisodeShowCombined.URI.ID) + "#",
@@ -636,7 +659,7 @@ public class ScraperProvider extends ContentProvider {
         log.debug("delete: URI {} selection:{} selectionArgs:{}", uri.toString(), selection, Arrays.toString(selectionArgs));
         int changed = internalDelete(uri, selection, selectionArgs);
         if (changed > 0) {
-            // since deleting stuff affects actors, studios, shows etc notify a change for everything.
+            // since deleting stuff affects actors, studios, networks, shows etc notify a change for everything.
             Uri notifyUri = ScraperStore.ALL_CONTENT_URI;
             mCr.notifyChange(notifyUri, null);
         }
@@ -831,6 +854,11 @@ public class ScraperProvider extends ContentProvider {
                 rowId = db.insert(ScraperTables.STUDIOS_TABLE_NAME,
                         ScraperStore.Studio.ID, values);
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Studio.URI.ID, cr);
+                break;
+            case NETWORK:
+                rowId = db.insert(ScraperTables.NETWORKS_TABLE_NAME,
+                        ScraperStore.Network.ID, values);
+                noteUri = createUriAndNotify(rowId, db, ScraperStore.Network.URI.ID, cr);
                 break;
             case DIRECTOR_MOVIE:
                 try {
@@ -1142,6 +1170,16 @@ public class ScraperProvider extends ContentProvider {
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Studio.URI.ID, cr);
                 break;
+            case NETWORK_MOVIE:
+                try {
+                    rowId = db.insertOrThrow(ScraperTables.BROADCASTS_MOVIE_VIEW_NAME,
+                            ScraperStore.Movie.Network.MOVIE, values);
+                    rowId = 1; // inserting into views will not return a row
+                } catch (SQLException e) {
+                    log.error("Exception: ", e);
+                }
+                noteUri = createUriAndNotify(rowId, db, ScraperStore.Network.URI.ID, cr);
+                break;
             case STUDIO_SHOW:
                 try {
                     rowId = db.insertOrThrow(ScraperTables.PRODUCES_SHOW_VIEW_NAME,
@@ -1151,6 +1189,16 @@ public class ScraperProvider extends ContentProvider {
                     log.error("Exception: ", e);
                 }
                 noteUri = createUriAndNotify(rowId, db, ScraperStore.Studio.URI.ID, cr);
+                break;
+            case NETWORK_SHOW:
+                try {
+                    rowId = db.insertOrThrow(ScraperTables.BROADCASTS_SHOW_VIEW_NAME,
+                            ScraperStore.Show.Network.SHOW, values);
+                    rowId = 1; // inserting into views will not return a row
+                } catch (SQLException e) {
+                    log.error("Exception: ", e);
+                }
+                noteUri = createUriAndNotify(rowId, db, ScraperStore.Network.URI.ID, cr);
                 break;
             case MOVIE_POSTERS:
                 rowId = db.insert(ScraperTables.MOVIE_POSTERS_TABLE_NAME,
@@ -1764,6 +1812,34 @@ public class ScraperProvider extends ContentProvider {
                 qb.appendWhereEscapeString(data);
                 break;
 
+            case NETWORK_ID:
+                qb.setTables(ScraperTables.NETWORKS_TABLE_NAME);
+                qb.appendWhere(ScraperStore.Network.ID + "=");
+                qb.appendWhereEscapeString(data);
+                break;
+
+            case NETWORK_ALL:
+                qb.setTables(ScraperTables.NETWORKS_TABLE_NAME);
+                break;
+
+            case NETWORK_MOVIE:
+                qb.setTables(ScraperTables.BROADCASTS_MOVIE_VIEW_NAME);
+                qb.appendWhere(ScraperStore.Movie.Network.MOVIE + " = ");
+                qb.appendWhereEscapeString(data);
+                break;
+
+            case NETWORK_SHOW:
+                qb.setTables(ScraperTables.BROADCASTS_SHOW_VIEW_NAME);
+                qb.appendWhere(ScraperStore.Show.Network.SHOW + " = ");
+                qb.appendWhereEscapeString(data);
+                break;
+
+            case NETWORK_NAME:
+                qb.setTables(ScraperTables.NETWORKS_TABLE_NAME);
+                qb.appendWhere(ScraperStore.Network.NAME + " = ");
+                qb.appendWhereEscapeString(data);
+                break;
+
             case EPISODESHOWCOMBINED_ID:
                 handleEpisodeShowCombined(qb);
                 qb.appendWhere(ScraperStore.EpisodeShowCombined.SCRAPER_ID + " = ");
@@ -2305,6 +2381,11 @@ public class ScraperProvider extends ContentProvider {
                 ScraperStore.Movie.ID + " = " + 
                 ScraperTables.PRODUCES_MOVIE_VIEW_NAME + "." +
                 ScraperStore.Movie.Studio.MOVIE + ") " +
+                "LEFT JOIN " + ScraperTables.BROADCASTS_MOVIE_VIEW_NAME + " ON (" +
+                ScraperTables.MOVIE_TABLE_NAME + "." +
+                ScraperStore.Movie.ID + " = " +
+                ScraperTables.BROADCASTS_MOVIE_VIEW_NAME + "." +
+                ScraperStore.Movie.Network.MOVIE + ") " +
                 "LEFT JOIN " + ScraperTables.BELONGS_MOVIE_VIEW_NAME + " ON (" +
                 ScraperTables.MOVIE_TABLE_NAME + "." +
                 ScraperStore.Movie.ID + " = " + 
@@ -2380,6 +2461,11 @@ public class ScraperProvider extends ContentProvider {
                 ScraperStore.Show.ID + " = " + 
                 ScraperTables.PRODUCES_SHOW_VIEW_NAME + "." +
                 ScraperStore.Show.Studio.SHOW + ") " +
+                "LEFT JOIN " + ScraperTables.BROADCASTS_SHOW_VIEW_NAME + " ON (" +
+                ScraperTables.SHOW_TABLE_NAME + "." +
+                ScraperStore.Show.ID + " = " +
+                ScraperTables.BROADCASTS_SHOW_VIEW_NAME + "." +
+                ScraperStore.Show.Network.SHOW + ") " +
                 "LEFT JOIN " + ScraperTables.BELONGS_SHOW_VIEW_NAME + " ON (" +
                 ScraperTables.SHOW_TABLE_NAME + "." +
                 ScraperStore.Show.ID + " = " + 

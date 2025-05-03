@@ -82,6 +82,8 @@ public final class ScraperStore {
         public static final String GERNES_FORMATTED = "m_genres";
         /** studios preformatted */
         public static final String STUDIOS_FORMATTED = "m_studios";
+        /** networks preformatted */
+        public static final String NETWORKS_FORMATTED = "m_networks";
 
         public static class URI {
             public static final Uri BASE = Uri.parse(CONTENT_AUTHORITY + "/tags/movie");
@@ -157,6 +159,12 @@ public final class ScraperStore {
             public static final String GENRE = "genre_v_belongs_movie";
         }
 
+        public static class Network {
+            public static final String MOVIE = "movie_v_broadcasts_movie";
+            public static final String NAME = "name_v_broadcasts_movie";
+            public static final String NETWORK = "network_v_broadcasts_movie";
+        }
+
         public static final String COLLECTION_ID = "m_coll_id";
     }
 
@@ -220,6 +228,8 @@ public final class ScraperStore {
         public static final String GERNES_FORMATTED = "s_genres";
         /** studios preformatted */
         public static final String STUDIOS_FORMATTED = "s_studios";
+        /** networks preformatted */
+        public static final String NETWORKS_FORMATTED = "s_networks";
 
         public static class URI {
             public static final Uri BASE = Uri.parse(CONTENT_AUTHORITY + "/tags/show");
@@ -301,6 +311,12 @@ public final class ScraperStore {
             public static final String SHOW = "show_v_belongs_show";
             public static final String NAME = "name_v_belongs_show";
             public static final String GENRE = "genre_v_belongs_show";
+        }
+
+        public static class Network {
+            public static final String SHOW = "show_v_broadcasts_show";
+            public static final String NAME = "name_v_broadcasts_show";
+            public static final String NETWORK = "network_v_broadcasts_show";
         }
     }
 
@@ -493,6 +509,21 @@ public final class ScraperStore {
             public static final Uri MOVIE = Uri.parse(CONTENT_AUTHORITY + "/tags/studio/movie/");
             public static final Uri SHOW = Uri.parse(CONTENT_AUTHORITY + "/tags/studio/show/");
             public static final Uri NAME = Uri.parse(CONTENT_AUTHORITY + "/tags/studio/name/");
+        }
+    }
+
+    public static class Network {
+        public static final String ID = "_id";
+        public static final String NAME = "name_network";
+        public static final String COUNT = "count_network";
+
+        public static class URI {
+            public static final Uri BASE = Uri.parse(CONTENT_AUTHORITY + "/tags/network");
+            public static final Uri ID = Uri.parse(CONTENT_AUTHORITY + "/tags/network/id/");
+            public static final Uri ALL = Uri.parse(CONTENT_AUTHORITY + "/tags/networks");
+            public static final Uri MOVIE = Uri.parse(CONTENT_AUTHORITY + "/tags/network/movie/");
+            public static final Uri SHOW = Uri.parse(CONTENT_AUTHORITY + "/tags/network/show/");
+            public static final Uri NAME = Uri.parse(CONTENT_AUTHORITY + "/tags/network/name/");
         }
     }
 
@@ -808,5 +839,4 @@ public final class ScraperStore {
             public static final Uri ID = Uri.parse(CONTENT_AUTHORITY + "/tags/moviecollections/m_coll_id/");
         }
     }
-
 }

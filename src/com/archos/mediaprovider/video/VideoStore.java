@@ -1358,6 +1358,24 @@ public final class VideoStore {
              */
             public static final String SCRAPER_S_STUDIOS = "s_studios";
             /**
+             * MediaScraper: Movie Networks / Show Networks
+             * <P>TYPE: <code>String</code> or <code>null</code> if not scraped
+             * <P>FORMAT: "HBO, Netflix, ..."
+             */
+            public static final String SCRAPER_NETWORKS = "networks";
+            /**
+             * MediaScraper: Movie Networks
+             * <P>TYPE: <code>String</code> or <code>null</code> if not a movie
+             * <P>FORMAT: "HBO, Netflix, ..."
+             */
+            public static final String SCRAPER_M_NETWORKS = "m_networks";
+            /**
+             * MediaScraper: Show Networks
+             * <P>TYPE: <code>String</code> or <code>null</code> if not a show / episode
+             * <P>FORMAT: "HBO, Netflix, ..."
+             */
+            public static final String SCRAPER_S_NETWORKS = "s_networks";
+            /**
              * MediaScraper: Movie or Episode / Show Cover, using episode cover over show cover if present
              * <P>TYPE: <code>String</code>(path to file) or <code>null</code> if not scraped
              */

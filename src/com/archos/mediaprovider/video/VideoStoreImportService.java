@@ -447,7 +447,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         int cCount = 0;
 
         try {
-            // tidy up the accumulated actor director writer tagline producer screenplay musiccomposer spokenlanguage country seasonplot studio genre piled up in v_.*_deletable tables in one shot during deletes
+            // tidy up the accumulated actor director writer tagline producer screenplay musiccomposer spokenlanguage country seasonplot studio network genre piled up in v_.*_deletable tables in one shot during deletes
             // it has been moved from scraperTables triggers here to gain in efficiency
             db.execSQL("delete from actor where _id in (select _id from v_actor_deletable)");
             db.execSQL("delete from director where _id in (select _id from v_director_deletable)");
@@ -459,6 +459,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             db.execSQL("delete from spokenlanguage where _id in (select _id from v_spokenlanguage_deletable)");
             db.execSQL("delete from country where _id in (select _id from v_country_deletable)");
             db.execSQL("delete from studio where _id in (select _id from v_studio_deletable)");
+            db.execSQL("delete from network where _id in (select _id from v_network_deletable)");
             db.execSQL("delete from genre where _id in (select _id from v_genre_deletable)");
         } catch (SQLException | IllegalStateException e) {
             log.error("processDeleteFileAndVobCallback: SQLException or IllegalStateException",e);

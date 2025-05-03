@@ -43,6 +43,7 @@ public final class ScraperTables {
     public static final String COUNTRIES_TABLE_NAME = "COUNTRY";
     public static final String SEASONPLOTS_TABLE_NAME = "SEASONPLOT";
     public static final String STUDIOS_TABLE_NAME = "STUDIO";
+    public static final String NETWORKS_TABLE_NAME = "NETWORK";
     public static final String FILMS_MOVIE_TABLE_NAME = "FILMS_MOVIE";
     public static final String WRITERS_MOVIE_TABLE_NAME = "WRITERS_MOVIE";
     public static final String TAGLINES_MOVIE_TABLE_NAME = "TAGLINES_MOVIE";
@@ -70,7 +71,9 @@ public final class ScraperTables {
     public static final String COUNTRIES_EPISODE_TABLE_NAME = "COUNTRIES_EPISODE";
     public static final String GUESTS_TABLE_NAME = "GUESTS";
     public static final String PRODUCES_MOVIE_TABLE_NAME = "PRODUCES_MOVIE";
+    public static final String BROADCASTS_MOVIE_TABLE_NAME = "BROADCASTS_MOVIE";
     public static final String PRODUCES_SHOW_TABLE_NAME = "PRODUCES_SHOW";
+    public static final String BROADCASTS_SHOW_TABLE_NAME = "BROADCASTS_SHOW";
     public static final String PLAYS_MOVIE_TABLE_NAME = "PLAYS_MOVIE";
     public static final String PLAYS_SHOW_TABLE_NAME = "PLAYS_SHOW";
     public static final String BELONGS_MOVIE_TABLE_NAME = "BELONGS_MOVIE";
@@ -117,7 +120,9 @@ public final class ScraperTables {
     public static final String SEASONPLOTS_SHOW_VIEW_NAME = "V_SEASONPLOTS_SHOW";
 
     public static final String PRODUCES_MOVIE_VIEW_NAME = "V_PRODUCES_MOVIE";
+    public static final String BROADCASTS_MOVIE_VIEW_NAME = "V_BROADCASTS_MOVIE";
     public static final String PRODUCES_SHOW_VIEW_NAME = "V_PRODUCES_SHOW";
+    public static final String BROADCASTS_SHOW_VIEW_NAME = "V_BROADCASTS_SHOW";
     public static final String BELONGS_MOVIE_VIEW_NAME = "V_BELONGS_MOVIE";
     public static final String BELONGS_SHOW_VIEW_NAME = "V_BELONGS_SHOW";
     public static final String ALL_VIDEOS_VIEW_NAME = "v_all_videos";
@@ -134,6 +139,7 @@ public final class ScraperTables {
     public static final String COUNTRY_DELETABLE_VIEW_NAME = "v_country_deletable";
     public static final String GENRE_DELETABLE_VIEW_NAME = "v_genre_deletable";
     public static final String STUDIO_DELETABLE_VIEW_NAME = "v_studio_deletable";
+    public static final String NETWORK_DELETABLE_VIEW_NAME = "v_network_deletable";
     /*
      * Columns names that we need and are not to be exposed.
      * Public ones are in the ScraperStore class.
@@ -214,10 +220,14 @@ public final class ScraperTables {
     private static final String COUNTRIES_EPISODE_ID_EPISODE = "episode_countries";
 
     private static final String PRODUCES_MOVIE_ID_MOVIE = "movie_produces";
+    private static final String BROADCASTS_MOVIE_ID_MOVIE = "movie_broadcasts";
     private static final String PRODUCES_MOVIE_ID_STUDIO = "studio_produces";
+    private static final String BROADCASTS_MOVIE_ID_NETWORK = "network_broadcasts";
 
     private static final String PRODUCES_SHOW_ID_SHOW = "show_produces";
+    private static final String BROADCASTS_SHOW_ID_SHOW = "show_broadcasts";
     private static final String PRODUCES_SHOW_ID_STUDIO = "studio_produces";
+    private static final String BROADCASTS_SHOW_ID_NETWORK = "network_broadcasts";
 
     private static final String PLAYS_MOVIE_ID_ACTOR = "actor_plays";
     private static final String PLAYS_MOVIE_ROLE = "role_plays";
@@ -270,7 +280,8 @@ public final class ScraperTables {
         ScraperStore.Movie.ACTORS_FORMATTED + " TEXT," +
         ScraperStore.Movie.DIRECTORS_FORMATTED + " TEXT," +
         ScraperStore.Movie.GERNES_FORMATTED + " TEXT," +
-        ScraperStore.Movie.STUDIOS_FORMATTED + " TEXT" +
+        ScraperStore.Movie.STUDIOS_FORMATTED + " TEXT," +
+        ScraperStore.Movie.NETWORKS_FORMATTED + " TEXT" +
         ")";
 
     private static final String SHOW_TABLE_CREATE =
@@ -303,7 +314,8 @@ public final class ScraperTables {
         ScraperStore.Show.ACTORS_FORMATTED + " TEXT," +
         ScraperStore.Show.DIRECTORS_FORMATTED + " TEXT," +
         ScraperStore.Show.GERNES_FORMATTED + " TEXT," +
-        ScraperStore.Show.STUDIOS_FORMATTED + " TEXT" +
+        ScraperStore.Show.STUDIOS_FORMATTED + " TEXT," +
+        ScraperStore.Show.NETWORKS_FORMATTED + " TEXT" +
         ")";
 
     private static final String EPISODE_TABLE_CREATE =
@@ -399,6 +411,12 @@ public final class ScraperTables {
         ScraperStore.Studio.ID + " INTEGER PRIMARY KEY NOT NULL," +
         ScraperStore.Studio.NAME + " TEXT UNIQUE," +
         ScraperStore.Studio.COUNT + " INTEGER)";
+
+    private static final String NETWORKS_TABLE_CREATE =
+        "CREATE TABLE " + NETWORKS_TABLE_NAME + " (" +
+        ScraperStore.Network.ID + " INTEGER PRIMARY KEY NOT NULL," +
+        ScraperStore.Network.NAME + " TEXT UNIQUE," +
+        ScraperStore.Network.COUNT + " INTEGER)";
 
     /*
      *  Tables associating movie, show and episode tables with directors
@@ -618,6 +636,23 @@ public final class ScraperTables {
         PRODUCES_SHOW_ID_STUDIO + " INTEGER REFERENCES " + STUDIOS_TABLE_NAME + " ON DELETE RESTRICT ON UPDATE CASCADE," +
         "PRIMARY KEY(" + PRODUCES_SHOW_ID_SHOW + "," +
         PRODUCES_SHOW_ID_STUDIO + "))";
+
+    /*
+     * Tables associating movie and show tables to networks
+     */
+    private static final String BROADCASTS_MOVIE_TABLE_CREATE =
+            "CREATE TABLE " + BROADCASTS_MOVIE_TABLE_NAME + " (" +
+                    BROADCASTS_MOVIE_ID_MOVIE + " INTEGER REFERENCES " + MOVIE_TABLE_NAME + " ON DELETE CASCADE ON UPDATE CASCADE," +
+                    BROADCASTS_MOVIE_ID_NETWORK + " INTEGER REFERENCES " + NETWORKS_TABLE_NAME + " ON DELETE RESTRICT ON UPDATE CASCADE," +
+                    "PRIMARY KEY(" + BROADCASTS_MOVIE_ID_MOVIE + "," +
+                    BROADCASTS_MOVIE_ID_NETWORK + "))";
+
+    private static final String BROADCASTS_SHOW_TABLE_CREATE =
+            "CREATE TABLE " + BROADCASTS_SHOW_TABLE_NAME + " (" +
+                    BROADCASTS_SHOW_ID_SHOW + " INTEGER REFERENCES " + SHOW_TABLE_NAME + " ON DELETE CASCADE ON UPDATE CASCADE," +
+                    BROADCASTS_SHOW_ID_NETWORK + " INTEGER REFERENCES " + NETWORKS_TABLE_NAME + " ON DELETE RESTRICT ON UPDATE CASCADE," +
+                    "PRIMARY KEY(" + BROADCASTS_SHOW_ID_SHOW + "," +
+                    BROADCASTS_SHOW_ID_NETWORK + "))";
 
     /*
      *  Tables associating movie, show and episode tables with actors
@@ -1179,7 +1214,7 @@ public final class ScraperTables {
                     " FROM " + SPOKENLANGUAGES_TABLE_NAME +
                     " WHERE " + ScraperStore.Spokenlanguage.NAME + " = NEW." + ScraperStore.Show.Spokenlanguage.NAME + "; " +
                     "END";
-    
+
     private static final String COUNTRIES_SHOW_VIEW_INSERT_TRIGGER =
             "CREATE TRIGGER insert_countries_show INSTEAD OF INSERT ON " + COUNTRIES_SHOW_VIEW_NAME +
                     " BEGIN " +
@@ -1408,6 +1443,31 @@ public final class ScraperTables {
         " WHERE " + ScraperStore.Studio.NAME + " = NEW." + ScraperStore.Movie.Studio.NAME + "; " +
         "END";
 
+    private static final String BROADCASTS_MOVIE_VIEW_CREATE =
+            "CREATE VIEW " + BROADCASTS_MOVIE_VIEW_NAME + " AS SELECT " +
+                    BROADCASTS_MOVIE_TABLE_NAME + "." +
+                    BROADCASTS_MOVIE_ID_MOVIE + " AS " + ScraperStore.Movie.Network.MOVIE + ", " +
+                    NETWORKS_TABLE_NAME + "." +
+                    ScraperStore.Network.NAME + " AS " + ScraperStore.Movie.Network.NAME + ", " +
+                    NETWORKS_TABLE_NAME + "." +
+                    ScraperStore.Network.ID + " AS " + ScraperStore.Movie.Network.NETWORK + " FROM " +
+                    BROADCASTS_MOVIE_TABLE_NAME + " LEFT JOIN " + NETWORKS_TABLE_NAME +
+                    " ON (" + BROADCASTS_MOVIE_TABLE_NAME + "." + BROADCASTS_MOVIE_ID_NETWORK +
+                    " = " + NETWORKS_TABLE_NAME + "." + ScraperStore.Network.ID + ")";
+
+    private static final String BROADCASTS_MOVIE_VIEW_INSERT_TRIGGER =
+            "CREATE TRIGGER insert_broadcasts_movie INSTEAD OF INSERT ON " + BROADCASTS_MOVIE_VIEW_NAME +
+                    " BEGIN " +
+                    "INSERT OR IGNORE INTO " + NETWORKS_TABLE_NAME + " ( " + ScraperStore.Network.NAME + " ) " +
+                    "VALUES (NEW." + ScraperStore.Movie.Network.NAME + "); " +
+                    "INSERT INTO " + BROADCASTS_MOVIE_TABLE_NAME +
+                    " ( " + BROADCASTS_MOVIE_ID_MOVIE + "," + BROADCASTS_MOVIE_ID_NETWORK + " ) " +
+                    "SELECT NEW." + ScraperStore.Movie.Network.MOVIE + ", " +
+                    NETWORKS_TABLE_NAME + "." + ScraperStore.Network.ID + " " +
+                    " FROM " + NETWORKS_TABLE_NAME +
+                    " WHERE " + ScraperStore.Network.NAME + " = NEW." + ScraperStore.Movie.Network.NAME + "; " +
+                    "END";
+
     private static final String PRODUCES_SHOW_VIEW_CREATE =
         "CREATE VIEW " + PRODUCES_SHOW_VIEW_NAME + " AS SELECT " +
         PRODUCES_SHOW_TABLE_NAME + "." +
@@ -1432,6 +1492,30 @@ public final class ScraperTables {
         " FROM " + STUDIOS_TABLE_NAME +
         " WHERE " + ScraperStore.Studio.NAME + " = NEW." + ScraperStore.Show.Studio.NAME + "; " +
         "END";
+
+    private static final String BROADCASTS_SHOW_VIEW_CREATE =
+            "CREATE VIEW " + BROADCASTS_SHOW_VIEW_NAME + " AS SELECT " +
+                    BROADCASTS_SHOW_TABLE_NAME + "." +
+                    BROADCASTS_SHOW_ID_SHOW + " AS " + ScraperStore.Show.Network.SHOW + ", " +
+                    NETWORKS_TABLE_NAME + "." +
+                    ScraperStore.Network.NAME + " AS " + ScraperStore.Show.Network.NAME + ", " +
+                    NETWORKS_TABLE_NAME + "." +
+                    ScraperStore.Network.ID + " AS " + ScraperStore.Show.Network.NETWORK + " FROM " +
+                    BROADCASTS_SHOW_TABLE_NAME + " LEFT JOIN " + NETWORKS_TABLE_NAME +
+                    " ON (" + BROADCASTS_SHOW_TABLE_NAME + "." + BROADCASTS_SHOW_ID_NETWORK +
+                    " = " + NETWORKS_TABLE_NAME + "." + ScraperStore.Network.ID + ")";
+    private static final String BROADCASTS_SHOW_VIEW_INSERT_TRIGGER =
+            "CREATE TRIGGER insert_broadcasts_show INSTEAD OF INSERT ON " + BROADCASTS_SHOW_VIEW_NAME +
+                    " BEGIN " +
+                    "INSERT OR IGNORE INTO " + NETWORKS_TABLE_NAME + " ( " + ScraperStore.Network.NAME + " ) " +
+                    "VALUES (NEW." + ScraperStore.Show.Network.NAME + "); " +
+                    "INSERT INTO " + BROADCASTS_SHOW_TABLE_NAME +
+                    " ( " + BROADCASTS_SHOW_ID_SHOW + "," + BROADCASTS_SHOW_ID_NETWORK + " ) " +
+                    "SELECT NEW." + ScraperStore.Show.Network.SHOW + ", " +
+                    NETWORKS_TABLE_NAME + "." + ScraperStore.Network.ID + " " +
+                    " FROM " + NETWORKS_TABLE_NAME +
+                    " WHERE " + ScraperStore.Network.NAME + " = NEW." + ScraperStore.Show.Network.NAME + "; " +
+                    "END";
 
     private static final String BELONGS_MOVIE_VIEW_CREATE =
         "CREATE VIEW " + BELONGS_MOVIE_VIEW_NAME + " AS SELECT " +
@@ -1572,6 +1656,12 @@ public final class ScraperTables {
             "LEFT JOIN produces_movie ON produces_movie.studio_produces=studio._id " +
             "LEFT JOIN produces_show ON produces_show.studio_produces=studio._id " +
             "WHERE coalesce(movie_produces, show_produces) IS NULL";
+    private static final String NETWORK_DELETABLE_VIEW_CREATE =
+            "CREATE VIEW v_network_deletable AS " +
+            "SELECT _id FROM network " +
+            "LEFT JOIN broadcasts_movie ON broadcasts_movie.network_broadcasts=network._id " +
+            "LEFT JOIN broadcasts_show ON broadcasts_show.network_broadcasts=network._id " +
+            "WHERE coalesce(movie_broadcasts, show_broadcasts) IS NULL";
     private static final String EPISODE_DELETE_TRIGGER_DROP = "DROP TRIGGER IF EXISTS episode_delete";
     private static final String EPISODE_DELETE_TRIGGER_CREATE =
             "CREATE TRIGGER episode_delete AFTER DELETE ON episode " +
@@ -1579,6 +1669,7 @@ public final class ScraperTables {
             "delete from actor where _id in (select _id from v_actor_deletable); " +
             "delete from director where _id in (select _id from v_director_deletable); " +
             "delete from studio where _id in (select _id from v_studio_deletable); " +
+            "delete from network where _id in (select _id from v_network_deletable); " +
             "delete from genre where _id in (select _id from v_genre_deletable); " +
             "DELETE FROM SHOW WHERE SHOW._id = OLD.show_episode AND NOT EXISTS (SELECT 1 FROM EPISODE WHERE show_episode = OLD.show_episode LIMIT 1); " +
             // set scraper type / id to -1 if something is refering this episode
@@ -1624,6 +1715,7 @@ public final class ScraperTables {
             "delete from actor where _id in (select _id from v_actor_deletable); " +
             "delete from director where _id in (select _id from v_director_deletable); " +
             "delete from studio where _id in (select _id from v_studio_deletable); " +
+            "delete from network where _id in (select _id from v_network_deletable); " +
             "delete from genre where _id in (select _id from v_genre_deletable); " +
             "INSERT INTO delete_files(name) VALUES(OLD.cover_show);" +
             "END";
@@ -2095,8 +2187,10 @@ public final class ScraperTables {
             ") \n" +
             " GROUP BY _id";
 
-    // studios for show / movie
+    // studios and networks for show / movie
     public static final String VIEW_SHOW_STUDIOS = "v_show_studios";
+    public static final String VIEW_MOVIE_NETWORKS = "v_movie_networks";
+    public static final String VIEW_SHOW_NETWORKS = "v_show_networks";
     private static final String CREATE_VIEW_SHOW_STUDIOS =
             "CREATE VIEW " + VIEW_SHOW_STUDIOS + " AS\n" +
             "SELECT _id, group_concat( name_studio, ', ' ) AS studios\n" +
@@ -2120,6 +2214,30 @@ public final class ScraperTables {
             "     ORDER BY produces_movie.ROWID \n" +
             ") \n" +
             " GROUP BY _id";
+
+    private static final String CREATE_VIEW_SHOW_NETWORKS =
+            "CREATE VIEW " + VIEW_SHOW_NETWORKS + " AS\n" +
+                    "SELECT _id, group_concat( name_network, ', ' ) AS networks\n" +
+                    "  FROM  ( \n" +
+                    "    SELECT show_broadcasts AS _id, name_network\n" +
+                    "      FROM broadcasts_show\n" +
+                    "           LEFT JOIN network\n" +
+                    "                  ON ( network_broadcasts = _id ) \n" +
+                    "     ORDER BY broadcasts_show.ROWID \n" +
+                    ") \n" +
+                    " GROUP BY _id";
+
+    private static final String CREATE_VIEW_MOVIE_NETWORKS =
+        "CREATE VIEW " + VIEW_MOVIE_NETWORKS + " AS\n" +
+        "SELECT _id, group_concat( name_network, ', ' ) AS networks\n" +
+        "  FROM  ( \n" +
+        "    SELECT movie_broadcasts AS _id, name_network\n" +
+        "      FROM broadcasts_movie\n" +
+        "           LEFT JOIN network\n" +
+        "                  ON ( network_broadcasts = _id ) \n" +
+        "     ORDER BY broadcasts_movie.ROWID \n" +
+        ") \n" +
+        " GROUP BY _id";
 
     /* Version 11 */
     // additions for posters backdrops
@@ -2412,6 +2530,7 @@ public final class ScraperTables {
         db.execSQL(DIRECTORS_TABLE_CREATE);
         db.execSQL(GENRES_TABLE_CREATE);
         db.execSQL(STUDIOS_TABLE_CREATE);
+        db.execSQL(NETWORKS_TABLE_CREATE);
         db.execSQL(SHOW_TABLE_CREATE);
         db.execSQL(EPISODE_TABLE_CREATE);
         db.execSQL(GUESTS_TABLE_CREATE);
@@ -2420,12 +2539,14 @@ public final class ScraperTables {
         db.execSQL(BELONGS_MOVIE_TABLE_CREATE);
         db.execSQL(PLAYS_MOVIE_TABLE_CREATE);
         db.execSQL(PRODUCES_MOVIE_TABLE_CREATE);
+        db.execSQL(BROADCASTS_MOVIE_TABLE_CREATE);
 
         db.execSQL(FILMS_EPISODE_TABLE_CREATE);
         db.execSQL(FILMS_SHOW_TABLE_CREATE);
         db.execSQL(BELONGS_SHOW_TABLE_CREATE);
         db.execSQL(PLAYS_SHOW_TABLE_CREATE);
         db.execSQL(PRODUCES_SHOW_TABLE_CREATE);
+        db.execSQL(BROADCASTS_SHOW_TABLE_CREATE);
 
         db.execSQL(GUESTS_VIEW_CREATE);
         db.execSQL(PLAYS_SHOW_VIEW_CREATE);
@@ -2435,6 +2556,8 @@ public final class ScraperTables {
         db.execSQL(FILMS_EPISODE_VIEW_CREATE);
         db.execSQL(PRODUCES_MOVIE_VIEW_CREATE);
         db.execSQL(PRODUCES_SHOW_VIEW_CREATE);
+        db.execSQL(BROADCASTS_MOVIE_VIEW_CREATE);
+        db.execSQL(BROADCASTS_SHOW_VIEW_CREATE);
         db.execSQL(BELONGS_MOVIE_VIEW_CREATE);
         db.execSQL(BELONGS_SHOW_VIEW_CREATE);
         db.execSQL(ALL_VIDEOS_VIEW_CREATE_v24);
@@ -2447,6 +2570,8 @@ public final class ScraperTables {
         db.execSQL(FILMS_EPISODE_VIEW_INSERT_TRIGGER);
         db.execSQL(PRODUCES_MOVIE_VIEW_INSERT_TRIGGER);
         db.execSQL(PRODUCES_SHOW_VIEW_INSERT_TRIGGER);
+        db.execSQL(BROADCASTS_MOVIE_VIEW_INSERT_TRIGGER);
+        db.execSQL(BROADCASTS_SHOW_VIEW_INSERT_TRIGGER);
         db.execSQL(BELONGS_MOVIE_VIEW_INSERT_TRIGGER);
         db.execSQL(BELONGS_SHOW_VIEW_INSERT_TRIGGER);
 
@@ -2454,6 +2579,7 @@ public final class ScraperTables {
         db.execSQL(DIRECTOR_DELETABLE_VIEW_CREATE);
         db.execSQL(GENRE_DELETABLE_VIEW_CREATE);
         db.execSQL(STUDIO_DELETABLE_VIEW_CREATE);
+        db.execSQL(NETWORK_DELETABLE_VIEW_CREATE);
 
         db.execSQL(EPISODE_DELETE_TRIGGER_CREATE);
         db.execSQL(SHOW_DELETE_TRIGGER_CREATE);
@@ -2475,6 +2601,9 @@ public final class ScraperTables {
 
         db.execSQL(CREATE_VIEW_SHOW_STUDIOS);
         db.execSQL(CREATE_VIEW_MOVIE_STUDIOS);
+
+        db.execSQL(CREATE_VIEW_SHOW_NETWORKS);
+        db.execSQL(CREATE_VIEW_MOVIE_NETWORKS);
 
         // V11
         db.execSQL(CREATE_MOVIE_POSTERS_TABLE);
@@ -2760,6 +2889,9 @@ public final class ScraperTables {
             db.execSQL("CREATE INDEX COUNTRIES_SHOW_idx ON COUNTRIES_SHOW(country_countries)");
 
             db.execSQL("CREATE INDEX SEASONPLOTS_SHOW_idx ON SEASONPLOTS_SHOW(seasonplot_seasonplots)");
+
+            db.execSQL("CREATE INDEX BROADCASTS_MOVIE_idx ON BROADCASTS_MOVIE(network_broadcasts)");
+            db.execSQL("CREATE INDEX BROADCASTS_SHOW_idx ON BROADCASTS_SHOW(network_broadcasts)");
         }
     }
 }

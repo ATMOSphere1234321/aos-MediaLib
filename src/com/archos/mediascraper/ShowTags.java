@@ -233,6 +233,7 @@ public class ShowTags extends VideoTags {
             values.put(ScraperStore.Show.SEASONPLOTS_FORMATTED, getSeasonPlotsFormatted());
             values.put(ScraperStore.Show.GERNES_FORMATTED, getGenresFormatted());
             values.put(ScraperStore.Show.STUDIOS_FORMATTED, getStudiosFormatted());
+            values.put(ScraperStore.Show.NETWORKS_FORMATTED, getNetworksFormatted());
 
             if (!showFound || updateCover) {
                 values.put(ScraperStore.Show.COVER, newCover);
@@ -287,12 +288,19 @@ public class ShowTags extends VideoTags {
         // if show did not exist insert all the actors etc, updates here are not done.
         if (!showFound) {
             // We know our ID now so we can put everything into a single transaction
-            log.debug("Inserting studios, directors, writers, taglines, producers, screenplays, musiccomposer, spokenlanguage, countries seasonplots, actors, genres.");
+            log.debug("Inserting studios, networks, directors, writers, taglines, producers, screenplays, musiccomposer, spokenlanguage, countries seasonplots, actors, genres.");
 
             for (String studio : mStudios) {
                 cop = ContentProviderOperation.newInsert(ScraperStore.Studio.URI.SHOW);
                 cop.withValue(ScraperStore.Show.Studio.NAME, studio);
                 cop.withValue(ScraperStore.Show.Studio.SHOW, showIdString);
+                allOperations.add(cop.build());
+            }
+
+            for (String network : mNetworks) {
+                cop = ContentProviderOperation.newInsert(ScraperStore.Network.URI.SHOW);
+                cop.withValue(ScraperStore.Show.Network.NAME, network);
+                cop.withValue(ScraperStore.Show.Network.SHOW, showIdString);
                 allOperations.add(cop.build());
             }
 

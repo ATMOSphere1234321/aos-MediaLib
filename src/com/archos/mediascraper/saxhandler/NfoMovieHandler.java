@@ -81,6 +81,7 @@ public class NfoMovieHandler extends BasicSubParseHandler {
     private static final int MUSICCOMPOSER = 37;
     private static final int COUNTRY = 38;
     private static final int SPOKENLANGUAGE = 39;
+    private static final int NETWORK = 40;
 
     static {
         STRINGS.addKey("movie", ROOT_MOVIE);
@@ -105,6 +106,7 @@ public class NfoMovieHandler extends BasicSubParseHandler {
         STRINGS.addKey("role", ROLE);
         STRINGS.addKey("fanart", FANART);
         STRINGS.addKey("studio", STUDIO);
+        STRINGS.addKey("network", NETWORK);
         STRINGS.addKey("tmdbid", TMDBID);
         STRINGS.addKey("runtime", RUNTIME);
         STRINGS.addKey("lastplayed", LASTPLAYED);
@@ -223,6 +225,7 @@ public class NfoMovieHandler extends BasicSubParseHandler {
                     case SPOKENLANGUAGE:
                     case COUNTRY:
                     case STUDIO:
+                    case NETWORK:
                     case TMDBID:
                     case RUNTIME:
                     case LASTPLAYED:
@@ -360,6 +363,9 @@ public class NfoMovieHandler extends BasicSubParseHandler {
                         break;
                     case STUDIO:
                         mMovie.addStudioIfAbsent(getString(), NfoParser.STRING_SPLITTERS);
+                        break;
+                    case NETWORK:
+                        mMovie.addNetworkIfAbsent(getString(), NfoParser.STRING_SPLITTERS);
                         break;
                     case TMDBID:
                         mMovie.setOnlineId(getLong());

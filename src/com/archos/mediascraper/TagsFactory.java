@@ -138,6 +138,7 @@ public class TagsFactory {
             seasonplotsS = getCol(c, VideoColumns.SCRAPER_S_SEASONPLOTS);
             genresMS = getCol(c, VideoColumns.SCRAPER_GENRES);
             studiosMS = getCol(c, VideoColumns.SCRAPER_STUDIOS);
+            networksMS = getCol(c, VideoColumns.SCRAPER_NETWORKS);
             seasonE = getCol(c, VideoColumns.SCRAPER_E_SEASON);
             episodeE = getCol(c, VideoColumns.SCRAPER_E_EPISODE);
             showId = getCol(c, VideoColumns.SCRAPER_SHOW_ID);
@@ -264,6 +265,7 @@ public class TagsFactory {
         public final int seasonplotsS;
         public final int genresMS;
         public final int studiosMS;
+        public final int networksMS;
         public final int seasonE;
         public final int episodeE;
         public final int showId;
@@ -382,6 +384,7 @@ public class TagsFactory {
             VideoColumns.SCRAPER_S_SEASONPLOTS,
         VideoColumns.SCRAPER_GENRES,
         VideoColumns.SCRAPER_STUDIOS,
+        VideoColumns.SCRAPER_NETWORKS,
         VideoColumns.SCRAPER_E_SEASON,
         VideoColumns.SCRAPER_E_EPISODE,
         VideoColumns.SCRAPER_SHOW_ID,
@@ -462,6 +465,7 @@ public class TagsFactory {
      VideoColumns.SCRAPER_S_COUNTRIES,
     VideoColumns.SCRAPER_GENRES,
     VideoColumns.SCRAPER_STUDIOS,
+    VideoColumns.SCRAPER_NETWORKS,
     VideoColumns.SCRAPER_E_SEASON,
     VideoColumns.SCRAPER_E_EPISODE,
     VideoColumns.SCRAPER_SHOW_ID,
@@ -517,6 +521,7 @@ public class TagsFactory {
             String countriesME = getStringCol(cur, cols.countriesME);
             String genresMS = getStringCol(cur, cols.genresMS);
             String studiosMS = getStringCol(cur, cols.studiosMS);
+            String networksMS = getStringCol(cur, cols.networksMS);
             long backdropId = getLongCol(cur, cols.backdropId);
             String backdropLFile = getStringCol(cur, cols.backdropLFile);
             String backdropLUrl = getStringCol(cur, cols.backdropLUrl);
@@ -609,6 +614,7 @@ public class TagsFactory {
                 tag.setCountriesFormatted(countriesME);
                 tag.setGenresFormatted(genresMS);
                 tag.setStudiosFormatted(studiosMS);
+                tag.setNetworksFormatted(networksMS);
 
                 if(coverME != null && posterId <= 0)
                     tag.setCover(new File(coverME));
@@ -777,6 +783,7 @@ public class TagsFactory {
                     sTag.setCountriesFormatted(countriesS);
                     sTag.setGenresFormatted(genresMS);
                     sTag.setStudiosFormatted(studiosMS);
+                    sTag.setNetworksFormatted(networksMS);
 
                     String coverS =getStringCol(cur, cols.coverS);
                     long posterSId = getLongCol(cur, cols.posterSId);
@@ -893,6 +900,7 @@ public class TagsFactory {
             String country = getStringCol(cur, ScraperStore.Movie.Country.NAME);
             String genre = getStringCol(cur, ScraperStore.Movie.Genre.NAME);
             String studio = getStringCol(cur, ScraperStore.Movie.Studio.NAME);
+            String network = getStringCol(cur, ScraperStore.Movie.Network.NAME);
 
             String backdropUrl = getStringCol(cur, ScraperStore.Movie.BACKDROP_URL);
             String backdropPath = getStringCol(cur, ScraperStore.Movie.BACKDROP);
@@ -935,6 +943,7 @@ public class TagsFactory {
             tag.addCountryIfAbsent(country);
             tag.addGenreIfAbsent(genre);
             tag.addStudioIfAbsent(studio);
+            tag.addNetworkIfAbsent(network);
 
             if(backdropUrl != null && backdropPath != null) {
                 ScraperImage image = new ScraperImage(Type.MOVIE_BACKDROP, null);
@@ -996,6 +1005,7 @@ public class TagsFactory {
             String seasonplot = getStringCol(cur, ScraperStore.Show.SeasonPlot.NAME);
             String genre = getStringCol(cur, ScraperStore.Show.Genre.NAME);
             String studio = getStringCol(cur, ScraperStore.Show.Studio.NAME);
+            String network = getStringCol(cur, ScraperStore.Show.Network.NAME);
 
             String backdropUrl = getStringCol(cur, ScraperStore.Show.BACKDROP_URL);
             String backdropPath = getStringCol(cur, ScraperStore.Show.BACKDROP);
@@ -1040,6 +1050,7 @@ public class TagsFactory {
             tag.addSeasonPlotIfAbsent(seasonplot);
             tag.addGenreIfAbsent(genre);
             tag.addStudioIfAbsent(studio);
+            tag.addNetworkIfAbsent(network);
 
             if(backdropUrl != null && backdropPath != null) {
                 ScraperImage image = new ScraperImage(Type.SHOW_BACKDROP, null);
@@ -1349,6 +1360,18 @@ public class TagsFactory {
             if (c != null) {
                 while (c.moveToNext()) {
                     result.addStudioIfAbsent(c.getString(0));
+                }
+                c.close();
+            }
+            // Networks
+            c = cr.query(
+                    ContentUris.withAppendedId(ScraperStore.Network.URI.MOVIE, movieId),
+                    new String[] {
+                            ScraperStore.Show.Network.NAME,            // 0
+                    }, null, null, null);
+            if (c != null) {
+                while (c.moveToNext()) {
+                    result.addNetworkIfAbsent(c.getString(0));
                 }
                 c.close();
             }
@@ -1835,6 +1858,18 @@ public class TagsFactory {
             if (c != null) {
                 while (c.moveToNext()) {
                     showTags.addStudioIfAbsent(c.getString(0));
+                }
+                c.close();
+            }
+            // Networks
+            c = cr.query(
+                    ContentUris.withAppendedId(ScraperStore.Network.URI.SHOW, showId),
+                    new String[] {
+                            ScraperStore.Show.Network.NAME,            // 0
+                    }, null, null, null);
+            if (c != null) {
+                while (c.moveToNext()) {
+                    showTags.addNetworkIfAbsent(c.getString(0));
                 }
                 c.close();
             }
