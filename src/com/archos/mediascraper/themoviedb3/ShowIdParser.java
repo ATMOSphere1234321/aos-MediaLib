@@ -121,26 +121,6 @@ public class ShowIdParser {
                 result.addDirectorIfAbsent(person.name); // director = created_by
         }
 
-        // Utilizing the unused series writer as a pipeline for series actors
-        List<String> actorsList = new ArrayList<>();
-        if (serie.credits != null) {
-            if (serie.credits.cast != null) {
-                for (CastMember actor : serie.credits.cast) {
-                    try {
-                        JSONObject actorObject = new JSONObject();
-                        actorObject.put("name", actor.name);
-                        actorObject.put("character", actor.character);
-                        actorObject.put("profile_path", actor.profile_path);
-
-                        actorsList.add(actorObject.toString());
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-        result.setWriters(actorsList);
-
         result.setRating(Math.round(serie.vote_average.floatValue() * 10)/10.0f);
         result.setTitle(serie.name + (( year != null) ? " " + year : ""));
 
@@ -281,9 +261,20 @@ public class ShowIdParser {
         } else log.debug("getResult: no actor_photo_path for " + serie.id);
 
         if (serie.credits != null) {
-            if (serie.credits.cast != null)
-                for (CastMember actor : serie.credits.cast)
-                    result.addActorIfAbsent(actor.name, actor.character);
+            if (serie.credits.cast != null){
+                for (CastMember actor : serie.credits.cast) {
+                    try {
+                        JSONObject actorObject = new JSONObject();
+                        actorObject.put("name", actor.name);
+                        actorObject.put("character", actor.character);
+                        actorObject.put("profile_path", actor.profile_path);
+
+                        result.addActorIfAbsent(actorObject.toString());
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
             if (serie.credits.crew != null)
                 for (CrewMember crew : serie.credits.crew) {
                     assert crew.job != null;
