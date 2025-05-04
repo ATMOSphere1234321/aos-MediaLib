@@ -281,9 +281,6 @@ public class ShowIdParser {
         } else log.debug("getResult: no actor_photo_path for " + serie.id);
 
         if (serie.credits != null) {
-            if (serie.credits.guest_stars != null)
-                for (CastMember guestStar : serie.credits.guest_stars)
-                    result.addActorIfAbsent(guestStar.name, guestStar.character);
             if (serie.credits.cast != null)
                 for (CastMember actor : serie.credits.cast)
                     result.addActorIfAbsent(actor.name, actor.character);
