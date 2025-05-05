@@ -406,22 +406,29 @@ public class ScraperImage {
         boolean isStudioLogoSeries;
         boolean isStudioLogoMovie;
         boolean isCastPhotoMovie;
+        boolean isClearLogoMovie;
+        boolean isClearLogoSeries;
         isNetworkLogo = mType == Type.SHOW_NETWORK;
         isCastPhotoSeries = mType == Type.SHOW_ACTOR_PHOTO;
         isStudioLogoSeries = mType == Type.SHOW_STUDIOLOGO;
         isCastPhotoMovie = mType == Type.MOVIE_ACTORPHOTO;
         isStudioLogoMovie = mType == Type.MOVIE_STUDIOLOGO;
+        isClearLogoMovie = mType == Type.MOVIE_CLEARLOGO;
+        isClearLogoSeries = mType == Type.SHOW_TITLE_CLEARLOGO;
         String name;
-        if (isNetworkLogo || isStudioLogoSeries || isStudioLogoMovie) {
-            assert url != null;
-            name = url.replaceAll(GITHUB_STUDIO_NETWOK_LOGO_URL, "").replaceAll("%20", " ");
-            return name;
-        } else if (isCastPhotoSeries || isCastPhotoMovie){
-            assert url != null;
-            name = url.replaceAll(TMDB_CAST_IMAGE_URL, "");
-            return name;
-        } else
-            name = String.valueOf(seedHash) + String.valueOf(urlHash);
+        if (url != null){
+            if (isNetworkLogo || isStudioLogoSeries || isStudioLogoMovie) {
+                name = url.replaceAll(GITHUB_STUDIO_NETWOK_LOGO_URL, "").replaceAll("%20", " ");
+                return name;
+            } else if (isCastPhotoSeries || isCastPhotoMovie){
+                name = url.replaceAll(TMDB_CAST_IMAGE_URL, "");
+                return name;
+            } else if (isClearLogoMovie || isClearLogoSeries){
+                name = String.valueOf(seedHash) + String.valueOf(urlHash) + (thumb ? "t.png" : "l.png");
+                return name;
+            }
+        }
+        name = String.valueOf(seedHash) + String.valueOf(urlHash);
         return name + (thumb ? "t.jpg" : "l.jpg");
     }
 
