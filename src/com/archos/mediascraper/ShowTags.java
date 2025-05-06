@@ -787,7 +787,7 @@ public class ShowTags extends VideoTags {
         addDefaultBackdrop(image);
     }
 
-    /** Add this (local) image as the default show networklogo */
+    /** Add this (local) image as the default show network logo */
     public void addDefaultNetworkLogo(Context context, Uri localImage) {
         ScraperImage image = new ScraperImage(Type.SHOW_NETWORK, mTitle);
         String imageUrl = localImage.toString();
@@ -797,7 +797,7 @@ public class ShowTags extends VideoTags {
         addDefaultNetworkLogo(image);
     }
 
-    /** Add this (local) image as the default show actorphoto */
+    /** Add this (local) image as the default show actor photo */
     public void addDefaultActorPhoto(Context context, Uri localImage) {
         ScraperImage image = new ScraperImage(Type.SHOW_ACTOR_PHOTO, mTitle);
         String imageUrl = localImage.toString();
@@ -807,7 +807,7 @@ public class ShowTags extends VideoTags {
         addDefaultActorPhoto(image);
     }
 
-    /** Add this (local) image as the default show clearlogo */
+    /** Add this (local) image as the default show title clear logo */
     public void addDefaultClearLogo(Context context, Uri localImage) {
         ScraperImage image = new ScraperImage(Type.SHOW_TITLE_CLEARLOGO, mTitle);
         String imageUrl = localImage.toString();
@@ -817,7 +817,7 @@ public class ShowTags extends VideoTags {
         addDefaultClearLogo(image);
     }
 
-    /** Add this (local) image as the default show networklogo */
+    /** Add this (local) image as the default show studio logo */
     public void addDefaultStudioLogo(Context context, Uri localImage) {
         ScraperImage image = new ScraperImage(Type.SHOW_STUDIOLOGO, mTitle);
         String imageUrl = localImage.toString();
@@ -863,7 +863,7 @@ public class ShowTags extends VideoTags {
         addDefaultActorPhoto(image);
     }
 
-    /** Add this url image as the show actor photo */
+    /** Add this url image as the show title clear logo */
     public void addClearLogoFTV(Context context, String path) {
         ScraperImage image = new ScraperImage(Type.SHOW_TITLE_CLEARLOGO, mTitle);
         image.setLargeUrl(path);
@@ -872,7 +872,7 @@ public class ShowTags extends VideoTags {
         addDefaultClearLogo(image);
     }
 
-    /** Add this url image as the show network logo */
+    /** Add this url image as the show studio logo */
     public void addStudioLogoGITHUB(Context context, String path) {
         ScraperImage image = new ScraperImage(Type.SHOW_STUDIOLOGO, mTitle);
         image.setLargeUrl(ScraperImage.GSNL + path);

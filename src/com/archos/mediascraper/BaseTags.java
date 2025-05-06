@@ -812,12 +812,12 @@ public abstract class BaseTags implements Parcelable {
         mActorPhotos = addAsFirstItem(mActorPhotos, image);
     }
 
-    /** Adds this image as first element to the list of actor photos */
+    /** Adds this image as first element to the list of title clear logo */
     public void addDefaultClearLogo(ScraperImage image) {
         mClearLogos = addAsFirstItem(mClearLogos, image);
     }
 
-    /** Adds this image as first element to the list of actor photos */
+    /** Adds this image as first element to the list of studio logos */
     public void addDefaultStudioLogo(ScraperImage image) {
         mStudioLogos = addAsFirstItem(mStudioLogos, image);
     }

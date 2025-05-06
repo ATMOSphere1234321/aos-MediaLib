@@ -244,7 +244,7 @@ public class ShowIdParser {
                 log.debug("getResult: " + serie.id + " has studiologo_path=" + ScraperImage.GSNL + serie.production_companies.get(i).name.replaceAll(" ", "%20").replaceAll("/", "%20").replaceAll("\t", "") + ".png");
                 result.addStudioLogoGITHUB(mContext, serie.production_companies.get(i).name.replaceAll(" ", "%20").replaceAll("/", "%20").replaceAll("\t", "") + ".png");
             }
-        } else log.debug("getResult: no networklogo_path for " + serie.id);
+        } else log.debug("getResult: no studiologo_path for " + serie.id);
 
 
         if (serie.origin_country != null) {

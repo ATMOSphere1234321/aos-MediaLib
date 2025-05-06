@@ -85,10 +85,6 @@ public abstract class VideoTags extends BaseTags {
 
     public void setGenresFormatted(String genres) { mGenresFormatted = genres; }
 
-    /**
-     * all strings are trimmed, does not put empty values, does not replace entries.
-     * optional splitCharacters to specify how to split the string
-     **/
     public void addStudioIfAbsent(String studio, char... splitCharacters) {
         addIfAbsentSplitNTrim(studio, mStudios, splitCharacters);
     }
