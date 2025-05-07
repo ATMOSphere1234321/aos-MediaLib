@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
@@ -39,11 +40,13 @@ import androidx.preference.PreferenceManager;
 
 import android.os.Looper;
 import android.provider.BaseColumns;
+import android.util.Log;
 
 import com.archos.mediacenter.utils.trakt.TraktService;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.DeleteFileCallback;
 import com.archos.environment.NetworkState;
+import com.archos.mediaprovider.VideoDb;
 import com.archos.mediaprovider.video.VideoStore;
 import com.archos.mediaprovider.video.WrapperChannelManager;
 import com.archos.mediascraper.preprocess.SearchInfo;
@@ -55,6 +58,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by alexandre on 20/05/15.
@@ -348,6 +353,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                 int totalNumberOfFilesScraped = 0;
 
                 public void run() {
+                    SQLiteDatabase db = VideoDb.getHolder(mContext).get();
+                    List<String> filesToPreserve;
                     sIsScraping = true;
                     boolean shouldRescrapAll = rescrapAlreadySearched;
                     log.debug("startScraping: startThread " + String.valueOf(mThread==null || !mThread.isAlive()) );
@@ -443,6 +450,10 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             }
                                             log.trace("startScraping: NFO tags.save ID=" + ID);
                                             tags.save(AutoScrapeService.this, ID);
+                                            filesToPreserve = getFilesFromDeleteFilesTable(db);
+                                            if (!filesToPreserve.isEmpty() && (shouldRescrapAll || scrapeOnlyMovies)) {
+                                                clearDeleteFilesTable(db);
+                                            }
                                             DeleteFileCallback.DO_NOT_DELETE.clear();
                                         } else {
                                             log.trace("startScraping: oh oh NFO ID = -1 ");
@@ -520,6 +531,10 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         log.trace("startScraping: online result.tag.save ID=" + ID);
 
                                         result.tag.save(AutoScrapeService.this, ID);
+                                        filesToPreserve = getFilesFromDeleteFilesTable(db);
+                                        if (!filesToPreserve.isEmpty() && (shouldRescrapAll || scrapeOnlyMovies)) {
+                                            clearDeleteFilesTable(db);
+                                        }
                                         DeleteFileCallback.DO_NOT_DELETE.clear();
                                         // result exists thus scraped and no error for now
                                         notScraped = false;
@@ -610,6 +625,38 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             };
             mThread.start();
         }
+    }
+
+    public static void clearDeleteFilesTable(SQLiteDatabase db) {
+        try {
+            db.execSQL("DELETE FROM delete_files");
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static List<String> getFilesFromDeleteFilesTable(SQLiteDatabase db) {
+        List<String> files = new ArrayList<>();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT name FROM delete_files", null);
+            if (cursor != null) {
+                Log.d("DBnova", "Rows: " + cursor.getCount());
+                if (cursor.moveToFirst()) {
+                    do {
+                        String path = cursor.getString(0);
+                        Log.d("DBnova", "Read file: " + path);
+                        if (path != null) {
+                            files.add(path);
+                        }
+                    } while (cursor.moveToNext());
+                }
+            }
+        } catch (Exception e) {
+            Log.e("DBnova", "Error reading delete_files", e);
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return files;
     }
 
     private static final String WHERE_BASE =
