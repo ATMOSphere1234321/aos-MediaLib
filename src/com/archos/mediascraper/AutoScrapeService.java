@@ -95,7 +95,10 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             VideoStore.Video.VideoColumns.SCRAPER_EPISODE_ID,
             VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE,
             VideoStore.Video.VideoColumns.SCRAPER_VIDEO_ONLINE_ID,
-            VideoStore.Video.VideoColumns.SCRAPER_E_SEASON
+            VideoStore.Video.VideoColumns.SCRAPER_E_SEASON,
+            VideoStore.Video.VideoColumns.SCRAPER_E_EPISODE,
+            VideoStore.Video.VideoColumns.SCRAPER_TITLE,
+            VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID
     };
     private Thread mThread;
     private boolean restartOnNextRound = false;
@@ -490,14 +493,32 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         if (scraperType == BaseTags.TV_SHOW) {
                                             // get the whole season
                                             long season = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_E_SEASON));
+                                            long episode = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_E_EPISODE));
+                                            String showName = cursor.getString(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_TITLE));
+                                            long onlineId = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID));
                                             Bundle b = new Bundle();
                                             b.putInt(Scraper.ITEM_REQUEST_SEASON, (int) season);
+                                            b.putInt(Scraper.ITEM_REQUEST_EPISODE, (int) episode);
+                                            b.putBoolean(Scraper.ITEM_REQUEST_ALL_EPISODES, true);
+                                            b.putBoolean(Scraper.ITEM_REQUEST_BASIC_SHOW, true); // Add this to indicate we're rescraping
+                                            b.putBoolean(Scraper.ITEM_REQUEST_BASIC_VIDEO, true); // Add this to indicate we're rescraping a video
 
-                                            log.trace("startScraping: rescraping episode for tvId " + videoID + ", season " + season);
+                                            log.trace("startScraping: rescraping episode for tvId " + videoID + ", season " + season + ", episode " + episode);
                                             SearchResult searchResult = new SearchResult(SearchResult.tvshow, title, (int) videoID);
                                             searchResult.setFile(fileUri);
+                                            searchResult.setOriginSearchSeason((int)season);
+                                            searchResult.setOriginSearchEpisode((int)episode);
+                                            if (showName != null && !showName.isEmpty() && onlineId > 0) {
+                                                searchResult.setTitle(showName);
+                                                searchResult.setId((int)onlineId);
+                                            }
+                                            // Add episode information to SearchResult's extra Bundle
+                                            Bundle extra = new Bundle();
+                                            extra.putString(ShowUtils.SEASON, String.valueOf(season));
+                                            extra.putString(ShowUtils.EPNUM, String.valueOf(episode));
+                                            searchResult.setExtra(extra);
                                             searchResult.setScraper(new ShowScraper4(AutoScrapeService.this));
-                                            result = ShowScraper4.getDetails(new SearchResult(SearchResult.tvshow, title, (int) videoID), b);
+                                            result = ShowScraper4.getDetails(searchResult, b);
                                         } else if (scraperType == BaseTags.MOVIE) {
                                             log.trace("startScraping: rescraping movie " + videoID);
                                             SearchResult searchResult = new SearchResult(SearchResult.movie, title, (int) videoID);
