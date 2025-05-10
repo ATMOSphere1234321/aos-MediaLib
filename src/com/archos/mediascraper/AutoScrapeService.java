@@ -68,6 +68,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     public static final String EXPORT_EVERYTHING = "export_everything";
     public static final String RESCAN_EVERYTHING = "rescan_everything";
     public static final String RESCAN_MOVIES = "rescan_movies";
+    public static final String RESCAN_SHOWS = "rescan_shows";
     public static final String RESCAN_COLLECTIONS = "rescan_collections";
     public static final String RESCAN_ONLY_DESC_NOT_FOUND = "rescan_only_desc_not_found";
     private static final int PARAM_NOT_SCRAPED = 0;
@@ -75,6 +76,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     private static final int PARAM_ALL = 2;
     private static final int PARAM_SCRAPED_NOT_FOUND = 3;
     private static final int PARAM_MOVIES = 4;
+    private static final int PARAM_SHOWS = 5;
     private static final Logger log = LoggerFactory.getLogger(AutoScrapeService.class);
 
     // window size used to split queries to db
@@ -116,6 +118,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     private static final String notifChannelDescr = "AutoScrapeService";
 
     private static Boolean scrapeOnlyMovies = false;
+
+    private static Boolean scrapeOnlyShows = false;
 
     private volatile static boolean isForeground = true;
     private static final String PREF_IS_SCRAPE_DIRTY = "is_scrape_dirty";
@@ -209,6 +213,10 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             } else if (intent.getAction()!=null&&intent.getAction().equals(RESCAN_MOVIES)) {
                 scrapeOnlyMovies = true;
                 log.debug("onStartCommand: RESCAN_MOVIES, scrapeOnlyMovies=" + scrapeOnlyMovies);
+                startScraping(true, intent.getBooleanExtra(RESCAN_ONLY_DESC_NOT_FOUND, false));
+            } else if (intent.getAction()!=null&&intent.getAction().equals(RESCAN_SHOWS)) {
+                scrapeOnlyShows = true;
+                log.debug("onStartCommand: RESCAN_SHOWS, scrapeOnlyShows=" + scrapeOnlyShows);
                 startScraping(true, intent.getBooleanExtra(RESCAN_ONLY_DESC_NOT_FOUND, false));
             } else {
                 log.debug("onStartCommand: RESCAN_EVERYTHING");
@@ -401,6 +409,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             log.debug("startScraping: new batch fetching cursor from index 0, window " + window + " entries <=" + numberOfRowsRemaining);
                             cursor = getFileListCursor(shouldRescrapAll && onlyNotFound ? PARAM_SCRAPED_NOT_FOUND :
                                             scrapeOnlyMovies ? PARAM_MOVIES :
+                                            scrapeOnlyShows ? PARAM_SHOWS :
                                                 shouldRescrapAll ? PARAM_ALL :
                                                         PARAM_NOT_SCRAPED,
                                     BaseColumns._ID, null, window);
@@ -699,6 +708,10 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID + ">=0 AND " +
             VideoStore.Video.VideoColumns.SCRAPER_MOVIE_ID + " IS NOT NULL AND " + WHERE_BASE;
 
+    private static final String WHERE_SHOWS =
+            VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID + ">=0 AND " +
+                    VideoStore.Video.VideoColumns.SCRAPER_SHOW_ID + " IS NOT NULL AND " + WHERE_BASE;
+
     private Cursor getFileListCursor(int scrapStatusParam, String sortOrder, Integer offset, Integer limit) {
         // Look for all the videos not yet processed and not located in the Camera folder
         final String cameraPath =  Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getPath() + "/Camera";
@@ -719,6 +732,9 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                 break;
             case PARAM_MOVIES:
                 where = WHERE_MOVIES;
+                break;
+            case PARAM_SHOWS:
+                where = WHERE_SHOWS;
                 break;
             default:
                 where = WHERE_BASE;
