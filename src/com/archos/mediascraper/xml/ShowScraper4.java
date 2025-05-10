@@ -20,6 +20,7 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.BaseColumns;
 import android.text.TextUtils;
 import android.util.LruCache;
 import android.util.SparseArray;
@@ -54,9 +55,14 @@ import com.archos.mediascraper.themoviedb3.ShowIdTvSearchResult;
 import com.uwetrottmann.tmdb2.entities.TvEpisode;
 import com.uwetrottmann.tmdb2.entities.TvSeason;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -83,6 +89,24 @@ public class ShowScraper4 extends BaseScraper2 {
 
     static MyTmdb tmdb = null;
     static String apiKey = null;
+
+    private static String readUrl(String urlString) throws Exception {
+        BufferedReader reader = null;
+        try {
+            URL url = new URL(urlString);
+            reader = new BufferedReader(new InputStreamReader(url.openStream()));
+            StringBuffer buffer = new StringBuffer();
+            int read;
+            char[] chars = new char[1024];
+            while ((read = reader.read(chars)) != -1)
+                buffer.append(chars, 0, read);
+
+            return buffer.toString();
+        } finally {
+            if (reader != null)
+                reader.close();
+        }
+    }
 
     public ShowScraper4(Context context) {
         super(context);
@@ -156,6 +180,19 @@ public class ShowScraper4 extends BaseScraper2 {
         if (TextUtils.isEmpty(resultLanguage))
             resultLanguage = "en";
         int showId = result.getId();
+
+        // Get mRemoteId from database using show's online ID
+        ContentResolver contentResolver = mContext.getContentResolver();
+        String[] projection = {BaseColumns._ID};
+        Cursor cursor = contentResolver.query(
+                ContentUris.withAppendedId(ScraperStore.Show.URI.ONLINE_ID, showId),
+                projection, null, null, null);
+        long mRemoteId = -1;
+        if (cursor != null && cursor.moveToFirst()) {
+            mRemoteId = cursor.getLong(0);
+            cursor.close();
+        }
+
         String key = (getAllEpisodes ? "all" : (season != -1 ? "s" + season : "") + (episode != -1 ? "e" + episode : ""));
         String showKey = showId + "|" + key + "|" + resultLanguage;
         log.debug("getDetailsInternal: " + result.getTitle() + "(" + showId + ") " + key + " in " + resultLanguage +
@@ -213,13 +250,48 @@ public class ShowScraper4 extends BaseScraper2 {
                 if (!isShowKnown) {
                     log.debug("getDetailsInternal: get all images for show " + showId);
 
+                    //set series title clear logo
+                    String apikey = "ac6ed0ad315f924847ff24fa4f555571";
+                    String url = "https://webservice.fanart.tv/v3/tv/" + showIdTvSearchResult.tvShow.external_ids.tvdb_id + "?api_key=" + apikey;
+                    List<String> enClearLogos = new ArrayList<>();
+                    try {
+                        JSONObject json = new JSONObject(readUrl(url));
+                        JSONArray resultsff = json.getJSONArray("hdtvlogo");
+                        for(int i = 0; i < resultsff.length(); i++){
+                            JSONObject movieObject = resultsff.getJSONObject(i);
+                            if (movieObject.getString("lang").equalsIgnoreCase("en"))
+                                enClearLogos.add(movieObject.getString("url"));
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    for (int i = 0; i < enClearLogos.size(); i++) {
+                        result.setClearLogoPath(enClearLogos.get(0));
+                    }
+
                     // get show posters and backdrops
                     searchImages = ShowIdImagesParser.getResult(showTags.getTitle(), showIdTvSearchResult.tvShow, lang, mContext);
                     if (!searchImages.backdrops.isEmpty())
                         showTags.setBackdrops(searchImages.backdrops);
                     else log.debug("getDetailsInternal: backdrops empty!");
+
                     // needs to be done after setBackdrops not to be erased
-                    if (result.getBackdropPath() != null)  showTags.addDefaultBackdropTMDB(mContext, result.getBackdropPath());
+                    // Set new default backdrop AFTER setting backdrops
+                    if (showIdTvSearchResult.tvShow.backdrop_path != null) {
+                        log.debug("getDetailsInternal: " + showId + " has backdrop_path=" + ScraperImage.TMBL + showIdTvSearchResult.tvShow.backdrop_path);
+                        showTags.addDefaultBackdropTMDB(mContext, showIdTvSearchResult.tvShow.backdrop_path);
+                        ScraperImage backdrop = showTags.getDefaultBackdrop();
+                        if (backdrop != null && mRemoteId > 0) {
+                            backdrop.setRemoteId(mRemoteId);
+                            // Save to get an ID
+                            long backdropId = backdrop.save(mContext, mRemoteId);
+                            if (backdropId > 0) {
+                                backdrop.setId(backdropId);
+                                backdrop.setAsDefault(mContext, -1);
+                            }
+                        }
+                    } else log.debug("getDetailsInternal: no backdrop_path for " + showId);
+
 
                     if (!searchImages.networklogos.isEmpty())
                         showTags.setNetworkLogos(searchImages.networklogos);
@@ -236,8 +308,23 @@ public class ShowScraper4 extends BaseScraper2 {
                     if (!searchImages.clearlogos.isEmpty())
                         showTags.setClearLogos(searchImages.clearlogos);
                     else log.debug("getDetailsInternal: clearlogos empty!");
+
                     // needs to be done after setClearLogos not to be erased
-                    if (result.getClearLogoPath() != null)  showTags.addClearLogoFTV(mContext, result.getClearLogoPath());
+                    // Set new default clearlogo AFTER setting clearlogos
+                    if (result.getClearLogoPath() != null) {
+                        showTags.addClearLogoFTV(mContext, result.getClearLogoPath());
+                        ScraperImage clearlogo = showTags.getDefaultClearLogo();
+                        if (clearlogo != null) {
+                            clearlogo.setRemoteId(mRemoteId);
+                            clearlogo.setOnlineId(showIdTvSearchResult.tvShow.id);
+                            // Save to get an ID
+                            long clearlogoId = clearlogo.save(mContext, mRemoteId);
+                            if (clearlogoId > 0) {
+                                clearlogo.setId(clearlogoId);
+                                clearlogo.setAsDefault(mContext, -1);
+                            }
+                        }
+                    }
 
                     if (!searchImages.studiologos.isEmpty())
                         showTags.setStudioLogos(searchImages.studiologos);
@@ -248,8 +335,23 @@ public class ShowScraper4 extends BaseScraper2 {
                     if (!searchImages.posters.isEmpty())
                         showTags.setPosters(searchImages.posters);
                     else log.debug("getDetailsInternal: posters empty!");
+
                     // needs to be done after setPosters not to be erased
-                    if (result.getPosterPath() != null) showTags.addDefaultPosterTMDB(mContext, result.getPosterPath());
+                    // Set new default poster AFTER setting posters
+                    if (showIdTvSearchResult.tvShow.poster_path != null) {
+                        log.debug("getDetailsInternal: " + showId + " has poster_path=" + ScraperImage.TMPL + showIdTvSearchResult.tvShow.poster_path);
+                        showTags.addDefaultPosterTMDB(mContext, showIdTvSearchResult.tvShow.poster_path);
+                        ScraperImage poster = showTags.getDefaultPoster();
+                        if (poster != null && mRemoteId > 0) {
+                            poster.setRemoteId(mRemoteId);
+                            // Save to get an ID
+                            long posterId = poster.save(mContext, mRemoteId);
+                            if (posterId > 0) {
+                                poster.setId(posterId);
+                                poster.setAsDefault(mContext, -1);
+                            }
+                        }
+                    } else log.debug("getDetailsInternal: no poster_path for " + showId);
 
                     // only downloads main backdrop/poster and not the entire collection (x8 in size)
                     showTags.downloadPoster(mContext);
