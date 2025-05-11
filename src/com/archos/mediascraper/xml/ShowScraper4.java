@@ -250,24 +250,6 @@ public class ShowScraper4 extends BaseScraper2 {
                 if (!isShowKnown) {
                     log.debug("getDetailsInternal: get all images for show " + showId);
 
-                    //set series title clear logo
-                    String apikey = "ac6ed0ad315f924847ff24fa4f555571";
-                    String url = "https://webservice.fanart.tv/v3/tv/" + showIdTvSearchResult.tvShow.external_ids.tvdb_id + "?api_key=" + apikey;
-                    List<String> enClearLogos = new ArrayList<>();
-                    try {
-                        JSONObject json = new JSONObject(readUrl(url));
-                        JSONArray resultsff = json.getJSONArray("hdtvlogo");
-                        for(int i = 0; i < resultsff.length(); i++){
-                            JSONObject movieObject = resultsff.getJSONObject(i);
-                            if (movieObject.getString("lang").equalsIgnoreCase("en"))
-                                enClearLogos.add(movieObject.getString("url"));
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    for (int i = 0; i < enClearLogos.size(); i++) {
-                        result.setClearLogoPath(enClearLogos.get(0));
-                    }
 
                     // get show posters and backdrops
                     searchImages = ShowIdImagesParser.getResult(showTags.getTitle(), showIdTvSearchResult.tvShow, lang, mContext);
@@ -305,9 +287,10 @@ public class ShowScraper4 extends BaseScraper2 {
                     // needs to be done after setActorPhotos not to be erased
                     if (result.getActorPhotoPath() != null)  showTags.addActorPhotoTMDB(mContext, result.getActorPhotoPath());
 
-                    if (!searchImages.clearlogos.isEmpty())
+                    if (!searchImages.clearlogos.isEmpty()){
+                        result.setClearLogoPath(searchImages.clearlogos.get(0).getLargeUrl());
                         showTags.setClearLogos(searchImages.clearlogos);
-                    else log.debug("getDetailsInternal: clearlogos empty!");
+                    }else log.debug("getDetailsInternal: clearlogos empty!");
 
                     // needs to be done after setClearLogos not to be erased
                     // Set new default clearlogo AFTER setting clearlogos
