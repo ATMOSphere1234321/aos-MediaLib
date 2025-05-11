@@ -530,8 +530,12 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         }
         log.debug("syncPlaybackStatus: processing batch of " + ((videos !=null) ? videos.size() : "null"));
         //from db to trakt
-
-        Cursor c1= cr.query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, VideoDbInfo.COLUMNS, VideoStore.Video.VideoColumns.ARCHOS_TRAKT_RESUME +" < 0", null, null);
+        // get all videos watched on device not yet synced to trakt (traktResume < 0: negative traktResume means set but not yet synced)
+        // filter videos that are scraped and that have been played and not synced yet
+        // SELECT _data, Archos_lastTimePlayed, Archos_traktSeen, Archos_traktLibrary, Archos_traktResume from video WHERE ArchosMediaScraper_id > 0 AND Archos_lastTimePlayed > 0 AND Archos_traktResume < 0
+        Cursor c1= cr.query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, VideoDbInfo.COLUMNS,
+                VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID + " > 0 AND " + VideoStore.Video.VideoColumns.ARCHOS_TRAKT_RESUME + " < 0 AND " + VideoStore.Video.VideoColumns.ARCHOS_LAST_TIME_PLAYED + " > 0",
+                null, null);
         if (c1 != null) {
             if (c1.getCount() > 0) {
                 c1.moveToFirst();
