@@ -295,7 +295,6 @@ public class ShowScraper4 extends BaseScraper2 {
                     // needs to be done after setClearLogos not to be erased
                     // Set new default clearlogo AFTER setting clearlogos
                     if (result.getClearLogoPath() != null) {
-                        showTags.addClearLogoFTV(mContext, result.getClearLogoPath());
                         ScraperImage clearlogo = showTags.getDefaultClearLogo();
                         if (clearlogo != null) {
                             clearlogo.setRemoteId(mRemoteId);
