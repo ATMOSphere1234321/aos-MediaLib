@@ -25,6 +25,8 @@ import com.uwetrottmann.tmdb2.entities.CrewMember;
 import com.uwetrottmann.tmdb2.entities.TvEpisode;
 import com.uwetrottmann.tmdb2.entities.TvSeason;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,8 +75,17 @@ public class ShowIdEpisodes {
                 EpisodeTags episodeTags = new EpisodeTags();
                 // note: tvEpisode.credits is null thus use tvEpisode.guest_stars and tvEpisode.crew instead
                 if (tvEpisode.guest_stars != null) {
-                    for (CastMember guestStar : tvEpisode.guest_stars)
-                        episodeTags.addActorIfAbsent(guestStar.name, guestStar.character);
+                        for (CastMember guestStar : tvEpisode.guest_stars) {
+                            try {
+                                JSONObject guestStarObject = new JSONObject();
+                                guestStarObject.put("name", guestStar.name);
+                                guestStarObject.put("character", guestStar.character);
+                                guestStarObject.put("profile_path", guestStar.profile_path);
+                                episodeTags.addActorIfAbsent(guestStarObject.toString());
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
                 } else {
                     log.warn("getEpisodes: guest_star is null for showId " + showId);
                 }
