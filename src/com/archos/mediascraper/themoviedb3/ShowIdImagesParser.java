@@ -75,6 +75,10 @@ public class ShowIdImagesParser {
         List<ScraperImage> clearlogos = new ArrayList<>();
         List<String> tempClearLogos = new ArrayList<>();
 
+        // networklogos
+        List<ScraperImage> networklogos = new ArrayList<>();
+        List<String> tempNetworkLogos = new ArrayList<>();
+
         log.debug("getResult: global " + showTitle + " poster " + tvShow.poster_path + ", backdrop " + tvShow.backdrop_path);
 
         posters.add(genPoster(showTitle, tvShow.poster_path, language, true, context));
@@ -115,6 +119,15 @@ public class ShowIdImagesParser {
             e.printStackTrace();
         }
 
+        //set series networklogos
+        if (tvShow.networks != null) {
+            for (int k = 0; k < tvShow.networks.size(); k++) {
+                String path = tvShow.networks.get(k).name.replaceAll(" ", "%20").replaceAll("\t", "") + ".png";
+                tempNetworkLogos.add(path);
+                networklogos.add(genNetworkLogo(showTitle, path,  context));
+            }
+        }
+
         Collections.sort(tempPosters, new Comparator<Pair<Image, String>>() {
             @Override
             public int compare(Pair<Image, String> b1, Pair<Image, String> b2) {
@@ -142,6 +155,7 @@ public class ShowIdImagesParser {
         result.posters = posters;
         result.backdrops = backdrops;
         result.clearlogos = clearlogos;
+        result.networklogos = networklogos;
         return result;
     }
 
@@ -169,6 +183,14 @@ public class ShowIdImagesParser {
         ScraperImage image = new ScraperImage(ScraperImage.Type.SHOW_TITLE_CLEARLOGO, showTitle);
         image.setLargeUrl(path);
         image.setThumbUrl(path);
+        image.generateFileNames(context);
+        return image;
+    }
+
+    public static ScraperImage genNetworkLogo(String showTitle, String path, Context context) {
+        ScraperImage image = new ScraperImage(ScraperImage.Type.SHOW_NETWORK, showTitle);
+        image.setLargeUrl(ScraperImage.GSNL + path);
+        image.setThumbUrl(ScraperImage.GSNL + path);
         image.generateFileNames(context);
         return image;
     }

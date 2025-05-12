@@ -19,6 +19,7 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.BaseColumns;
 import android.text.TextUtils;
@@ -275,11 +276,52 @@ public class ShowScraper4 extends BaseScraper2 {
                     } else log.debug("getDetailsInternal: no backdrop_path for " + showId);
 
 
-                    if (!searchImages.networklogos.isEmpty())
-                        showTags.setNetworkLogos(searchImages.networklogos);
-                    else log.debug("getDetailsInternal: networklogos empty!");
-                    // needs to be done after setNetworkLogos not to be erased
-                    if (result.getNetworkLogoPath() != null)  showTags.addNetworkLogoGITHUB(mContext, result.getNetworkLogoPath());
+                    if (!searchImages.networklogos.isEmpty()) {
+                        List<ScraperImage> newNetworkLogos = new ArrayList<>();
+
+                        for (ScraperImage img : searchImages.networklogos) {
+                            ScraperImage existing = getImageByUrl(
+                                    mContext, mRemoteId, img.getLargeUrl());
+
+
+                            if (existing == null) {
+                                img.setRemoteId(mRemoteId);
+                                img.setOnlineId(showIdTvSearchResult.tvShow.id);
+                                long id = img.save(mContext, mRemoteId);
+                                if (id > 0) {
+                                    img.setId(id);
+                                }
+                                newNetworkLogos.add(img);
+                            } else {
+                                log.debug("getDetailsInternal: skipping DB-duplicate network logo: " + img.getLargeUrl());
+                                newNetworkLogos.add(existing); // Add existing one to list for usage
+                            }
+                        }
+
+                        showTags.setNetworkLogos(newNetworkLogos);
+
+                        // Set first as default, assuming at least one exists
+                        if (!newNetworkLogos.isEmpty()) {
+                            ScraperImage defaultLogo = newNetworkLogos.get(0);
+                            result.setNetworkLogoPath(defaultLogo.getLargeUrl());
+
+                            // Set as default only if it's saved (has valid ID)
+                            if (defaultLogo.getId() > 0) {
+                                defaultLogo.setAsDefault(mContext, -1);
+                            } else {
+                                // Save it if not already saved
+                                defaultLogo.setRemoteId(mRemoteId);
+                                defaultLogo.setOnlineId(showIdTvSearchResult.tvShow.id);
+                                long id = defaultLogo.save(mContext, mRemoteId);
+                                if (id > 0) {
+                                    defaultLogo.setId(id);
+                                    defaultLogo.setAsDefault(mContext, -1);
+                                }
+                            }
+                        }
+                    } else {
+                        log.debug("getDetailsInternal: networklogos empty!");
+                    }
 
                     if (!searchImages.actorphotos.isEmpty())
                         showTags.setActorPhotos(searchImages.actorphotos);
@@ -487,6 +529,35 @@ public class ShowScraper4 extends BaseScraper2 {
             }
         }
     }
+
+    public static ScraperImage getImageByUrl(Context context, long remoteId, String url) {
+        ContentResolver resolver = context.getContentResolver();
+
+        Uri uri = ScraperStore.ShowNetworkLogos.URI.BASE;
+        String selection = ScraperStore.ShowNetworkLogos.LARGE_URL + "=? AND " +
+                ScraperStore.ShowNetworkLogos.SHOW_ID + "=?";
+        String[] selectionArgs = {
+                url,
+                String.valueOf(remoteId)
+        };
+
+        Cursor cursor = resolver.query(uri, null, selection, selectionArgs, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            ScraperImage image = new ScraperImage(ScraperImage.Type.SHOW_NETWORK, null);
+            image.setLargeUrl(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowNetworkLogos.LARGE_URL)));
+            image.setThumbUrl(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowNetworkLogos.THUMB_URL)));
+            image.setLargeFile(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowNetworkLogos.LARGE_FILE)));
+            image.setThumbFile(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowNetworkLogos.THUMB_FILE)));
+            image.setRemoteId(remoteId);
+            image.setId(cursor.getLong(cursor.getColumnIndexOrThrow(ScraperStore.ShowNetworkLogos.ID)));
+            cursor.close();
+            return image;
+        }
+
+        if (cursor != null) cursor.close();
+        return null;
+    }
+
 
     private EpisodeTags buildTag(Map<String, EpisodeTags> allEpisodes, int epnum, int season, ShowTags showTags) {
         log.debug("buildTag allEpisodes.size=" + allEpisodes.size() + " epnum=" + epnum + ", season=" + season + ", showId=" + showTags.getId());
