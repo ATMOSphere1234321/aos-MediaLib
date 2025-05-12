@@ -1367,7 +1367,7 @@ public class TagsFactory {
             c = cr.query(
                     ContentUris.withAppendedId(ScraperStore.Network.URI.MOVIE, movieId),
                     new String[] {
-                            ScraperStore.Show.Network.NAME,            // 0
+                            ScraperStore.Movie.Network.NAME,            // 0
                     }, null, null, null);
             if (c != null) {
                 while (c.moveToNext()) {
