@@ -326,8 +326,6 @@ public class ShowScraper4 extends BaseScraper2 {
                     if (!searchImages.actorphotos.isEmpty())
                         showTags.setActorPhotos(searchImages.actorphotos);
                     else log.debug("getDetailsInternal: actorphotos empty!");
-                    // needs to be done after setActorPhotos not to be erased
-                    if (result.getActorPhotoPath() != null)  showTags.addActorPhotoTMDB(mContext, result.getActorPhotoPath());
 
                     if (!searchImages.clearlogos.isEmpty()) {
                         List<ScraperImage> newClearLogos = new ArrayList<>();
