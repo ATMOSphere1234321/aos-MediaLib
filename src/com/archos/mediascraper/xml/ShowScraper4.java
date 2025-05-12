@@ -372,8 +372,6 @@ public class ShowScraper4 extends BaseScraper2 {
                     if (!searchImages.studiologos.isEmpty())
                         showTags.setStudioLogos(searchImages.studiologos);
                     else log.debug("getDetailsInternal: studiologos empty!");
-                    // needs to be done after setStudioLogos not to be erased
-                    if (result.getStudioLogoPath() != null)  showTags.addStudioLogoGITHUB(mContext, result.getStudioLogoPath());
 
                     if (!searchImages.posters.isEmpty())
                         showTags.setPosters(searchImages.posters);
