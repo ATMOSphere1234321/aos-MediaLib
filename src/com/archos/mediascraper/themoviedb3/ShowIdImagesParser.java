@@ -83,6 +83,10 @@ public class ShowIdImagesParser {
         List<ScraperImage> actorphotos = new ArrayList<>();
         List<String> tempActorPhotos = new ArrayList<>();
 
+        // studiologos
+        List<ScraperImage> studiologos = new ArrayList<>();
+        List<String> tempStudioLogos = new ArrayList<>();
+
         log.debug("getResult: global " + showTitle + " poster " + tvShow.poster_path + ", backdrop " + tvShow.backdrop_path);
 
         posters.add(genPoster(showTitle, tvShow.poster_path, language, true, context));
@@ -143,6 +147,15 @@ public class ShowIdImagesParser {
             }
         }
 
+        //set series studiologos
+        if (tvShow.production_companies != null) {
+            for (int m = 0; m < tvShow.production_companies.size(); m++) {
+                String path = tvShow.production_companies.get(m).name.replaceAll(" ", "%20").replaceAll("/", "%20").replaceAll("\t", "") + ".png";
+                tempStudioLogos.add(path);
+                studiologos.add(genStudioLogo(showTitle, path,  context));
+            }
+        }
+
         Collections.sort(tempPosters, new Comparator<Pair<Image, String>>() {
             @Override
             public int compare(Pair<Image, String> b1, Pair<Image, String> b2) {
@@ -172,6 +185,7 @@ public class ShowIdImagesParser {
         result.clearlogos = clearlogos;
         result.networklogos = networklogos;
         result.actorphotos = actorphotos;
+        result.studiologos = studiologos;
         return result;
     }
 
@@ -215,6 +229,14 @@ public class ShowIdImagesParser {
         ScraperImage image = new ScraperImage(ScraperImage.Type.SHOW_ACTOR_PHOTO, showTitle);
         image.setLargeUrl(ScraperImage.AP + path);
         image.setThumbUrl(ScraperImage.AP + path);
+        image.generateFileNames(context);
+        return image;
+    }
+
+    public static ScraperImage genStudioLogo(String showTitle, String path, Context context) {
+        ScraperImage image = new ScraperImage(ScraperImage.Type.SHOW_STUDIOLOGO, showTitle);
+        image.setLargeUrl(ScraperImage.GSNL + path);
+        image.setThumbUrl(ScraperImage.GSNL + path);
         image.generateFileNames(context);
         return image;
     }
