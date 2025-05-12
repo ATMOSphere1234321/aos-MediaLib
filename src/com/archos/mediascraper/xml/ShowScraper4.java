@@ -329,25 +329,46 @@ public class ShowScraper4 extends BaseScraper2 {
                     // needs to be done after setActorPhotos not to be erased
                     if (result.getActorPhotoPath() != null)  showTags.addActorPhotoTMDB(mContext, result.getActorPhotoPath());
 
-                    if (!searchImages.clearlogos.isEmpty()){
-                        result.setClearLogoPath(searchImages.clearlogos.get(0).getLargeUrl());
-                        showTags.setClearLogos(searchImages.clearlogos);
-                    }else log.debug("getDetailsInternal: clearlogos empty!");
+                    if (!searchImages.clearlogos.isEmpty()) {
+                        List<ScraperImage> newClearLogos = new ArrayList<>();
 
-                    // needs to be done after setClearLogos not to be erased
-                    // Set new default clearlogo AFTER setting clearlogos
-                    if (result.getClearLogoPath() != null) {
-                        ScraperImage clearlogo = showTags.getDefaultClearLogo();
-                        if (clearlogo != null) {
-                            clearlogo.setRemoteId(mRemoteId);
-                            clearlogo.setOnlineId(showIdTvSearchResult.tvShow.id);
-                            // Save to get an ID
-                            long clearlogoId = clearlogo.save(mContext, mRemoteId);
-                            if (clearlogoId > 0) {
-                                clearlogo.setId(clearlogoId);
-                                clearlogo.setAsDefault(mContext, -1);
+                        for (ScraperImage img : searchImages.clearlogos) {
+                            ScraperImage existing = getClearLogoByUrl(mContext, mRemoteId, img.getLargeUrl());
+
+                            if (existing == null) {
+                                img.setRemoteId(mRemoteId);
+                                img.setOnlineId(showIdTvSearchResult.tvShow.id);
+                                long id = img.save(mContext, mRemoteId);
+                                if (id > 0) {
+                                    img.setId(id);
+                                }
+                                newClearLogos.add(img);
+                            } else {
+                                log.debug("getDetailsInternal: skipping DB-duplicate clearlogo: " + img.getLargeUrl());
+                                newClearLogos.add(existing);
                             }
                         }
+
+                        showTags.setClearLogos(newClearLogos);
+
+                        if (!newClearLogos.isEmpty()) {
+                            ScraperImage defaultLogo = newClearLogos.get(0);
+                            result.setClearLogoPath(defaultLogo.getLargeUrl());
+
+                            if (defaultLogo.getId() > 0) {
+                                defaultLogo.setAsDefault(mContext, -1);
+                            } else {
+                                defaultLogo.setRemoteId(mRemoteId);
+                                defaultLogo.setOnlineId(showIdTvSearchResult.tvShow.id);
+                                long id = defaultLogo.save(mContext, mRemoteId);
+                                if (id > 0) {
+                                    defaultLogo.setId(id);
+                                    defaultLogo.setAsDefault(mContext, -1);
+                                }
+                            }
+                        }
+                    } else {
+                        log.debug("getDetailsInternal: clearlogos empty!");
                     }
 
                     if (!searchImages.studiologos.isEmpty())
@@ -558,6 +579,33 @@ public class ShowScraper4 extends BaseScraper2 {
         return null;
     }
 
+    public static ScraperImage getClearLogoByUrl(Context context, long remoteId, String url) {
+        ContentResolver resolver = context.getContentResolver();
+
+        Uri uri = ScraperStore.ShowClearLogos.URI.BASE;
+        String selection = ScraperStore.ShowClearLogos.LARGE_URL + "=? AND " +
+                ScraperStore.ShowClearLogos.SHOW_ID + "=?";
+        String[] selectionArgs = {
+                url,
+                String.valueOf(remoteId)
+        };
+
+        Cursor cursor = resolver.query(uri, null, selection, selectionArgs, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            ScraperImage image = new ScraperImage(ScraperImage.Type.SHOW_TITLE_CLEARLOGO, null);
+            image.setLargeUrl(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowClearLogos.LARGE_URL)));
+            image.setThumbUrl(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowClearLogos.THUMB_URL)));
+            image.setLargeFile(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowClearLogos.LARGE_FILE)));
+            image.setThumbFile(cursor.getString(cursor.getColumnIndexOrThrow(ScraperStore.ShowClearLogos.THUMB_FILE)));
+            image.setRemoteId(remoteId);
+            image.setId(cursor.getLong(cursor.getColumnIndexOrThrow(ScraperStore.ShowClearLogos.ID)));
+            cursor.close();
+            return image;
+        }
+
+        if (cursor != null) cursor.close();
+        return null;
+    }
 
     private EpisodeTags buildTag(Map<String, EpisodeTags> allEpisodes, int epnum, int season, ShowTags showTags) {
         log.debug("buildTag allEpisodes.size=" + allEpisodes.size() + " epnum=" + epnum + ", season=" + season + ", showId=" + showTags.getId());
