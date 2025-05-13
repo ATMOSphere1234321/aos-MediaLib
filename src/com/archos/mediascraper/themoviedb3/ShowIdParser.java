@@ -308,14 +308,18 @@ public class ShowIdParser {
                         Log.d("TMDb", "Got " + credits.cast.size() + " cast members");
 
                         Set<String> addedPhotos = new HashSet<>();
+                        int actorCount = 0;
                         for (AggregateCastMember actor : credits.cast) {
                             String character = (actor.roles != null && !actor.roles.isEmpty()) ? actor.roles.get(0).character : "unknown";
                             Log.d("TMDb", actor.name + " (" + character + ")");
 
                             if (actor.profile_path != null && addedPhotos.add(actor.profile_path)) {
                                 result.addActorPhotoTMDB(mContext, actor.profile_path);
+                                actorCount++;
                             }
 
+                            // Stop after 45 actors
+                            if (actorCount >= 45) break;
 
                             try {
                                 // Optional: Store the actor info as JSON string

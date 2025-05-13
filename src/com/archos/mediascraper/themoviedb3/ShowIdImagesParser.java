@@ -194,6 +194,7 @@ public class ShowIdImagesParser {
                         Log.d("TMDb", "Got " + credits.cast.size() + " cast members");
 
                         Set<String> addedPhotos = new HashSet<>();
+                        int actorCount = 0;
                         for (AggregateCastMember actor : credits.cast) {
                             String character = (actor.roles != null && !actor.roles.isEmpty()) ? actor.roles.get(0).character : "unknown";
                             Log.d("TMDb", actor.name + " (" + character + ")");
@@ -201,7 +202,11 @@ public class ShowIdImagesParser {
                             if (actor.profile_path != null && addedPhotos.add(actor.profile_path)) {
                                 tempActorPhotos.add(actor.profile_path);
                                 actorphotos.add(genActorPhoto(showTitle, actor.profile_path,  context));
+                                actorCount++;
                             }
+
+                            // Stop after 45 actors
+                            if (actorCount >= 45) break;
                         }
                     }
                 }
