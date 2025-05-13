@@ -17,10 +17,14 @@ package com.archos.mediascraper.themoviedb3;
 import static com.archos.mediascraper.TVMazeAPI.fetchRuntimeFromTVMaze;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.archos.medialib.R;
 import com.archos.mediascraper.ScraperImage;
 import com.archos.mediascraper.ShowTags;
+import com.archos.mediascraper.themoviedb3.aggregate.AggregateCastMember;
+import com.archos.mediascraper.themoviedb3.aggregate.AggregateCredits;
+import com.archos.mediascraper.themoviedb3.aggregate.ExtendedTvService;
 import com.uwetrottmann.tmdb2.entities.BaseCompany;
 import com.uwetrottmann.tmdb2.entities.CastMember;
 import com.uwetrottmann.tmdb2.entities.ContentRating;
@@ -39,14 +43,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ShowIdParser {
     private static final Logger log = LoggerFactory.getLogger(ShowIdParser.class);
@@ -254,27 +268,70 @@ public class ShowIdParser {
         } else log.debug("getResult: no origin_country for " + serie.id);
 
         if (serie.credits != null) {
-            if (serie.credits.cast != null)
-                    for (int i = 0; i < serie.credits.cast.size(); i++) {
-                        result.addActorPhotoTMDB(mContext, serie.credits.cast.get(i).profile_path);
-                    }
-        } else log.debug("getResult: no actor_photo_path for " + serie.id);
-
-        if (serie.credits != null) {
             if (serie.credits.cast != null){
-                for (CastMember actor : serie.credits.cast) {
-                    try {
-                        JSONObject actorObject = new JSONObject();
-                        actorObject.put("name", actor.name);
-                        actorObject.put("character", actor.character);
-                        actorObject.put("profile_path", actor.profile_path);
+                OkHttpClient client = new OkHttpClient.Builder()
+                        .addInterceptor(chain -> {
+                            HttpUrl originalUrl = chain.request().url();
+                            HttpUrl newUrl = originalUrl.newBuilder()
+                                    .addQueryParameter("api_key", context.getString(R.string.tmdb_api_key))  // 👈 Replace with your actual TMDb API key
+                                    .build();
 
-                        result.addActorIfAbsent(actorObject.toString());
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                            Request newRequest = chain.request().newBuilder().url(newUrl).build();
+                            return chain.proceed(newRequest);
+                        })
+                        .build();
+
+                Retrofit retrofit = new Retrofit.Builder()
+                        .baseUrl("https://api.themoviedb.org/3/")
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .client(client)  // 👈 this is where we use the client with interceptor
+                        .build();
+
+
+                // Create the ExtendedTvService (only once, ideally reuse it later)
+                ExtendedTvService extendedTvService = retrofit.create(ExtendedTvService.class);
+
+                // Fetch aggregate credits
+                Response<AggregateCredits> response = null;
+                try {
+                    response = extendedTvService.aggregateCredits(serie.id, "en").execute();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                if (!response.isSuccessful()) {
+                    Log.e("TMDb", "Error: " + response.code() + " - " + response.message());
+                } else {
+                    AggregateCredits credits = response.body();
+                    if (credits == null || credits.cast == null) {
+                        Log.e("TMDb", "No cast data returned!");
+                    } else {
+                        Log.d("TMDb", "Got " + credits.cast.size() + " cast members");
+
+                        Set<String> addedPhotos = new HashSet<>();
+                        for (AggregateCastMember actor : credits.cast) {
+                            String character = (actor.roles != null && !actor.roles.isEmpty()) ? actor.roles.get(0).character : "unknown";
+                            Log.d("TMDb", actor.name + " (" + character + ")");
+
+                            if (actor.profile_path != null && addedPhotos.add(actor.profile_path)) {
+                                result.addActorPhotoTMDB(mContext, actor.profile_path);
+                            }
+
+
+                            try {
+                                // Optional: Store the actor info as JSON string
+                                JSONObject actorObject = new JSONObject();
+                                actorObject.put("name", actor.name);
+                                actorObject.put("character", character);
+                                actorObject.put("profile_path", actor.profile_path);
+                                result.addActorIfAbsent(actorObject.toString());  // Your usual storage method
+                            } catch (JSONException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
                     }
                 }
-            }
+            } else log.debug("getResult: no actor_photo_path for " + serie.id);
+
             if (serie.credits.crew != null)
                 for (CrewMember crew : serie.credits.crew) {
                     assert crew.job != null;

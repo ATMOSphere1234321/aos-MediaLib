@@ -15,8 +15,14 @@
 package com.archos.mediascraper.themoviedb3;
 
 import android.content.Context;
+import android.util.Log;
 import android.util.Pair;
+
+import com.archos.medialib.R;
 import com.archos.mediascraper.ScraperImage;
+import com.archos.mediascraper.themoviedb3.aggregate.AggregateCastMember;
+import com.archos.mediascraper.themoviedb3.aggregate.AggregateCredits;
+import com.archos.mediascraper.themoviedb3.aggregate.ExtendedTvService;
 import com.uwetrottmann.tmdb2.entities.Image;
 import com.uwetrottmann.tmdb2.entities.Images;
 import com.uwetrottmann.tmdb2.entities.TvSeason;
@@ -29,12 +35,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ShowIdImagesParser {
 
@@ -139,10 +155,55 @@ public class ShowIdImagesParser {
         //set series actorphotos
         if (tvShow.credits != null) {
             if (tvShow.credits.cast != null) {
-                for (int l = 0; l < tvShow.credits.cast.size(); l++) {
-                    String path = tvShow.credits.cast.get(l).profile_path;
-                    tempActorPhotos.add(path);
-                    actorphotos.add(genActorPhoto(showTitle, path,  context));
+                OkHttpClient client = new OkHttpClient.Builder()
+                        .addInterceptor(chain -> {
+                            HttpUrl originalUrl = chain.request().url();
+                            HttpUrl newUrl = originalUrl.newBuilder()
+                                    .addQueryParameter("api_key", context.getString(R.string.tmdb_api_key))  // 👈 Replace with your actual TMDb API key
+                                    .build();
+
+                            Request newRequest = chain.request().newBuilder().url(newUrl).build();
+                            return chain.proceed(newRequest);
+                        })
+                        .build();
+
+                Retrofit retrofit = new Retrofit.Builder()
+                        .baseUrl("https://api.themoviedb.org/3/")
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .client(client)  // 👈 this is where we use the client with interceptor
+                        .build();
+
+
+                // Create the ExtendedTvService (only once, ideally reuse it later)
+                ExtendedTvService extendedTvService = retrofit.create(ExtendedTvService.class);
+
+                // Fetch aggregate credits
+                Response<AggregateCredits> response = null;
+                try {
+                    response = extendedTvService.aggregateCredits(tvShow.id, "en").execute();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                if (!response.isSuccessful()) {
+                    Log.e("TMDb", "Error: " + response.code() + " - " + response.message());
+                } else {
+                    AggregateCredits credits = response.body();
+                    if (credits == null || credits.cast == null) {
+                        Log.e("TMDb", "No cast data returned!");
+                    } else {
+                        Log.d("TMDb", "Got " + credits.cast.size() + " cast members");
+
+                        Set<String> addedPhotos = new HashSet<>();
+                        for (AggregateCastMember actor : credits.cast) {
+                            String character = (actor.roles != null && !actor.roles.isEmpty()) ? actor.roles.get(0).character : "unknown";
+                            Log.d("TMDb", actor.name + " (" + character + ")");
+
+                            if (actor.profile_path != null && addedPhotos.add(actor.profile_path)) {
+                                tempActorPhotos.add(actor.profile_path);
+                                actorphotos.add(genActorPhoto(showTitle, actor.profile_path,  context));
+                            }
+                        }
+                    }
                 }
             }
         }
