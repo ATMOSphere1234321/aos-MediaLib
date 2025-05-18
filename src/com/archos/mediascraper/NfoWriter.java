@@ -421,7 +421,7 @@ public class NfoWriter {
                 exportImage(tag.getDefaultPoster(), parent, videoName + NfoParser.POSTER_EXTENSION);
                 exportImage(tag.getDefaultBackdrop(), parent, videoName + NfoParser.BACKDROP_EXTENSION);
                 //exportImage(tag.getDefaultActorPhoto(), parent, videoName + NfoParser.ACTORPHOTO_EXTENSION);
-                exportImage(tag.getDefaultStudioLogo(), parent, videoName + NfoParser.STUDIOLOGO_EXTENSION);
+                //exportImage(tag.getDefaultStudioLogo(), parent, videoName + NfoParser.STUDIOLOGO_EXTENSION);
                 exportImage(tag.getDefaultClearLogo(), parent, videoName + NfoParser.CLEARLOGO_EXTENSION);
             } finally {
                 if (writer != null) {
@@ -499,10 +499,10 @@ public class NfoWriter {
                 writer = null;
                 exportImage(tag.getDefaultPoster(), parent,  showTitle + NfoParser.POSTER_EXTENSION);
                 exportImage(tag.getDefaultBackdrop(), parent, showTitle + NfoParser.BACKDROP_EXTENSION);
-                exportImage(tag.getDefaultNetworkLogo(), parent, showTitle + NfoParser.NETWORKLOGO_EXTENSION);
+                //exportImage(tag.getDefaultNetworkLogo(), parent, showTitle + NfoParser.NETWORKLOGO_EXTENSION);
                 //exportImage(tag.getDefaultActorPhoto(), parent, showTitle + NfoParser.ACTORPHOTO_EXTENSION);
                 exportImage(tag.getDefaultClearLogo(), parent, showTitle + NfoParser.CLEARLOGO_EXTENSION);
-                exportImage(tag.getDefaultStudioLogo(), parent, showTitle + NfoParser.STUDIOLOGO_EXTENSION);
+                //exportImage(tag.getDefaultStudioLogo(), parent, showTitle + NfoParser.STUDIOLOGO_EXTENSION);
             } finally {
                 if (writer != null) {
                     // writer is only != null if writing nfo has thrown an exception
