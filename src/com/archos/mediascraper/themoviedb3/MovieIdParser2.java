@@ -134,7 +134,10 @@ public class MovieIdParser2 {
                         actorObject.put("character", actor.character);
                         actorObject.put("profile_path", actor.profile_path);
 
-                        result.addActorIfAbsent(actorObject.toString());
+                        JSONObject valueObject = new JSONObject();
+                        valueObject.put("id", actor.id);
+
+                        result.addActorIfAbsent(actorObject.toString(), valueObject.toString());
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }

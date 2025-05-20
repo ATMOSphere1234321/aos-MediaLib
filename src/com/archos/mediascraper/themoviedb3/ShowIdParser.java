@@ -327,7 +327,11 @@ public class ShowIdParser {
                                 actorObject.put("name", actor.name);
                                 actorObject.put("character", character);
                                 actorObject.put("profile_path", actor.profile_path);
-                                result.addActorIfAbsent(actorObject.toString());  // Your usual storage method
+
+                                JSONObject valueObject = new JSONObject();
+                                valueObject.put("id", actor.id);
+
+                                result.addActorIfAbsent(actorObject.toString(), valueObject.toString());
                             } catch (JSONException e) {
                                 throw new RuntimeException(e);
                             }
