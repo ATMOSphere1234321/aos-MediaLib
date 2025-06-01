@@ -87,7 +87,7 @@
         <item name="alertDialogTheme">@style/Theme.AlertDialog</item>
     </style>
 
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat">
         <!-- Your existing theme items -->
         <item name="popupMenuStyle">@style/CustomPopupMenu</item>
         <item name="actionOverflowMenuStyle">@style/CustomPopupMenu</item>
