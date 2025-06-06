@@ -104,5 +104,6 @@
     <color name="dark_blue">#010D16</color>
     <color name="yellow">#FFEB3B</color>
     <color name="green_accent">#8BC34A</color>
+    <color name="light_black">#030910</color>
 </resources>
 
