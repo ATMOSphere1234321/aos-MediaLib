@@ -68,10 +68,10 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
 
     private class SubmenuItemData {
         private int mIconId;
-        private int mTitleId;
+        private CharSequence mTitleId;
         private long mItemId;
 
-        public SubmenuItemData(int iconId, int titleId, long itemId) {
+        public SubmenuItemData(int iconId, CharSequence titleId, long itemId) {
             super();
             mIconId = iconId;
             mTitleId = titleId;
@@ -82,7 +82,7 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
             return mIconId;
         }
 
-        public int getTitleId() {
+        public CharSequence getTitleId() {
             return mTitleId;
         }
 
@@ -135,11 +135,11 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
         mSubmenuListener = listener;
     }
 
-    public void addSubmenuItem(int iconId, int titleId, long itemId) {
+    public void addSubmenuItem(int iconId, CharSequence titleId, long itemId) {
         // Add the item to the internal list
         mItemList.add(new SubmenuItemData(iconId, titleId, itemId));
 
-        // Compute the width of the title 
+        // Compute the width of the title
         Paint paint = new Paint();
         Rect bounds = new Rect();
         int textWidth;
@@ -147,7 +147,7 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
         paint.setTypeface(Typeface.DEFAULT);
         paint.setTextSize(mSubmenuFontSize);
 
-        String title = mContext.getString(titleId);
+        String title = titleId.toString();
         paint.getTextBounds(title, 0, title.length(), bounds);
         textWidth =  bounds.width();
 
