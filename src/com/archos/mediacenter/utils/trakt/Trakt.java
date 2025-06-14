@@ -20,7 +20,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import androidx.preference.PreferenceManager;
-import android.util.Log;
 
 import com.archos.environment.ArchosUtils;
 import com.archos.mediacenter.utils.trakt.Trakt.Result.ObjectType;
@@ -53,7 +52,10 @@ import org.apache.oltu.oauth2.client.request.OAuthClientRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.threeten.bp.Instant;
 import org.threeten.bp.OffsetDateTime;
+import org.threeten.bp.ZoneOffset;
+import org.threeten.bp.format.DateTimeFormatter;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -261,6 +263,7 @@ public class Trakt {
     public static OAuthClientRequest getAuthorizationRequest(SharedPreferences pref) throws OAuthSystemException{
         String sampleState = new BigInteger(130, new SecureRandom()).toString(32);
         String url = getTraktV2().buildAuthorizationUrl(sampleState);
+        log.debug("getAuthorizationRequest: url is " + url);
         return OAuthClientRequest
                 .authorizationLocation(url)
                 .buildQueryMessage();
@@ -278,6 +281,7 @@ public class Trakt {
             final accessToken mAccessToken = new accessToken();
             mAccessToken.access_token = response.body().access_token;
             mAccessToken.refresh_token = response.body().refresh_token;
+            log.debug("getAccessToken: access_token is " + mAccessToken.access_token);
             return mAccessToken;
         } catch (IOException | NullPointerException e) {
             log.error("getAccessToken: caught IoException ", e);
@@ -332,9 +336,8 @@ public class Trakt {
         return currentTimeSecond > 0 ? DATE_FORMAT.format(new Date(currentTimeSecond * 1000L + millisecondsOffset)) : null;
     }
 
-
     public Result markAs(final String action, final SyncItems param, final boolean isShow, final int trial){
-        log.debug("markAs "+action+" "+trial);
+        log.debug("markAs {} trial {} for {}", action, trial, (param != null) ? param.ids : null);
         SyncResponse response = null;
         if (action.equals(Trakt.ACTION_SEEN)) {
             response = exec(mTraktV2.sync().addItemsToWatchedHistory(param));
@@ -361,8 +364,10 @@ public class Trakt {
                 EpisodeIds ei = new EpisodeIds();
                 ei.tmdb = Integer.valueOf(videoInfo.scraperEpisodeId);
                 se.id(ei);
-                if(videoInfo.lastTimePlayed>0)
+                // note that lastTimePlayed should always be >0 since filtered before call to avoid syncing not viewed videos
+                if(videoInfo.lastTimePlayed>0) {
                     se.watchedAt(OffsetDateTime.parse(getDateFormat(videoInfo.lastTimePlayed)));
+                }
                 SyncItems sitems = new SyncItems();
                 sitems.episodes(se);
 
@@ -498,6 +503,7 @@ public class Trakt {
 
     public static void setRefreshToken(SharedPreferences sharedPreferences, String refreshToken) {
         Editor editor = sharedPreferences.edit();
+        log.debug("setRefreshToken: refreshToken={}", refreshToken);
         if (refreshToken != null) {
             editor.putString(KEY_TRAKT_REFRESH_TOKEN, refreshToken);
         } else {
