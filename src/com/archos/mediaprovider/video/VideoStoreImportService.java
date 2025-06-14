@@ -512,7 +512,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                     long id = c.getLong(0);
                     String path = c.getString(1);
                     long count = c.getLong(2);
-                    log.debug("processDeleteFileAndVobCallback: delete_files " + String.valueOf(id) + " path " + path + " count " + String.valueOf(count));
+                    log.trace("processDeleteFileAndVobCallback: delete_files " + String.valueOf(id) + " path " + path + " count " + String.valueOf(count));
                     DeleteFileCallbackArgs = new String[] {path, String.valueOf(count)};
                     delCb.callback(DeleteFileCallbackArgs);
                     // purge the db: delete row even if file delete callback fails (file deletion could be handled elsewhere
@@ -550,7 +550,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
                 while (c.moveToNext() && isForeground) {
                     long id = c.getLong(0);
                     String path = c.getString(1);
-                    log.debug("processDeleteFileAndVobCallback: vob_insert " + String.valueOf(id) + " path " + path);
+                    log.trace("processDeleteFileAndVobCallback: vob_insert " + String.valueOf(id) + " path " + path);
                     VobUpdateCallbackArgs = new String[] {path};
                     vobCb.callback(VobUpdateCallbackArgs);
                     // purge the db: delete row even if file delete callback fails (file deletion could be handled elsewhere
@@ -670,8 +670,11 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         // when switching to foreground state and db
         // has potentially changed: trigger db import
         if (mVolumeState != null) {
+            log.debug("onStart: onForeGround && mVolumeState != null register observer");
             mVolumeState.registerReceiver();
             mVolumeState.updateState();
+        } else {
+            log.debug("onStart: onForeGround && mVolumeState == null do not register observer");
         }
         if (ImportState.VIDEO.isDirty()) {
             log.debug("onStart: onForeGround && ImportState.isDirty MESSAGE_IMPORT_FULL");
