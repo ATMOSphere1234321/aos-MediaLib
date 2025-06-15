@@ -105,5 +105,9 @@
     <color name="yellow">#FFEB3B</color>
     <color name="green_accent">#8BC34A</color>
     <color name="light_black">#030910</color>
+
+    <color name="button">#E2EDF8EE</color>
+    <color name="ripple">#25DB0F</color>
+    <color name="ripple_mask">#33FFFFFF</color>
 </resources>
 
