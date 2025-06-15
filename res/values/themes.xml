@@ -103,4 +103,18 @@
         <item name="colorAccent">@color/green_accent</item>
         <item name="android:colorAccent">@color/green_accent</item>
     </style>
+
+    <style name="Theme.CustomDialogMinWidth" parent="Theme.AppCompat.Dialog.MinWidth">
+        <item name="colorPrimary">@color/lightblue500</item>
+        <item name="colorAccent">@color/green_accent</item>
+        <item name="alertDialogTheme">@style/Theme.AlertDialog</item>
+        <item name="android:windowBackground">@drawable/menu_bg</item> <!-- custom background -->
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:textColorPrimary">@color/red</item>
+        <item name="android:fontFamily">@font/nhaasgroteskdspro_95blk</item>
+        <!-- <item name="android:textColor">@color/red</item>  apply your text color -->
+    </style>
 </resources>
