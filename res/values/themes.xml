@@ -49,7 +49,7 @@
     </style>
 
     <style name="DarkBlueTheme" parent="ArchosTheme">
-        <item name="android:windowBackground">@drawable/dark_mode</item>
+        <item name="android:windowBackground">@drawable/background_2014_private</item>
     </style>
 
     <style name="Theme.AlertDialog" parent="Theme.AppCompat.Dialog.Alert">
