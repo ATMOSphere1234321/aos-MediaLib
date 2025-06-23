@@ -6,7 +6,7 @@
             <item
                 android:drawable="@color/my_holo_blue_very_dark"
                 android:state_activated="true"/>
-            <item android:drawable="@color/list_item_background_grey"/>
+            <item android:drawable="@color/transparent"/>
         </selector>
     </item>
 </ripple>

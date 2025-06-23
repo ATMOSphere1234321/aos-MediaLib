@@ -5,6 +5,6 @@
     <item android:state_pressed="true" android:drawable="@android:color/holo_blue_light"/>
     <item android:state_activated="true" android:drawable="@color/my_holo_blue_very_dark"/>
     <item android:state_focused="true" android:drawable="@color/my_holo_blue_very_dark"/>
-    <item android:drawable="@color/list_item_background_grey"/>
+    <item android:drawable="@color/transparent"/>
 
 </selector>
