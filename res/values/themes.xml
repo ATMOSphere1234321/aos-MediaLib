@@ -46,14 +46,20 @@
 
     <style name="ArchosThemeBlue" parent="ArchosTheme">
         <item name="android:windowBackground">@drawable/background_2014</item>
+        <item name="colorAccent">@color/green_accent</item>
+        <item name="android:colorAccent">@color/green_accent</item>
     </style>
 
     <style name="PrivateDarkBlueTheme" parent="ArchosTheme">
         <item name="android:windowBackground">@drawable/background_2014_private</item>
+        <item name="colorAccent">@color/green_accent</item>
+        <item name="android:colorAccent">@color/green_accent</item>
     </style>
 
     <style name="DarkBlueTheme" parent="ArchosTheme">
         <item name="android:windowBackground">@drawable/background_2014_dark</item>
+        <item name="colorAccent">@color/green_accent</item>
+        <item name="android:colorAccent">@color/green_accent</item>
     </style>
 
     <style name="Theme.AlertDialog" parent="Theme.AppCompat.Dialog.Alert">
