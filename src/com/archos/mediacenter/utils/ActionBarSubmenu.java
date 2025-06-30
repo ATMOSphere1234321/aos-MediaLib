@@ -38,6 +38,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.widget.ListPopupWindow;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import com.archos.medialib.R;
 
@@ -146,7 +147,7 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
         Rect bounds = new Rect();
         int textWidth;
 
-        paint.setTypeface(Typeface.DEFAULT);
+        paint.setTypeface(ResourcesCompat.getFont(mContext, R.font.nhaasgroteskdspro_95blk));
         paint.setTextSize(mSubmenuFontSize);
 
         String title = titleId.toString();
