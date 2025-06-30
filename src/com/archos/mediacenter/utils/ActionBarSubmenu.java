@@ -15,6 +15,7 @@
 package com.archos.mediacenter.utils;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -319,6 +320,17 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
 
             RadioButton radioButtonView = (RadioButton)v.findViewById(R.id.radio_button);
             if (radioButtonView != null) {
+                ColorStateList tint = new ColorStateList(
+                        new int[][] {
+                                new int[] { android.R.attr.state_checked },
+                                new int[] { -android.R.attr.state_checked }
+                        },
+                        new int[] {
+                                ContextCompat.getColor(mContext, R.color.green_accent), // checked
+                                ContextCompat.getColor(mContext, R.color.white)    // unchecked
+                        }
+                );
+                radioButtonView.setButtonTintList(tint);
                 radioButtonView.setChecked(position == mSelectedPosition);
             }
             v.setBackgroundResource(R.drawable.custom_ripple);
