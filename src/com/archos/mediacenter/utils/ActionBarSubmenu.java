@@ -17,6 +17,7 @@ package com.archos.mediacenter.utils;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
@@ -108,7 +109,7 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
         mPopupWindow = new ListPopupWindow(context, null);
         mPopupWindow.setAdapter(mAdapter);
         mPopupWindow.setModal(true);
-        mPopupWindow.setBackgroundDrawable(ContextCompat.getDrawable(mContext, R.drawable.menu_bg));
+        mPopupWindow.setBackgroundDrawable(ContextCompat.getDrawable(mContext, R.drawable.submenu_bg));
         mPopupWindow.setAnchorView(anchor);
         mPopupWindow.setOnItemClickListener(this);
 
@@ -210,6 +211,11 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
 
             // Display the submenu
             mPopupWindow.show();
+
+            // Set the selector to transparent so it doesn't draw over the ripple
+            if (mPopupWindow.getListView() != null) {
+                mPopupWindow.getListView().setSelector(new ColorDrawable(Color.TRANSPARENT));
+            }
             return true;
         }
         return false;
@@ -315,7 +321,7 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
             if (radioButtonView != null) {
                 radioButtonView.setChecked(position == mSelectedPosition);
             }
-
+            v.setBackgroundResource(R.drawable.custom_ripple);
             return v;
         }
 
