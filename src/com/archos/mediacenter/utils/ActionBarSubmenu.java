@@ -24,6 +24,7 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
@@ -114,6 +115,12 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
         mPopupWindow.setBackgroundDrawable(ContextCompat.getDrawable(mContext, R.drawable.submenu_bg));
         mPopupWindow.setAnchorView(anchor);
         mPopupWindow.setOnItemClickListener(this);
+
+        // move the popup away from right edge by 4dp
+        mPopupWindow.setDropDownGravity(Gravity.END); // anchor from end (right)
+        int offset = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 4, mContext.getResources().getDisplayMetrics());
+        mPopupWindow.setHorizontalOffset(-offset); // move popup to the left
 
         // Get the size of the font used to display the submenu items
         TypedValue typedValue = new TypedValue();
