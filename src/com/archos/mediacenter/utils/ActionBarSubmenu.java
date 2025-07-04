@@ -209,7 +209,7 @@ public class ActionBarSubmenu implements OnMenuItemClickListener, OnItemClickLis
         if (mAdapter != null && mPopupWindow != null) {
             // We are going to display the submenu => we must set its size
             // so that it is wide enough to display the title of all items
-            int padding = mContext.getResources().getDimensionPixelSize(R.dimen.track_menu_padding);
+            int padding = mContext.getResources().getDimensionPixelSize(R.dimen.track_menu_padding_action_bar_submenu);
             int popupWidth = padding + mIconMaxWidth + padding + mSubmenuItemTitleMaxWidth + mRadioButtonWidth + padding;
             // Sanity check: popup doesn't show if larger than screen
             final int maxWidth = mContext.getResources().getDisplayMetrics().widthPixels - 40; // not proud of this hard-coded 40 but one need to remove some pixels here...

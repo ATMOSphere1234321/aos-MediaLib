@@ -99,7 +99,8 @@
 
     <!-- based on base/core/res/res/layout/popup_menu_item_layout.xml -->
     <dimen name="track_menu_minWidth">196dip</dimen>
-    <dimen name="track_menu_padding">6dip</dimen>
+    <dimen name="track_menu_padding">16dip</dimen>
+    <dimen name="track_menu_padding_action_bar_submenu">6dip</dimen>
     <dimen name="track_menu_layout_width">48dip</dimen>
 
     <!-- Subtitles -->
