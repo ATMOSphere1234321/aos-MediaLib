@@ -74,6 +74,7 @@
 
     <style name="ArchosThemeBlueTransparent" parent="ArchosThemeBlue">
         <item name="android:windowIsTranslucent">true</item>
+        <item name="android:fontFamily">@font/nhaasgroteskdspro_75bd</item>
     </style>
 
     <style name="Theme.TransparentCompat" parent="Theme.AppCompat.NoActionBar">
