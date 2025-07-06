@@ -28,8 +28,8 @@ configurations {
 }
 
 android {
-    namespace 'com.archos.medialib'
-    compileSdk 35
+    namespace = 'com.archos.medialib'
+    compileSdk = 35
     gradle.startParameter.getTaskNames().each { task ->
         if (task.contains("Open")) {
             groupOpen = true
@@ -37,9 +37,9 @@ android {
     }
 
     compileOptions {
-        coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     sourceSets {
@@ -56,9 +56,9 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
-        targetSdkVersion 35
-        multiDexEnabled true
+        minSdkVersion = 23
+        targetSdkVersion = 35
+        multiDexEnabled = true
     }
 
     tasks.withType(JavaCompile).configureEach {
@@ -68,7 +68,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
         }
     }
@@ -86,8 +86,8 @@ android {
     }
 
     buildFeatures {
-        aidl true
-        renderScript false
+        aidl = true
+        renderScript = false
     }
 }
 
@@ -99,7 +99,7 @@ tasks.register('ndkBuild', Exec) {
     myCmd.add("native_libnativehelper")
     myCmd.add("native_avos_full")
     myCmd.add("native_torrentd")
-    commandLine myCmd
+    commandLine = myCmd
 }
 
 tasks.register('ndkClean', Exec) {
@@ -107,7 +107,7 @@ tasks.register('ndkClean', Exec) {
     List<String> myCmd = new ArrayList<String>()
     myCmd.add("make")
     myCmd.add("native_clean")
-    commandLine myCmd
+    commandLine = myCmd
 }
 
 def useSan = false
