@@ -109,6 +109,25 @@
         <item name="android:colorAccent">@color/green_accent</item>
     </style>
 
+    <style name="PlayerActivityTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="actionOverflowMenuStyle">@style/CustomOverFlowMenu</item>
+        <item name="popupMenuStyle">@style/CustomOverFlowMenu</item>
+        <item name="android:actionOverflowMenuStyle">@style/CustomOverFlowMenu</item>
+        <item name="android:popupMenuStyle">@style/CustomOverFlowMenu</item>
+        <item name="colorAccent">@color/green_accent</item>
+        <item name="android:colorAccent">@color/green_accent</item>
+        <item name="android:itemBackground">@drawable/overflow_menu_item_ripple</item>
+        <item name="android:listSelector">@drawable/overflow_menu_item_ripple</item>
+    </style>
+
+    <style name="CustomOverFlowMenu" parent="ThemeOverlay.AppCompat.Light">
+        <item name="android:popupBackground">@drawable/menu_bg</item>
+        <item name="colorAccent">@color/green_accent</item>
+        <item name="android:colorAccent">@color/green_accent</item>
+        <item name="android:itemBackground">@drawable/overflow_menu_item_ripple</item>
+        <item name="android:listSelector">@drawable/overflow_menu_item_ripple</item>
+    </style>
+
     <style name="CustomPopupMenu" parent="Widget.AppCompat.PopupMenu.Overflow">
         <item name="android:popupBackground">@drawable/menu_bg</item>
         <item name="colorAccent">@color/green_accent</item>
