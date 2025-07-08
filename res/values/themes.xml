@@ -110,10 +110,10 @@
     </style>
 
     <style name="PlayerActivityTheme" parent="Theme.AppCompat">
-        <item name="actionOverflowMenuStyle">@style/CustomOverFlowMenu</item>
-        <item name="popupMenuStyle">@style/CustomOverFlowMenu</item>
-        <item name="android:actionOverflowMenuStyle">@style/CustomOverFlowMenu</item>
-        <item name="android:popupMenuStyle">@style/CustomOverFlowMenu</item>
+        <item name="actionOverflowMenuStyle">@style/CustomPopupMenu</item>
+        <item name="popupMenuStyle">@style/CustomPopupMenu</item>
+        <item name="android:actionOverflowMenuStyle">@style/CustomPopupMenu</item>
+        <item name="android:popupMenuStyle">@style/CustomPopupMenu</item>
         <item name="colorAccent">@color/green_accent</item>
         <item name="android:colorAccent">@color/green_accent</item>
         <item name="android:itemBackground">@drawable/overflow_menu_item_ripple</item>
@@ -128,7 +128,7 @@
         <item name="android:listSelector">@drawable/overflow_menu_item_ripple</item>
     </style>
 
-    <style name="CustomPopupMenu" parent="Widget.AppCompat.PopupMenu.Overflow">
+    <style name="CustomPopupMenu" parent="Widget.AppCompat.PopupMenu.Overflow"><!-- player is one of use cases -->
         <item name="android:popupBackground">@drawable/menu_bg</item>
         <item name="colorAccent">@color/green_accent</item>
         <item name="android:colorAccent">@color/green_accent</item>
