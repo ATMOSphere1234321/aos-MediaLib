@@ -109,7 +109,7 @@
         <item name="android:colorAccent">@color/green_accent</item>
     </style>
 
-    <style name="PlayerActivityTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="PlayerActivityTheme" parent="Theme.AppCompat">
         <item name="actionOverflowMenuStyle">@style/CustomOverFlowMenu</item>
         <item name="popupMenuStyle">@style/CustomOverFlowMenu</item>
         <item name="android:actionOverflowMenuStyle">@style/CustomOverFlowMenu</item>
