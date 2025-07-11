@@ -33,6 +33,14 @@
         <item name="colorControlNormal">@android:color/white</item>
         <item name="android:navigationBarColor">#001b30</item>
         <item name="actionOverflowMenuStyle">@style/CustomPopupMenu</item>
+        <item name="actionDropDownStyle">@style/Widget.MovieCategory.Spinner</item>
+    </style>
+
+    <style name="Widget.MovieCategory.Spinner" parent="Widget.AppCompat.Spinner.DropDown.ActionBar">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:dropDownVerticalOffset">32dp</item> <!-- pushes dropdown below spinner -->
+        <item name="android:popupBackground">@drawable/movie_spinner_dropdown_bg</item>
+        <item name="android:dropDownSelector">@android:color/transparent</item>
     </style>
 
     <style name="DrawerArrowStyle" parent="Widget.AppCompat.DrawerArrowToggle">
