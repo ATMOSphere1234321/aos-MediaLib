@@ -509,8 +509,10 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 nm.cancel(NOTIFICATION_ID);
                 log.trace("doScan: added:" + insertCount + " modified:" + updateCount + " deleted:" + deleteCount + " listed files " + mFoundFiles);
             } finally {
-                if (wifiLock != null && wifiLock.isHeld())
+                if (wifiLock != null && wifiLock.isHeld()) {
                     wifiLock.release();
+                    wifiLock = null;
+                }
             }
         } else if(mRecordOnFailPreference!=null){
             PreferenceManager.getDefaultSharedPreferences(this).edit().putInt(mRecordOnFailPreference, -1).commit();//unable to reach server
