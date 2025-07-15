@@ -1120,6 +1120,10 @@ public final class VideoStore {
              * Constant for the {@link #ARCHOS_VIDEO_DEFINITION} column indicating that the definition is less than HD.
              */
             public static final int ARCHOS_DEFINITION_SD = 4;
+            public static final int ARCHOS_DEFINITION_480P = 5;
+            public static final int ARCHOS_DEFINITION_360P = 6;
+            public static final int ARCHOS_DEFINITION_240P = 7;
+            public static final int ARCHOS_DEFINITION_144P = 8;
 
             public static final String ARCHOS_GUESSED_VIDEO_FORMAT = "Archos_guessedVideoFormat";
 
