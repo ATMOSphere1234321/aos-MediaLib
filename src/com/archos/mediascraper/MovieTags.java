@@ -161,9 +161,11 @@ public class MovieTags extends VideoTags {
         values.put(ScraperStore.Movie.STUDIOS_FORMATTED, getStudiosFormatted());
 
         // build list of operations
+        Builder cop = null;
         ArrayList<ContentProviderOperation> allOperations = new ArrayList<ContentProviderOperation>();
+
         // first insert the movie base info - item 0 for backreferences
-        Builder cop = ContentProviderOperation.newInsert(ScraperStore.Movie.URI.BASE);
+        cop = ContentProviderOperation.newInsert(ScraperStore.Movie.URI.BASE);
         cop.withValues(values);
         allOperations.add(cop.build());
 
@@ -222,19 +224,6 @@ public class MovieTags extends VideoTags {
                 allOperations.add(cop.build());
             } else {
                 log.debug("save: collection " + mCollectionId + " already exists, skipping insert");
-                cop = ContentProviderOperation.newUpdate(ScraperStore.MovieCollections.URI.BASE)
-                        .withSelection(ScraperStore.MovieCollections.ID + "=?", new String[]{String.valueOf(mCollectionId)})
-                        .withValue(ScraperStore.MovieCollections.NAME, mCollectionName)
-                        .withValue(ScraperStore.MovieCollections.DESCRIPTION, mCollectionDescription)
-                        .withValue(ScraperStore.MovieCollections.POSTER_LARGE_URL, mCollectionPosterLargeUrl)
-                        .withValue(ScraperStore.MovieCollections.POSTER_LARGE_FILE, mCollectionPosterLargeFile)
-                        .withValue(ScraperStore.MovieCollections.POSTER_THUMB_URL, mCollectionPosterThumbUrl)
-                        .withValue(ScraperStore.MovieCollections.POSTER_THUMB_FILE, mCollectionPosterThumbFile)
-                        .withValue(ScraperStore.MovieCollections.BACKDROP_LARGE_URL, mCollectionBackdropLargeUrl)
-                        .withValue(ScraperStore.MovieCollections.BACKDROP_LARGE_FILE, mCollectionBackdropLargeFile)
-                        .withValue(ScraperStore.MovieCollections.BACKDROP_THUMB_URL, mCollectionBackdropThumbUrl)
-                        .withValue(ScraperStore.MovieCollections.BACKDROP_THUMB_FILE, mCollectionBackdropThumbFile);
-                allOperations.add(cop.build());
             }
         }
 
