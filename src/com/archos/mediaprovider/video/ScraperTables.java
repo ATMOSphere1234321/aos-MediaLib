@@ -105,6 +105,24 @@ public final class ScraperTables {
             "CREATE INDEX IF NOT EXISTS idx_movie_collection ON " + MOVIE_TABLE_NAME + 
             "(m_coll_id) WHERE m_coll_id > 0";
 
+    // WatchingUpNextLoader performance indexes for version 47
+    private static final String CREATE_EPISODE_SERIES_ORDERING_IDX =
+            "CREATE INDEX IF NOT EXISTS idx_episode_series_ordering ON " + EPISODE_TABLE_NAME + 
+            "(show_episode, season_episode, number_episode)";
+    private static final String CREATE_MOVIE_COLLECTION_YEAR_IDX =
+            "CREATE INDEX IF NOT EXISTS idx_movie_collection_year ON " + MOVIE_TABLE_NAME + 
+            "(m_coll_id, year_movie) WHERE m_coll_id IS NOT NULL";
+    
+    // Additional indexes for getSortOrder() subqueries in WatchingUpNextLoader
+    private static final String CREATE_EPISODE_WATCHED_ORDERING_IDX =
+            "CREATE INDEX IF NOT EXISTS idx_episode_watched_ordering ON " + EPISODE_TABLE_NAME + 
+            "(show_episode, season_episode DESC, number_episode DESC) WHERE video_id IN " +
+            "(SELECT _id FROM " + VideoOpenHelper.FILES_TABLE_NAME + " WHERE Archos_traktSeen = 1)";
+    private static final String CREATE_MOVIE_WATCHED_ORDERING_IDX =
+            "CREATE INDEX IF NOT EXISTS idx_movie_watched_ordering ON " + MOVIE_TABLE_NAME + 
+            "(m_coll_id, year_movie DESC) WHERE m_coll_id IS NOT NULL AND video_id IN " +
+            "(SELECT _id FROM " + VideoOpenHelper.FILES_TABLE_NAME + " WHERE Archos_traktSeen = 1)";
+
     /*
      * Columns names that we need and are not to be exposed.
      * Public ones are in the ScraperStore class.
@@ -1347,6 +1365,13 @@ public final class ScraperTables {
             db.execSQL(CREATE_SHOW_RATING_IDX);
             db.execSQL(CREATE_EPISODE_AIRED_IDX);
             db.execSQL(CREATE_MOVIE_COLLECTION_IDX);
+        }
+        if (toVersion == 47) {
+            log.debug("upgradeTo: " + toVersion + " - adding WatchingUpNextLoader performance indexes");
+            db.execSQL(CREATE_EPISODE_SERIES_ORDERING_IDX);
+            db.execSQL(CREATE_MOVIE_COLLECTION_YEAR_IDX);
+            db.execSQL(CREATE_EPISODE_WATCHED_ORDERING_IDX);
+            db.execSQL(CREATE_MOVIE_WATCHED_ORDERING_IDX);
         }
     }
 }

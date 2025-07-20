@@ -46,7 +46,7 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
     // that is what onCreate creates
     private static final int DATABASE_CREATE_VERSION = 36; // initial version for v1.0 of nova (archos was 10)
     // that is the current version
-    private static final int DATABASE_VERSION = 46;
+    private static final int DATABASE_VERSION = 47;
     private static final String DATABASE_NAME = "media.db";
 
     // (Integer.MAX_VALUE / 2) rounded to human readable form
@@ -1455,6 +1455,10 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
             
             // Scraper-related indexes are handled by ScraperTables.upgradeTo()
             ScraperTables.upgradeTo(db, 46);
+        }
+        if (oldVersion < 47) { // add WatchingUpNextLoader performance optimizations
+            log.debug("onUpgrade: " + 47 + " - optimizing WatchingUpNextLoader performance");
+            ScraperTables.upgradeTo(db, 47);
         }
     }
 
