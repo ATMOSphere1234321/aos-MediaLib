@@ -110,5 +110,8 @@
     <color name="ripple">#25DB0F</color>
     <color name="ripple_mask">#33FFFFFF</color>
     <color name="transparent_blue">#2A2E90DE</color>
+
+    <color name="medium_blue">#4E1B466A</color>
+    <color name="deep_blue">#510B2942</color>
 </resources>
 
