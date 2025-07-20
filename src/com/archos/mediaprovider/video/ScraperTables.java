@@ -116,12 +116,10 @@ public final class ScraperTables {
     // Additional indexes for getSortOrder() subqueries in WatchingUpNextLoader
     private static final String CREATE_EPISODE_WATCHED_ORDERING_IDX =
             "CREATE INDEX IF NOT EXISTS idx_episode_watched_ordering ON " + EPISODE_TABLE_NAME + 
-            "(show_episode, season_episode DESC, number_episode DESC) WHERE video_id IN " +
-            "(SELECT _id FROM " + VideoOpenHelper.FILES_TABLE_NAME + " WHERE Archos_traktSeen = 1)";
+            "(show_episode, season_episode DESC, number_episode DESC)";
     private static final String CREATE_MOVIE_WATCHED_ORDERING_IDX =
             "CREATE INDEX IF NOT EXISTS idx_movie_watched_ordering ON " + MOVIE_TABLE_NAME + 
-            "(m_coll_id, year_movie DESC) WHERE m_coll_id IS NOT NULL AND video_id IN " +
-            "(SELECT _id FROM " + VideoOpenHelper.FILES_TABLE_NAME + " WHERE Archos_traktSeen = 1)";
+            "(m_coll_id, year_movie DESC) WHERE m_coll_id IS NOT NULL";
 
     /*
      * Columns names that we need and are not to be exposed.
