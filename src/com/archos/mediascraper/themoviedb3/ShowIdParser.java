@@ -219,11 +219,12 @@ public class ShowIdParser {
 
         // Fetching multiple series tags using JSON formatting (tagline, type, status, vote_count, popularity, runtime, original language)
         int runtime;
-        assert serie.episode_run_time != null;
-        if (!serie.episode_run_time.isEmpty()) {
+        if (serie.episode_run_time != null && !serie.episode_run_time.isEmpty()) {
             runtime = serie.episode_run_time.get(0);
-        }else {
+        } else if (serie.external_ids != null && serie.external_ids.imdb_id != null) {
             runtime = fetchRuntimeFromTVMaze(serie.external_ids.imdb_id);
+        } else {
+            runtime = 0;
         }
         try {
             JSONObject seriesTags = new JSONObject();
