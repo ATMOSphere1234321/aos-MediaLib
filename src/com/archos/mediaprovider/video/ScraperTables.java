@@ -2342,23 +2342,23 @@ public final class ScraperTables {
     private static final String CREATE_SHOW_NETWORKLOGOS_TABLE =
             "CREATE TABLE " + SHOW_NETWORKLOGOS_TABLE_NAME + " ( \n" +
                     "    _id             INTEGER PRIMARY KEY,\n" +
-                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE\n" +
-                    "                                                    ON UPDATE CASCADE,\n" +
+                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE ON UPDATE CASCADE,\n" +
                     "    s_nl_thumb_url  TEXT,\n" +
                     "    s_nl_thumb_file TEXT,\n" +
                     "    s_nl_large_url  TEXT,\n" +
-                    "    s_nl_large_file TEXT \n" +
+                    "    s_nl_large_file TEXT,\n" +
+                    "    UNIQUE (show_id, s_nl_large_url) ON CONFLICT IGNORE\n" +
                     ")";
 
     private static final String CREATE_SHOW_ACTORPHOTOS_TABLE =
             "CREATE TABLE " + SHOW_ACTORPHOTOS_TABLE_NAME + " ( \n" +
                     "    _id             INTEGER PRIMARY KEY,\n" +
-                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE\n" +
-                    "                                                    ON UPDATE CASCADE,\n" +
+                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE ON UPDATE CASCADE,\n" +
                     "    s_ap_thumb_url  TEXT,\n" +
                     "    s_ap_thumb_file TEXT,\n" +
                     "    s_ap_large_url  TEXT,\n" +
-                    "    s_ap_large_file TEXT \n" +
+                    "    s_ap_large_file TEXT,\n" +
+                    "    UNIQUE (show_id, s_ap_large_url) ON CONFLICT IGNORE\n" +
                     ")";
 
     private static final String CREATE_MOVIE_ACTORPHOTOS_TABLE =
@@ -2397,23 +2397,23 @@ public final class ScraperTables {
     private static final String CREATE_SHOW_CLEARLOGOS_TABLE =
             "CREATE TABLE " + SHOW_CLEARLOGOS_TABLE_NAME + " ( \n" +
                     "    _id             INTEGER PRIMARY KEY,\n" +
-                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE\n" +
-                    "                                                    ON UPDATE CASCADE,\n" +
+                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE ON UPDATE CASCADE,\n" +
                     "    s_cl_thumb_url  TEXT,\n" +
                     "    s_cl_thumb_file TEXT,\n" +
                     "    s_cl_large_url  TEXT,\n" +
-                    "    s_cl_large_file TEXT \n" +
+                    "    s_cl_large_file TEXT,\n" +
+                    "    UNIQUE (show_id, s_cl_large_url) ON CONFLICT IGNORE\n" +
                     ")";
 
     private static final String CREATE_SHOW_STUDIOLOGOS_TABLE =
             "CREATE TABLE " + SHOW_STUDIOLOGOS_TABLE_NAME + " ( \n" +
                     "    _id             INTEGER PRIMARY KEY,\n" +
-                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE\n" +
-                    "                                                    ON UPDATE CASCADE,\n" +
+                    "    show_id         INTEGER REFERENCES show ( _id ) ON DELETE CASCADE ON UPDATE CASCADE,\n" +
                     "    s_sl_thumb_url  TEXT,\n" +
                     "    s_sl_thumb_file TEXT,\n" +
                     "    s_sl_large_url  TEXT,\n" +
-                    "    s_sl_large_file TEXT \n" +
+                    "    s_sl_large_file TEXT,\n" +
+                    "    UNIQUE (show_id, s_sl_large_url) ON CONFLICT IGNORE\n" +
                     ")";
 
 
@@ -2892,6 +2892,21 @@ public final class ScraperTables {
 
             db.execSQL("CREATE INDEX BROADCASTS_MOVIE_idx ON BROADCASTS_MOVIE(network_broadcasts)");
             db.execSQL("CREATE INDEX BROADCASTS_SHOW_idx ON BROADCASTS_SHOW(network_broadcasts)");
+        }
+        if (toVersion == 41) {
+            log.debug("upgradeTo: " + toVersion + " — Recreating show image tables with UNIQUE constraints");
+
+            db.execSQL("DROP TABLE IF EXISTS " + SHOW_NETWORKLOGOS_TABLE_NAME);
+            db.execSQL(CREATE_SHOW_NETWORKLOGOS_TABLE);
+
+            db.execSQL("DROP TABLE IF EXISTS " + SHOW_ACTORPHOTOS_TABLE_NAME);
+            db.execSQL(CREATE_SHOW_ACTORPHOTOS_TABLE);
+
+            db.execSQL("DROP TABLE IF EXISTS " + SHOW_CLEARLOGOS_TABLE_NAME);
+            db.execSQL(CREATE_SHOW_CLEARLOGOS_TABLE);
+
+            db.execSQL("DROP TABLE IF EXISTS " + SHOW_STUDIOLOGOS_TABLE_NAME);
+            db.execSQL(CREATE_SHOW_STUDIOLOGOS_TABLE);
         }
     }
 }
