@@ -59,7 +59,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by alexandre on 20/05/15.
@@ -123,6 +125,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
     private volatile static boolean isForeground = true;
     private static final String PREF_IS_SCRAPE_DIRTY = "is_scrape_dirty";
+    private static final String TAG = "AutoScrapeService";
 
     /**
      * Ugly implementation based on a static variable, guessing that there is only one instance at a time (seems to be true...)
@@ -384,6 +387,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                         log.debug("startScraping: is AutoScrapeService enabled? " + isEnable(AutoScrapeService.this));
                     }
 
+                    Set<Long> alreadyScrapedMovieIds = new HashSet<>();
+
                     do {
                         mNetworkOrScrapErrors = 0;
                         sNumberOfFilesScraped = 0;
@@ -562,10 +567,32 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         log.trace("startScraping: online result.tag.save ID=" + ID);
 
                                         result.tag.save(AutoScrapeService.this, ID);
+
                                         filesToPreserve = getFilesFromDeleteFilesTable(db);
-                                        if (!filesToPreserve.isEmpty() && (shouldRescrapAll || scrapeOnlyMovies)) {
-                                            clearDeleteFilesTable(db);
+
+                                        // Extract online ID for tracking
+                                        long onlineId = result.tag.getOnlineId();
+                                        boolean alreadyScraped = alreadyScrapedMovieIds.contains(onlineId);
+
+                                        Log.d(TAG, "scrapeOnlyMovies: " + scrapeOnlyMovies);
+                                        Log.d(TAG, "shouldRescrapAll: " + shouldRescrapAll);
+                                        Log.d(TAG, "filesToPreserve size: " + filesToPreserve.size());
+
+                                        // Decide whether to clear delete table
+                                        if (!filesToPreserve.isEmpty()) {
+                                            if (shouldRescrapAll || scrapeOnlyMovies || alreadyScraped) {
+                                                Log.d(TAG, "Clearing delete_files table (rescrapAll=" + shouldRescrapAll +
+                                                        ", scrapeOnlyMovies=" + scrapeOnlyMovies +
+                                                        ", alreadyScraped=" + alreadyScraped + ")");
+                                                clearDeleteFilesTable(db);
+                                            } else {
+                                                Log.d(TAG, "Not clearing delete_files table (first scrape for movie with onlineId=" + onlineId + ")");
+                                            }
                                         }
+
+                                        // Mark movie as scraped
+                                        alreadyScrapedMovieIds.add(onlineId);
+
                                         DeleteFileCallback.DO_NOT_DELETE.clear();
                                         // result exists thus scraped and no error for now
                                         notScraped = false;
