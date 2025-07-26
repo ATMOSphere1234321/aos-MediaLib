@@ -124,6 +124,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     private volatile static boolean isForeground = true;
     private static final String PREF_IS_SCRAPE_DIRTY = "is_scrape_dirty";
     private static final String TAG = "AutoScrapeService";
+    private static volatile boolean sIsRunning = false;
+
 
     /**
      * Ugly implementation based on a static variable, guessing that there is only one instance at a time (seems to be true...)
@@ -199,6 +201,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        sIsRunning = true;
         if(! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
             log.debug("onStartCommand: app is in background, do not start services");
             return START_NOT_STICKY;
@@ -299,6 +302,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     public void onDestroy() {
         log.debug("onDestroy() " + this);
         cleanup();
+        sIsRunning = false;
         super.onDestroy();
     }
 
@@ -787,4 +791,12 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PREF_IS_SCRAPE_DIRTY, false);
     }
 
+    public static void stopAutoScraping(Context context) {
+        Log.d(TAG, "Request to stop AutoScrapeService");
+        context.stopService(new Intent(context, AutoScrapeService.class));
+    }
+
+    public static boolean isRunning() {
+        return sIsRunning;
+    }
 }
