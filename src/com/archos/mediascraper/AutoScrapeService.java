@@ -797,6 +797,11 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
         return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(PREF_IS_SCRAPE_DIRTY, false);
     }
 
+    public static void startAutoScraping(Context context) {
+        Log.d(TAG, "Request to start AutoScrapeService");
+        context.startService(new Intent(context, AutoScrapeService.class));
+    }
+
     public static void stopAutoScraping(Context context) {
         Log.d(TAG, "Request to stop AutoScrapeService");
         context.stopService(new Intent(context, AutoScrapeService.class));
