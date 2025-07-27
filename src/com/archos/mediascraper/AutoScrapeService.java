@@ -201,6 +201,12 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (ScrapeState.isManualScrapingRunning()) {
+            Log.d(TAG, "Manual scraping is running — auto scrape aborted.");
+            stopSelf(); // Optionally stop the service if you want to cancel the attempt entirely
+            return START_NOT_STICKY;
+        }
+
         sIsRunning = true;
         if(! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
             log.debug("onStartCommand: app is in background, do not start services");
