@@ -366,6 +366,8 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     protected void startScraping(final boolean rescrapAlreadySearched, final boolean onlyNotFound) {
         log.debug("startScraping: {}", String.valueOf(mThread == null || !mThread.isAlive()));
         nb.setContentTitle(getString(R.string.scraping_in_progress));
+        
+        sIsRunning = true;
 
         if(mThread==null || !mThread.isAlive()) {
             mThread = new Thread() {
