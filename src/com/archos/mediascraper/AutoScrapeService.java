@@ -784,7 +784,13 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             log.debug("onStart: Rescanning everything due to dirty state");
             // Reset the dirty flag in SharedPreferences
             saveDirtyState(false);
-            startScraping(false, false);
+
+            if (ScrapeState.isManualScrapingRunning()) {
+                Log.d(TAG, "Manual scraping is running — auto scrape aborted.");
+                stopSelf(); // Optionally stop the service if you want to cancel the attempt entirely
+            }else {
+                startScraping(false, false);
+            }
         }
     }
 
