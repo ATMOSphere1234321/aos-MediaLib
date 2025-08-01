@@ -10,9 +10,9 @@
         />
 
     <padding android:left="0dp"
-        android:top="-3dp"
+        android:top="-2.3dp"
         android:right="0dp"
-        android:bottom="-2.6dp"
+        android:bottom="-2dp"
         />
 
     <corners android:bottomRightRadius="5dp" android:bottomLeftRadius="5dp"
