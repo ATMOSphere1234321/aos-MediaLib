@@ -90,6 +90,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
     private static final Logger log = LoggerFactory.getLogger(VideoProvider.class);
 
     private final static boolean SKIP_THUMBNAILS = false;
+    public static final boolean DEFER_THUMBNAILS_FOR_SCRAPING = true;
 
     private static volatile boolean isForeground = true;
 
@@ -702,7 +703,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                             try {
                                 while (c.moveToNext()) {
                                     long magic = c.getLong(2);
-                                    if (magic == 0) {
+                                    if (magic == 0 && !DEFER_THUMBNAILS_FOR_SCRAPING) {
                                         requestMediaThumbnail(c.getString(1), uri,
                                                 MediaThumbRequest.PRIORITY_NORMAL, 0);
                                     }
@@ -1129,7 +1130,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
      * Instances of this class are created and put in a queue to be executed sequentially to see if
      * it needs to (re)generate the thumbnails.
      */
-    static class MediaThumbRequest {
+    public static class MediaThumbRequest {
         private static final String TAG = ArchosMediaCommon.TAG_PREFIX + "MediaThumbRequest";
         private static final boolean DBG = false;
         static final int PRIORITY_LOW = 20;
