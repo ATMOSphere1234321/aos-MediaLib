@@ -211,6 +211,38 @@ public static int restoreBestPosition(GridView view, int selectedPosition,
         return subsDir;
     }
 
+    public static File getTorrentsDir(Context context){
+        StringBuilder sb = new StringBuilder();
+        if(context.getExternalCacheDir()!=null) //seems that some devices haven't external cache
+            sb.append(context.getExternalCacheDir().getAbsolutePath()).append("/torrents");
+        else
+            sb.append(STORAGE_PATH).append("/Android/data/").append(context.getPackageName()).append("/cache/torrents");
+        File torrentsDir = new File(sb.toString());
+        if (!torrentsDir.exists())
+            torrentsDir.mkdirs();
+        
+        // Clean up old torrent files (older than 2 days)
+        cleanupOldTorrentFiles(torrentsDir);
+        
+        return torrentsDir;
+    }
+    
+    private static void cleanupOldTorrentFiles(File torrentsDir) {
+        if (!torrentsDir.exists()) return;
+        
+        long twoDaysAgo = System.currentTimeMillis() - (2 * 24 * 60 * 60 * 1000L);
+        File[] files = torrentsDir.listFiles();
+        
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile() && file.getName().endsWith(".torrent") && 
+                    file.lastModified() < twoDaysAgo) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
     public static File getExternalCacheDir(Context context){
         StringBuilder sb = new StringBuilder();
         if(context.getExternalCacheDir()!=null) //seems that some devices haven't external cache
