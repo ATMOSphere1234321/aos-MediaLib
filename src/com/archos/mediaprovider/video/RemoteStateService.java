@@ -52,6 +52,9 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
 
     private static volatile boolean isForeground = true;
 
+    private static final int REMOTE_CHECK_RETRY_COUNT = 3;
+    private static final int REMOTE_CHECK_RETRY_DELAY_MS = 5000; // 5 seconds
+
     private static final Uri NOTIFY_URI = VideoStore.ALL_CONTENT_URI;
     private static final Uri SERVER_URI = VideoStore.SmbServer.getContentUri();
 
@@ -172,14 +175,29 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
                             new Thread() {
                                 @Override
                                 public void run() {
-                                    if (serverFile.exists()) {
+                                    boolean serverExists = false;
+                                    for (int i = 0; i < REMOTE_CHECK_RETRY_COUNT; i++) {
+                                        if (serverFile.exists()) {
+                                            serverExists = true;
+                                            break;
+                                        }
+                                        if (i < REMOTE_CHECK_RETRY_COUNT - 1) { // do not sleep after last attempt
+                                            try {
+                                                log.debug("handleDb: server " + server + " not found, retrying in " + REMOTE_CHECK_RETRY_DELAY_MS + "ms (" + (i + 1) + "/" + REMOTE_CHECK_RETRY_COUNT + ")");
+                                                Thread.sleep(REMOTE_CHECK_RETRY_DELAY_MS);
+                                            } catch (InterruptedException e) {
+                                                log.error("handleDb: sleep interrupted", e);
+                                            }
+                                        }
+                                    }
+                                    if (serverExists) {
                                         log.debug("handleDb: server exists: " + server);
                                         if (updateServerDb(id, cr, active, 1, now))
                                             mServerDbUpdated = true;
                                     } else {
                                         String smbDiscoveryInfo = SambaDiscovery.getIpFromShareName(serverUri.getHost());
                                         if (smbDiscoveryInfo == null) {
-                                            log.debug("handleDb: server does not exist: " + server);
+                                            log.debug("handleDb: server does not exist after " + REMOTE_CHECK_RETRY_COUNT + " retries: " + server);
                                             if (updateServerDb(id, cr, active, 0, now))
                                                 mServerDbUpdated = true;
                                         } else {
