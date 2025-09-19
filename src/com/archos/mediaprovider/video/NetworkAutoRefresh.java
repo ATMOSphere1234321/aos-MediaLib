@@ -34,6 +34,7 @@ import com.archos.filecorelibrary.sftp.SFTPSession;
 import com.archos.mediacenter.filecoreextension.upnp2.UpnpServiceManager;
 import com.archos.mediacenter.utils.ShortcutDbAdapter;
 import com.archos.mediaprovider.ArchosMediaIntent;
+import com.archos.mediascraper.AutoScrapeService;
 import com.archos.environment.NetworkState;
 
 import org.slf4j.Logger;
@@ -140,6 +141,12 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                     refreshIntent.putExtra(NetworkScannerServiceVideo.RECORD_END_OF_SCAN_PREFERENCE, AUTO_RESCAN_LAST_SCAN);
                     refreshIntent.setPackage(ArchosUtils.getGlobalContext().getPackageName());
                     context.sendBroadcast(refreshIntent);
+                }
+
+                // Start AutoScrapeService after network scanning to scrape newly found videos
+                if (!toUpdate.isEmpty() && AutoScrapeService.isEnable(context)) {
+                    log.debug("onReceive: starting AutoScrapeService after network scan");
+                    AutoScrapeService.startService(context);
                 }
             }
             else{
