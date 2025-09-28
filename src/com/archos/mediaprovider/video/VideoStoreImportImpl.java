@@ -578,6 +578,7 @@ public class VideoStoreImportImpl {
     // Tracks which storage ids were seen in the latest MediaStore query so we can
     // distinguish "volume missing" from "file removed" later in the process.
     private static final Set<Integer> sLastVisibleStorageIds = new HashSet<>();
+    private static volatile boolean sRemoteProjectionHasStorageId = Build.VERSION.SDK_INT <= Build.VERSION_CODES.O;
 
     private static synchronized void resetVisibleStorageIds() {
         sLastVisibleStorageIds.clear();
@@ -591,6 +592,15 @@ public class VideoStoreImportImpl {
 
     private static synchronized Set<Integer> getVisibleStorageIdsSnapshot() {
         return new HashSet<>(sLastVisibleStorageIds);
+    }
+
+    private static synchronized boolean remoteProjectionHasStorageId() {
+        return sRemoteProjectionHasStorageId;
+    }
+
+    private static synchronized void disableRemoteStorageIdTracking() {
+        sRemoteProjectionHasStorageId = false;
+        sLastVisibleStorageIds.clear();
     }
 
     private static int copyData(ContentResolver cr, String minId) {
@@ -836,6 +846,26 @@ public class VideoStoreImportImpl {
      * drive is still reconnecting.
      */
     private void updateVolumeHiddenStates(String existingFiles) {
+        if (!remoteProjectionHasStorageId()) {
+            if (TextUtils.isEmpty(existingFiles)) {
+                log.debug("updateVolumeHiddenStates: legacy path with no ids, skip");
+                return;
+            }
+            long now = System.currentTimeMillis() / 1000;
+            ContentValues cvHidden = new ContentValues();
+            cvHidden.put("volume_hidden", Long.valueOf(now));
+            int hiddenCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden,
+                    "_id NOT IN (" + existingFiles + ") AND volume_hidden = 0", null);
+            log.debug("updateVolumeHiddenStates: legacy hidden {} rows", hiddenCount);
+
+            ContentValues cvPresent = new ContentValues();
+            cvPresent.put("volume_hidden", 0);
+            int presentCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent,
+                    "_id IN (" + existingFiles + ") AND volume_hidden != 0", null);
+            log.debug("updateVolumeHiddenStates: legacy unhidden {} rows", presentCount);
+            return;
+        }
+
         Set<Integer> mountedStorageIds = getMountedReadableStorageIds();
         if (mountedStorageIds.isEmpty()) {
             log.debug("updateVolumeHiddenStates: no mounted storage, skip hide/unhide");
@@ -920,9 +950,13 @@ public class VideoStoreImportImpl {
         return sb.toString();
     }
 
-    private final static String[] REMOTE_LIST_PROJECTION = new String[] {
+    private static final String[] REMOTE_LIST_PROJECTION_BP = new String[] {
         BaseColumns._ID,
         "storage_id"
+    };
+
+    private static final String[] REMOTE_LIST_PROJECTION_AP = new String[] {
+        BaseColumns._ID
     };
     /** helper to get a comma separated list of all ids */
     private static String getRemoteIdList(ContentResolver cr) {
@@ -931,6 +965,8 @@ public class VideoStoreImportImpl {
         int offset = 0;
         Cursor c = null;
         resetVisibleStorageIds(); // new fetch, flush previous storage ids
+        boolean projectionHasStorageId = remoteProjectionHasStorageId();
+        String[] projection = projectionHasStorageId ? REMOTE_LIST_PROJECTION_BP : REMOTE_LIST_PROJECTION_AP;
         try {
             while (!mIsImportInterrupted) {
                 try {
@@ -942,17 +978,17 @@ public class VideoStoreImportImpl {
                         queryArgs.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING);
                         queryArgs.putInt(ContentResolver.QUERY_ARG_LIMIT, WINDOW_SIZE);
                         queryArgs.putInt(ContentResolver.QUERY_ARG_OFFSET, offset);
-                        c = cr.query(MediaStore.Files.getContentUri("external"), REMOTE_LIST_PROJECTION, queryArgs, null);
+                        c = cr.query(MediaStore.Files.getContentUri("external"), projection, queryArgs, null);
                     } else {
                         c = cr.query(MediaStore.Files.getContentUri("external"),
-                                REMOTE_LIST_PROJECTION, null, null,
+                                projection, null, null,
                                 BaseColumns._ID + " LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
                     }
 
                     int count = 0;
 
                     if (c != null) {
-                        int storageIdx = c.getColumnIndex("storage_id");
+                        int storageIdx = projectionHasStorageId ? c.getColumnIndex("storage_id") : -1;
                         while (c.moveToNext() && count < WINDOW_SIZE && !mIsImportInterrupted) {
                             count++;
                             sb.append(prefix).append(c.getString(0));
@@ -973,6 +1009,13 @@ public class VideoStoreImportImpl {
                     }
                 } catch (Exception e) {
                     log.error("getRemoteIdList: exception while moving to next cursor row!", e);
+                    if (e instanceof IllegalArgumentException && projectionHasStorageId) {
+                        log.warn("getRemoteIdList: storage_id column unavailable, falling back to legacy projection");
+                        disableRemoteStorageIdTracking();
+                        projectionHasStorageId = false;
+                        projection = REMOTE_LIST_PROJECTION_AP;
+                        continue;
+                    }
                     if (CRASH_ON_ERROR) throw new RuntimeException(e);
                     break;
                 } finally {
