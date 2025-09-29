@@ -256,11 +256,17 @@ public class VideoStoreImportService extends Service implements Handler.Callback
             removeAllMessages(mHandler);
             Message m;
             if (sActive) { // not first start
-                // Note that MESSAGE_IMPORT_FULL is needed for external USB storage otherwise if nova open, goes in background, get usb key in, relaunch nova results in  files not seen
-                log.debug("onStartCommand: intent == null || intent.getAction() == null, sActive == true, do MESSAGE_IMPORT_FULL");
-                ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "intent null, sActive true do MESSAGE_IMPORT_FULL");
-                //m = mHandler.obtainMessage(MESSAGE_IMPORT_INCR, DONT_KILL_SELF, 0); // not enough for external storage
-                m = mHandler.obtainMessage(MESSAGE_IMPORT_FULL, DONT_KILL_SELF, 0);
+                // Post-Android P: Use incremental import since our enhanced volume management handles external storage properly
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                    log.debug("onStartCommand: intent == null || intent.getAction() == null, sActive == true, do MESSAGE_IMPORT_INCR (post-Android P)");
+                    ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "intent null, sActive true do MESSAGE_IMPORT_INCR (post-Android P)");
+                    m = mHandler.obtainMessage(MESSAGE_IMPORT_INCR, DONT_KILL_SELF, 0);
+                } else {
+                    // Pre-Android P: Keep full import for external USB storage compatibility
+                    log.debug("onStartCommand: intent == null || intent.getAction() == null, sActive == true, do MESSAGE_IMPORT_FULL (pre-Android P)");
+                    ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.onStartCommand", "intent null, sActive true do MESSAGE_IMPORT_FULL (pre-Android P)");
+                    m = mHandler.obtainMessage(MESSAGE_IMPORT_FULL, DONT_KILL_SELF, 0);
+                }
                 ImportState.VIDEO.setState(State.REGULAR_IMPORT);
             } else {
                 // do a full import here to make sure that we have initial data
@@ -632,18 +638,45 @@ public class VideoStoreImportService extends Service implements Handler.Callback
 
     private void handleVolumeMounted(int storageId) {
         log.debug("handleVolumeMounted: storageId={}", storageId);
-        ContentValues cv = new ContentValues();
-        cv.put("volume_hidden", 0);
-        int updated = getContentResolver().update(
-                VideoStoreInternal.FILES_IMPORT,
-                cv,
-                "storage_id=? AND volume_hidden != 0",
-                new String[]{String.valueOf(storageId)});
-        log.debug("handleVolumeMounted: cleared volume_hidden for {} rows", updated);
+
+        // For post-Android P, we use path-based unhiding in updateVolumeHiddenStates()
+        // instead of storage_id-based unhiding here
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            log.debug("handleVolumeMounted: post-Android P, skipping storage_id-based unhiding");
+        } else {
+            // Pre-Android P: use existing storage_id-based unhiding
+            ContentValues cv = new ContentValues();
+            cv.put("volume_hidden", 0);
+            int updated = getContentResolver().update(
+                    VideoStoreInternal.FILES_IMPORT,
+                    cv,
+                    "storage_id=? AND volume_hidden != 0",
+                    new String[]{String.valueOf(storageId)});
+            log.debug("handleVolumeMounted: cleared volume_hidden for {} rows", updated);
+        }
+
         ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
                 (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0);
-        // Mark database dirty so a fresh import will run and refresh metadata
-        ImportState.VIDEO.setDirty(true);
+
+        // Key change: Use incremental import instead of full import for remounts
+        // Files are already unhidden by updateVolumeHiddenStates(), so incremental scan will pick them up
+        Message importMsg;
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            // Post-Android P: Use incremental import (much faster)
+            importMsg = mHandler.obtainMessage(MESSAGE_IMPORT_INCR, DONT_KILL_SELF, storageId);
+            log.debug("handleVolumeMounted: triggering incremental import for post-Android P");
+        } else {
+            // Pre-Android P: Keep existing full import behavior
+            importMsg = mHandler.obtainMessage(MESSAGE_IMPORT_FULL, DONT_KILL_SELF, storageId);
+            log.debug("handleVolumeMounted: triggering full import for pre-Android P");
+        }
+
+        // Don't mark as dirty for post-Android P since we're doing incremental
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            ImportState.VIDEO.setDirty(true);
+        }
+
+        mHandler.sendMessageDelayed(importMsg, 1000);
     }
 
     /** removes all messages from handler */

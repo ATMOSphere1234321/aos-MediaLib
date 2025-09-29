@@ -639,11 +639,36 @@ public class VideoStoreImportImpl {
             int ccount = allFiles.getColumnCount();
             if (count > 0) {
                 ArrayList<Long> ids = new ArrayList<>();
-                Cursor c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[] { "_id" }, null, null, null);
-                if (c != null) {
-                    while (c.moveToNext() && !mIsImportInterrupted)
-                        ids.add(c.getLong(0));
-                    c.close();
+                // Use windowed approach to get existing IDs to avoid cursor errors
+                int offset = 0;
+                while (!mIsImportInterrupted) {
+                    Cursor c = null;
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            Bundle queryArgs = new Bundle();
+                            queryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, null);
+                            queryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, null);
+                            queryArgs.putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, new String[]{BaseColumns._ID});
+                            queryArgs.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING);
+                            queryArgs.putInt(ContentResolver.QUERY_ARG_LIMIT, WINDOW_SIZE);
+                            queryArgs.putInt(ContentResolver.QUERY_ARG_OFFSET, offset);
+                            c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, queryArgs, null);
+                        } else {
+                            c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, null, null,
+                                        BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+                        }
+                        if (c == null || c.getCount() == 0) break;
+
+                        int batchCount = 0;
+                        while (c.moveToNext() && !mIsImportInterrupted) {
+                            ids.add(c.getLong(0));
+                            batchCount++;
+                        }
+                        if (batchCount < WINDOW_SIZE) break;
+                        offset += WINDOW_SIZE;
+                    } finally {
+                        if (c != null) c.close();
+                    }
                 }
                 // transaction size limited, acts like buffered output stream and auto-flushes queue
                 BulkInserter inserter = new BulkInserter(VideoStoreInternal.FILES_IMPORT, cr, 2000);
@@ -847,22 +872,8 @@ public class VideoStoreImportImpl {
      */
     private void updateVolumeHiddenStates(String existingFiles) {
         if (!remoteProjectionHasStorageId()) {
-            if (TextUtils.isEmpty(existingFiles)) {
-                log.debug("updateVolumeHiddenStates: legacy path with no ids, skip");
-                return;
-            }
-            long now = System.currentTimeMillis() / 1000;
-            ContentValues cvHidden = new ContentValues();
-            cvHidden.put("volume_hidden", Long.valueOf(now));
-            int hiddenCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden,
-                    "_id NOT IN (" + existingFiles + ") AND volume_hidden = 0", null);
-            log.debug("updateVolumeHiddenStates: legacy hidden {} rows", hiddenCount);
-
-            ContentValues cvPresent = new ContentValues();
-            cvPresent.put("volume_hidden", 0);
-            int presentCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent,
-                    "_id IN (" + existingFiles + ") AND volume_hidden != 0", null);
-            log.debug("updateVolumeHiddenStates: legacy unhidden {} rows", presentCount);
+            // Post-Android P: Use path-based volume detection
+            updateVolumeHiddenStatesByPath(existingFiles);
             return;
         }
 
@@ -880,8 +891,41 @@ public class VideoStoreImportImpl {
             if (!TextUtils.isEmpty(existingFiles)) {
                 whereHidden.append(" AND _id NOT IN (").append(existingFiles).append(")");
             }
-            int hiddenCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden, whereHidden.toString(), null);
-            log.debug("updateVolumeHiddenStates: hidden {} rows", hiddenCount);
+
+            // Use windowed approach for potentially large updates
+            // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
+            int totalHidden = 0;
+            int offset = 0;
+            while (!mIsImportInterrupted) {
+                Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
+                    whereHidden.toString(), null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+
+                if (c == null || c.getCount() == 0) {
+                    if (c != null) c.close();
+                    break;
+                }
+
+                StringBuilder updateWhere = new StringBuilder("_id IN (");
+                boolean firstId = true;
+                int count = 0;
+                while (c.moveToNext() && count < WINDOW_SIZE) {
+                    if (!firstId) updateWhere.append(",");
+                    updateWhere.append(c.getLong(0));
+                    firstId = false;
+                    count++;
+                }
+                c.close();
+                updateWhere.append(")");
+
+                if (count > 0) {
+                    int hiddenCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden, updateWhere.toString(), null);
+                    totalHidden += hiddenCount;
+                }
+
+                if (count < WINDOW_SIZE) break;
+                offset += WINDOW_SIZE;
+            }
+            log.debug("updateVolumeHiddenStates: hidden {} rows", totalHidden);
         }
 
         if (!TextUtils.isEmpty(existingFiles)) {
@@ -892,8 +936,41 @@ public class VideoStoreImportImpl {
                 ContentValues cvPresent = new ContentValues();
                 cvPresent.put("volume_hidden", 0);
                 String wherePresent = "_id IN (" + existingFiles + ") AND volume_hidden != 0 AND " + visibleClause;
-                int presentCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent, wherePresent, null);
-                log.debug("updateVolumeHiddenStates: unhidden {} rows", presentCount);
+
+                // Use windowed approach for potentially large updates
+                // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
+                int totalUnhidden = 0;
+                int offset = 0;
+                while (!mIsImportInterrupted) {
+                    Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
+                        wherePresent, null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+
+                    if (c == null || c.getCount() == 0) {
+                        if (c != null) c.close();
+                        break;
+                    }
+
+                    StringBuilder updateWhere = new StringBuilder("_id IN (");
+                    boolean firstId = true;
+                    int count = 0;
+                    while (c.moveToNext() && count < WINDOW_SIZE) {
+                        if (!firstId) updateWhere.append(",");
+                        updateWhere.append(c.getLong(0));
+                        firstId = false;
+                        count++;
+                    }
+                    c.close();
+                    updateWhere.append(")");
+
+                    if (count > 0) {
+                        int presentCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent, updateWhere.toString(), null);
+                        totalUnhidden += presentCount;
+                    }
+
+                    if (count < WINDOW_SIZE) break;
+                    offset += WINDOW_SIZE;
+                }
+                log.debug("updateVolumeHiddenStates: unhidden {} rows", totalUnhidden);
             }
         }
     }
@@ -948,6 +1025,315 @@ public class VideoStoreImportImpl {
         }
         sb.append(')');
         return sb.toString();
+    }
+
+    /**
+     * Post-Android P: Hide files from unmounted volumes, unhide files from mounted volumes
+     * Enhanced with recent mount detection for aggressive deletion of missing files
+     */
+    private void updateVolumeHiddenStatesByPath(String existingFiles) {
+        ExtStorageManager storageManager = ExtStorageManager.getExtStorageManager();
+        List<String> mountedVolumePaths = new ArrayList<>();
+        List<String> unmountedVolumePaths = new ArrayList<>();
+        List<String> recentlyMountedVolumePaths = new ArrayList<>();  // NEW
+
+        // Check primary storage
+        String primaryPath = Environment.getExternalStorageDirectory().getPath();
+        String primaryState = Environment.getExternalStorageState();
+        if (isMountedReadable(primaryState)) {
+            mountedVolumePaths.add(primaryPath);
+            // Primary storage is rarely unmounted, so don't check for recent mount
+        } else {
+            unmountedVolumePaths.add(primaryPath);
+        }
+
+        // Check all external volumes and detect recently mounted ones
+        checkVolumeStatesWithRecentMount(storageManager.getExtSdcards(), mountedVolumePaths, unmountedVolumePaths, recentlyMountedVolumePaths);
+        checkVolumeStatesWithRecentMount(storageManager.getExtUsbStorages(), mountedVolumePaths, unmountedVolumePaths, recentlyMountedVolumePaths);
+        checkVolumeStatesWithRecentMount(storageManager.getExtOtherStorages(), mountedVolumePaths, unmountedVolumePaths, recentlyMountedVolumePaths);
+
+        log.debug("updateVolumeHiddenStatesByPath: mounted={}, unmounted={}, recentlyMounted={}",
+                  mountedVolumePaths, unmountedVolumePaths, recentlyMountedVolumePaths);
+
+        long now = System.currentTimeMillis() / 1000;
+
+        // Hide files from unmounted volumes
+        if (!unmountedVolumePaths.isEmpty()) {
+            hideFilesFromVolumes(unmountedVolumePaths, now);
+        }
+
+        // Unhide files from mounted volumes
+        if (!mountedVolumePaths.isEmpty()) {
+            unhideFilesFromVolumes(mountedVolumePaths);
+        }
+
+        // For recently mounted volumes: Delete missing files more aggressively
+        if (!recentlyMountedVolumePaths.isEmpty() && !TextUtils.isEmpty(existingFiles)) {
+            hideDeletedFilesFromRecentlyMountedVolumes(recentlyMountedVolumePaths, existingFiles, now);
+        }
+
+        // Additionally delete files from other mounted volumes that are missing from MediaStore
+        if (!mountedVolumePaths.isEmpty() && !TextUtils.isEmpty(existingFiles)) {
+            List<String> nonRecentlyMounted = new ArrayList<>(mountedVolumePaths);
+            nonRecentlyMounted.removeAll(recentlyMountedVolumePaths);
+            if (!nonRecentlyMounted.isEmpty()) {
+                hideDeletedFilesFromMountedVolumes(nonRecentlyMounted, existingFiles, now);
+            }
+        }
+    }
+
+    private void checkVolumeStates(List<String> volumePaths, List<String> mounted, List<String> unmounted) {
+        for (String path : volumePaths) {
+            if (isMountedReadable(ExtStorageManager.getVolumeState(path))) {
+                mounted.add(path);
+            } else {
+                unmounted.add(path);
+            }
+        }
+    }
+
+    private void hideFilesFromVolumes(List<String> volumePaths, long timestamp) {
+        if (volumePaths.isEmpty()) return;
+
+        ContentValues cv = new ContentValues();
+        cv.put("volume_hidden", timestamp);
+
+        StringBuilder where = new StringBuilder("volume_hidden = 0 AND (");
+        boolean first = true;
+        for (String path : volumePaths) {
+            if (!first) where.append(" OR ");
+            where.append("_data LIKE '").append(path).append("/%'");
+            first = false;
+        }
+        where.append(")");
+
+        // Use windowed approach to avoid cursor errors for large datasets
+        // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
+        int totalHidden = 0;
+        int offset = 0;
+        while (!mIsImportInterrupted) {
+            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
+                where.toString(), null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+
+            if (c == null || c.getCount() == 0) {
+                if (c != null) c.close();
+                break;
+            }
+
+            StringBuilder updateWhere = new StringBuilder("_id IN (");
+            boolean firstId = true;
+            int count = 0;
+            while (c.moveToNext() && count < WINDOW_SIZE) {
+                if (!firstId) updateWhere.append(",");
+                updateWhere.append(c.getLong(0));
+                firstId = false;
+                count++;
+            }
+            c.close();
+            updateWhere.append(")");
+
+            if (count > 0) {
+                int hidden = mCr.update(VideoStoreInternal.FILES_IMPORT, cv, updateWhere.toString(), null);
+                totalHidden += hidden;
+            }
+
+            if (count < WINDOW_SIZE) break; // No more rows to process
+            offset += WINDOW_SIZE;
+        }
+        log.debug("hideFilesFromVolumes: hidden {} files from unmounted volumes", totalHidden);
+    }
+
+    private void unhideFilesFromVolumes(List<String> volumePaths) {
+        if (volumePaths.isEmpty()) return;
+
+        ContentValues cv = new ContentValues();
+        cv.put("volume_hidden", 0);
+
+        StringBuilder where = new StringBuilder("volume_hidden != 0 AND (");
+        boolean first = true;
+        for (String path : volumePaths) {
+            if (!first) where.append(" OR ");
+            where.append("_data LIKE '").append(path).append("/%'");
+            first = false;
+        }
+        where.append(")");
+
+        // Use windowed approach to avoid cursor errors for large datasets
+        // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
+        int totalUnhidden = 0;
+        int offset = 0;
+        while (!mIsImportInterrupted) {
+            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
+                where.toString(), null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
+
+            if (c == null || c.getCount() == 0) {
+                if (c != null) c.close();
+                break;
+            }
+
+            StringBuilder updateWhere = new StringBuilder("_id IN (");
+            boolean firstId = true;
+            int count = 0;
+            while (c.moveToNext() && count < WINDOW_SIZE) {
+                if (!firstId) updateWhere.append(",");
+                updateWhere.append(c.getLong(0));
+                firstId = false;
+                count++;
+            }
+            c.close();
+            updateWhere.append(")");
+
+            if (count > 0) {
+                int unhidden = mCr.update(VideoStoreInternal.FILES_IMPORT, cv, updateWhere.toString(), null);
+                totalUnhidden += unhidden;
+            }
+
+            if (count < WINDOW_SIZE) break; // No more rows to process
+            offset += WINDOW_SIZE;
+        }
+        log.debug("unhideFilesFromVolumes: unhidden {} files from mounted volumes", totalUnhidden);
+    }
+
+    private void hideDeletedFilesFromMountedVolumes(List<String> volumePaths, String existingFiles, long timestamp) {
+        if (volumePaths.isEmpty() || TextUtils.isEmpty(existingFiles)) return;
+
+        StringBuilder where = new StringBuilder("_id NOT IN (").append(existingFiles).append(") AND (");
+        boolean first = true;
+        for (String path : volumePaths) {
+            if (!first) where.append(" OR ");
+            where.append("_data LIKE '").append(path).append("/%'");
+            first = false;
+        }
+        where.append(")");
+
+        // DELETE (not hide) files that are missing from mounted volumes since they're actually gone
+        // Use windowed approach to avoid cursor errors for large datasets
+        int totalDeleted = 0;
+        int offset = 0;
+        while (!mIsImportInterrupted) {
+            // For DELETE operations, we need to query first to get IDs, then delete in batches
+            String sortOrder = "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset;
+            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, where.toString(), null, sortOrder);
+
+            if (c == null || c.getCount() == 0) {
+                if (c != null) c.close();
+                break;
+            }
+
+            StringBuilder deleteWhere = new StringBuilder("_id IN (");
+            boolean firstId = true;
+            int count = 0;
+            while (c.moveToNext() && count < WINDOW_SIZE) {
+                if (!firstId) deleteWhere.append(",");
+                deleteWhere.append(c.getLong(0));
+                firstId = false;
+                count++;
+            }
+            deleteWhere.append(")");
+            c.close();
+
+            if (count > 0) {
+                int deleted = mCr.delete(VideoStoreInternal.FILES_IMPORT, deleteWhere.toString(), null);
+                totalDeleted += deleted;
+                log.debug("hideDeletedFilesFromMountedVolumes: deleted {} files in batch", deleted);
+            }
+
+            if (count < WINDOW_SIZE) break; // No more rows to process
+            offset += WINDOW_SIZE;
+        }
+        log.debug("hideDeletedFilesFromMountedVolumes: DELETED {} files from mounted volumes", totalDeleted);
+    }
+
+    /**
+     * More aggressive deletion for recently remounted volumes using windowed approach
+     */
+    private void hideDeletedFilesFromRecentlyMountedVolumes(List<String> volumePaths, String existingFiles, long timestamp) {
+        if (volumePaths.isEmpty() || TextUtils.isEmpty(existingFiles)) return;
+
+        StringBuilder where = new StringBuilder("_id NOT IN (").append(existingFiles).append(") AND (");
+        boolean first = true;
+        for (String path : volumePaths) {
+            if (!first) where.append(" OR ");
+            where.append("_data LIKE '").append(path).append("/%'");
+            first = false;
+        }
+        where.append(")");
+
+        // For recently mounted volumes, DELETE ALL files that aren't in current MediaStore scan
+        // This ensures deleted files are properly removed even during incremental scans
+        // Use windowed approach to avoid cursor errors for large datasets
+        int totalDeleted = 0;
+        int offset = 0;
+        while (!mIsImportInterrupted) {
+            // For DELETE operations, we need to query first to get IDs, then delete in batches
+            String sortOrder = "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset;
+            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, where.toString(), null, sortOrder);
+
+            if (c == null || c.getCount() == 0) {
+                if (c != null) c.close();
+                break;
+            }
+
+            StringBuilder deleteWhere = new StringBuilder("_id IN (");
+            boolean firstId = true;
+            int count = 0;
+            while (c.moveToNext() && count < WINDOW_SIZE) {
+                if (!firstId) deleteWhere.append(",");
+                deleteWhere.append(c.getLong(0));
+                firstId = false;
+                count++;
+            }
+            deleteWhere.append(")");
+            c.close();
+
+            if (count > 0) {
+                int deleted = mCr.delete(VideoStoreInternal.FILES_IMPORT, deleteWhere.toString(), null);
+                totalDeleted += deleted;
+                log.debug("hideDeletedFilesFromRecentlyMountedVolumes: deleted {} files in batch", deleted);
+            }
+
+            if (count < WINDOW_SIZE) break; // No more rows to process
+            offset += WINDOW_SIZE;
+        }
+        log.debug("hideDeletedFilesFromRecentlyMountedVolumes: DELETED {} files from recently mounted volumes", totalDeleted);
+    }
+
+    /**
+     * Enhanced volume state checking that detects recently mounted volumes
+     */
+    private void checkVolumeStatesWithRecentMount(List<String> volumePaths, List<String> mounted,
+                                                List<String> unmounted, List<String> recentlyMounted) {
+        for (String path : volumePaths) {
+            if (isMountedReadable(ExtStorageManager.getVolumeState(path))) {
+                mounted.add(path);
+                // Check if this volume was recently hidden (within last 5 minutes)
+                if (wasVolumeRecentlyHidden(path)) {
+                    recentlyMounted.add(path);
+                }
+            } else {
+                unmounted.add(path);
+            }
+        }
+    }
+
+    /**
+     * Check if volume was recently hidden using windowed cursor approach
+     */
+    private boolean wasVolumeRecentlyHidden(String volumePath) {
+        long fiveMinutesAgo = (System.currentTimeMillis() / 1000) - 300; // 5 minutes
+        String selection = "volume_hidden > ? AND _data LIKE ?";
+        String[] args = {String.valueOf(fiveMinutesAgo), volumePath + "/%"};
+
+        // Use windowed approach with small limit since we only need to check existence
+        Cursor c = null;
+        try {
+            c = mCr.query(VideoStoreInternal.FILES_IMPORT,
+                         new String[]{"_id"}, selection, args, "_id ASC LIMIT 1");
+            boolean wasRecentlyHidden = (c != null && c.getCount() > 0);
+            return wasRecentlyHidden;
+        } finally {
+            if (c != null) c.close();
+        }
     }
 
     private static final String[] REMOTE_LIST_PROJECTION_BP = new String[] {
