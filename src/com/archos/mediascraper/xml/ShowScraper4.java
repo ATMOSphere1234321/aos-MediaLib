@@ -304,14 +304,20 @@ public class ShowScraper4 extends BaseScraper2 {
                 ExecutorService executor = Executors.newFixedThreadPool(Math.min(4, number_of_seasons));
                 List<Future<ShowIdSeasonSearchResult>> seasonFutures = new ArrayList<>();
 
+                // Make variables effectively final for use in Callable
+                final int finalShowId = showId;
+                final String finalLanguage = resultLanguage;
+                final boolean finalAdultScrape = adultScrape;
+                final MyTmdb finalTmdb = tmdb;
+
                 // Submit all season fetch tasks
                 for (int s = 1; s <= number_of_seasons; s++) {
                     final int seasonNum = s;
                     seasonFutures.add(executor.submit(new Callable<ShowIdSeasonSearchResult>() {
                         @Override
                         public ShowIdSeasonSearchResult call() {
-                            log.debug("getDetailsInternal: parallel fetch for show " + showId + " s" + seasonNum);
-                            return ShowIdSeasonSearch.getSeasonShowResponse(showId, seasonNum, resultLanguage, adultScrape, tmdb);
+                            log.debug("getDetailsInternal: parallel fetch for show " + finalShowId + " s" + seasonNum);
+                            return ShowIdSeasonSearch.getSeasonShowResponse(finalShowId, seasonNum, finalLanguage, finalAdultScrape, finalTmdb);
                         }
                     }));
                 }
