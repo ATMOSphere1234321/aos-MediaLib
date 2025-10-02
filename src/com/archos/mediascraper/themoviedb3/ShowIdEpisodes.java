@@ -19,6 +19,7 @@ import android.util.SparseArray;
 
 import com.archos.mediascraper.EpisodeTags;
 import com.archos.mediascraper.ScrapeStatus;
+import com.archos.mediascraper.ScraperImage;
 import com.archos.mediascraper.ShowTags;
 import com.uwetrottmann.tmdb2.entities.CastMember;
 import com.uwetrottmann.tmdb2.entities.CrewMember;
@@ -38,6 +39,10 @@ public class ShowIdEpisodes {
 
     private static final String DIRECTOR = "Director";
     private static final String WRITER = "Writer";
+
+    // Cache season poster ScraperImage objects to avoid redundant object creation and hash computations
+    // when multiple episodes share the same season poster
+    private static final Map<String, ScraperImage> sSeasonPosterImageCache = new HashMap<>();
 
     public static Map<String, EpisodeTags> getEpisodes(int showId, List<TvEpisode> tvEpisodes, Map<Integer, TvSeason> tvSeasons, ShowTags showTags, String language,
                                                        final boolean adultScrape, MyTmdb tmdb, Context context) {
@@ -89,7 +94,17 @@ public class ShowIdEpisodes {
                         }
                         // note tvSeason.poster_path can be null when show has only one serie e.g. https://api.themoviedb.org/3/tv/93911/season/1?language=en&api_key=051012651ba326cf5b1e2f482342eaa2
                         if (tvSeason.poster_path != null) {
-                            episodeTags.addDefaultPoster(ShowIdImagesParser.genPoster(showTags.getTitle(), tvSeason.poster_path, language, false, context));
+                            // Cache ScraperImage objects to avoid redundant creation for episodes sharing the same season poster
+                            String posterKey = showId + "|" + tvSeason.poster_path + "|" + language;
+                            ScraperImage seasonPoster = sSeasonPosterImageCache.get(posterKey);
+                            if (seasonPoster == null) {
+                                seasonPoster = ShowIdImagesParser.genPoster(showTags.getTitle(), tvSeason.poster_path, language, false, context);
+                                sSeasonPosterImageCache.put(posterKey, seasonPoster);
+                                log.trace("getEpisodes: cached season poster ScraperImage for " + posterKey);
+                            } else {
+                                log.trace("getEpisodes: reusing cached season poster ScraperImage for " + posterKey);
+                            }
+                            episodeTags.addDefaultPoster(seasonPoster);
                         } else {
                             log.debug("getEpisodes: tvSeason.poster_path is null get showTag default poster");
                             episodeTags.addDefaultPoster(showTags.getDefaultPoster());
