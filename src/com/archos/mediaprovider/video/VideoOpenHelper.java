@@ -46,7 +46,7 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
     // that is what onCreate creates
     private static final int DATABASE_CREATE_VERSION = 36; // initial version for v1.0 of nova (archos was 10)
     // that is the current version
-    private static final int DATABASE_VERSION = 47;
+    private static final int DATABASE_VERSION = 48;
     private static final String DATABASE_NAME = "media.db";
 
     // (Integer.MAX_VALUE / 2) rounded to human readable form
@@ -203,6 +203,13 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
             "BEGIN " +
                 "DELETE FROM " + FILES_TABLE_NAME + " WHERE remote_id=(OLD._id + " + SCANNED_ID_OFFSET + ");" +
             "END";
+
+    // indexes for network scanner performance optimization
+    private static final String CREATE_FILES_SCANNED_IDX_UNIQUE_ID =
+            "CREATE INDEX IF NOT EXISTS idx_archos_unique_id ON " + FILES_SCANNED_TABLE_NAME + "(archos_unique_id)";
+
+    private static final String CREATE_FILES_SCANNED_IDX_DATA =
+            "CREATE INDEX IF NOT EXISTS idx_data_prefix ON " + FILES_SCANNED_TABLE_NAME + "(_data)";
 
 
     // ------------- ---##[ All Files            ]## ---------------------------
@@ -1286,6 +1293,8 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
         db.execSQL(CREATE_FILES_SCANNED_TABLE_V32);
         db.execSQL(CREATE_FILES_SCANNED_TRIGGER_INSERT_V32);
         db.execSQL(CREATE_FILES_SCANNED_TRIGGER_DELETE);
+        db.execSQL(CREATE_FILES_SCANNED_IDX_UNIQUE_ID);
+        db.execSQL(CREATE_FILES_SCANNED_IDX_DATA);
         // create table that holds scanned/imported + added information about imported & scanned files
         db.execSQL(CREATE_FILES_TABLE_V32);
 
@@ -1459,6 +1468,11 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
         if (oldVersion < 47) { // add WatchingUpNextLoader performance optimizations
             log.debug("onUpgrade: " + 47 + " - optimizing WatchingUpNextLoader performance");
             ScraperTables.upgradeTo(db, 47);
+        }
+        if (oldVersion < 48) { // add network scanner performance indexes
+            log.debug("onUpgrade: " + 48 + " - adding indexes for network scanner performance");
+            db.execSQL(CREATE_FILES_SCANNED_IDX_UNIQUE_ID);
+            db.execSQL(CREATE_FILES_SCANNED_IDX_DATA);
         }
     }
 
