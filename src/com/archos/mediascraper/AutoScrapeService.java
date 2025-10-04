@@ -218,9 +218,9 @@ public class AutoScrapeService extends Service {
             // If killed by system, it will restart and check dirty state to resume interrupted operations
             return START_STICKY;
         }
-        
-        if (log.isDebugEnabled() && intent.getAction()==null) log.debug("onStartCommand: action is nul!!!");
-        if (log.isDebugEnabled() && intent.getAction()!=null) log.debug("onStartCommand: action " + intent.getAction());
+
+        if (log.isDebugEnabled() && intent != null && intent.getAction()==null) log.debug("onStartCommand: action is nul!!!");
+        if (log.isDebugEnabled() && intent != null && intent.getAction()!=null) log.debug("onStartCommand: action " + intent.getAction());
         try {
             if(intent!=null) {
                 if(intent.getAction()!=null&&intent.getAction().equals(EXPORT_EVERYTHING)) {
