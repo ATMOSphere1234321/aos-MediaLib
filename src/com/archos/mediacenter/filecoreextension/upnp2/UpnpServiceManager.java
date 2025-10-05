@@ -19,6 +19,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -91,6 +92,9 @@ public class UpnpServiceManager {
     private AndroidUpnpService mAndroidUpnpService;
     private List<Listener> mListeners = new LinkedList<>();
 
+    private WifiManager mWifiManager;
+    private WifiManager.MulticastLock mMulticastLock;
+
     /**
      * Handler running on main UI thread, used to post listeners callbacks to the UI thread
      */
@@ -145,6 +149,11 @@ public class UpnpServiceManager {
                                 mDevices.clear();
                                 informListenersOfDeviceListUpdate(mListeners);
                                 mAndroidUpnpService.getRegistry().removeListener(mRegistryListener);
+                                // Release multicast lock before unbinding
+                                if (mMulticastLock != null && mMulticastLock.isHeld()) {
+                                    mMulticastLock.release();
+                                    log.debug("MulticastLock released before restart");
+                                }
                                 try {
                                     mContext.unbindService(mServiceConnection);
                                 } catch (java.lang.IllegalArgumentException e) {
@@ -189,6 +198,11 @@ public class UpnpServiceManager {
 
     private UpnpServiceManager(Context context) {
         mContext = context;
+        mWifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (mWifiManager != null) {
+            mMulticastLock = mWifiManager.createMulticastLock("UpnpServiceManager");
+            mMulticastLock.setReferenceCounted(false);
+        }
     }
 
     /**
@@ -231,6 +245,12 @@ public class UpnpServiceManager {
             mAndroidUpnpService.getRegistry().removeListener(mRegistryListener);
         }
         if(mHasStarted) {
+            // Release multicast lock before unbinding (onServiceDisconnected won't be called)
+            if (mMulticastLock != null && mMulticastLock.isHeld()) {
+                mMulticastLock.release();
+                log.debug("MulticastLock released in stop()");
+            }
+
             try {
                 removeNetworkListener();
                 mDevices.clear();
@@ -270,6 +290,12 @@ public class UpnpServiceManager {
             mState = State.RUNNING;
             log.debug("State RUNNING");
 
+            // Acquire multicast lock for UPnP discovery
+            if (mMulticastLock != null && !mMulticastLock.isHeld()) {
+                mMulticastLock.acquire();
+                log.debug("MulticastLock acquired");
+            }
+
             // Listen for discovery stuff
             mAndroidUpnpService.getRegistry().addListener(mRegistryListener);
 
@@ -281,6 +307,12 @@ public class UpnpServiceManager {
         public void onServiceDisconnected(ComponentName className) {
             // Stop periodic search
             mUiHandler.removeCallbacks(mPeriodicSearchRunnable);
+
+            // Release multicast lock
+            if (mMulticastLock != null && mMulticastLock.isHeld()) {
+                mMulticastLock.release();
+                log.debug("MulticastLock released");
+            }
 
             // no more service
             mAndroidUpnpService = null;
