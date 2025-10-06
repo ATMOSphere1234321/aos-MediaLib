@@ -638,38 +638,15 @@ public class VideoStoreImportImpl {
             int count = allFiles.getCount();
             int ccount = allFiles.getColumnCount();
             if (count > 0) {
-                ArrayList<Long> ids = new ArrayList<>();
-                // Use windowed approach to get existing IDs to avoid cursor errors
-                int offset = 0;
-                while (!mIsImportInterrupted) {
-                    Cursor c = null;
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            Bundle queryArgs = new Bundle();
-                            queryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, null);
-                            queryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, null);
-                            queryArgs.putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, new String[]{BaseColumns._ID});
-                            queryArgs.putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_ASCENDING);
-                            queryArgs.putInt(ContentResolver.QUERY_ARG_LIMIT, WINDOW_SIZE);
-                            queryArgs.putInt(ContentResolver.QUERY_ARG_OFFSET, offset);
-                            c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, queryArgs, null);
-                        } else {
-                            c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, null, null,
-                                        BaseColumns._ID + " ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
-                        }
-                        if (c == null || c.getCount() == 0) break;
-
-                        int batchCount = 0;
-                        while (c.moveToNext() && !mIsImportInterrupted) {
-                            ids.add(c.getLong(0));
-                            batchCount++;
-                        }
-                        if (batchCount < WINDOW_SIZE) break;
-                        offset += WINDOW_SIZE;
-                    } finally {
-                        if (c != null) c.close();
-                    }
+                HashSet<Long> ids = new HashSet<>();
+                // Single query is fast; HashSet prevents OOM that ArrayList caused
+                Cursor c = cr.query(VideoStoreInternal.FILES_IMPORT, new String[] { "_id" }, null, null, null);
+                if (c != null) {
+                    while (c.moveToNext() && !mIsImportInterrupted)
+                        ids.add(c.getLong(0));
+                    c.close();
                 }
+                log.debug("copyData: loaded {} existing IDs", ids.size());
                 // transaction size limited, acts like buffered output stream and auto-flushes queue
                 BulkInserter inserter = new BulkInserter(VideoStoreInternal.FILES_IMPORT, cr, 2000);
                 log.debug("copyData: found items to import:" + count);
@@ -892,40 +869,9 @@ public class VideoStoreImportImpl {
                 whereHidden.append(" AND _id NOT IN (").append(existingFiles).append(")");
             }
 
-            // Use windowed approach for potentially large updates
-            // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
-            int totalHidden = 0;
-            int offset = 0;
-            while (!mIsImportInterrupted) {
-                Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
-                    whereHidden.toString(), null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
-
-                if (c == null || c.getCount() == 0) {
-                    if (c != null) c.close();
-                    break;
-                }
-
-                StringBuilder updateWhere = new StringBuilder("_id IN (");
-                boolean firstId = true;
-                int count = 0;
-                while (c.moveToNext() && count < WINDOW_SIZE) {
-                    if (!firstId) updateWhere.append(",");
-                    updateWhere.append(c.getLong(0));
-                    firstId = false;
-                    count++;
-                }
-                c.close();
-                updateWhere.append(")");
-
-                if (count > 0) {
-                    int hiddenCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden, updateWhere.toString(), null);
-                    totalHidden += hiddenCount;
-                }
-
-                if (count < WINDOW_SIZE) break;
-                offset += WINDOW_SIZE;
-            }
-            log.debug("updateVolumeHiddenStates: hidden {} rows", totalHidden);
+            // Direct UPDATE is efficient; no need for windowing
+            int hiddenCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvHidden, whereHidden.toString(), null);
+            log.debug("updateVolumeHiddenStates: hidden {} rows", hiddenCount);
         }
 
         if (!TextUtils.isEmpty(existingFiles)) {
@@ -937,40 +883,9 @@ public class VideoStoreImportImpl {
                 cvPresent.put("volume_hidden", 0);
                 String wherePresent = "_id IN (" + existingFiles + ") AND volume_hidden != 0 AND " + visibleClause;
 
-                // Use windowed approach for potentially large updates
-                // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
-                int totalUnhidden = 0;
-                int offset = 0;
-                while (!mIsImportInterrupted) {
-                    Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
-                        wherePresent, null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
-
-                    if (c == null || c.getCount() == 0) {
-                        if (c != null) c.close();
-                        break;
-                    }
-
-                    StringBuilder updateWhere = new StringBuilder("_id IN (");
-                    boolean firstId = true;
-                    int count = 0;
-                    while (c.moveToNext() && count < WINDOW_SIZE) {
-                        if (!firstId) updateWhere.append(",");
-                        updateWhere.append(c.getLong(0));
-                        firstId = false;
-                        count++;
-                    }
-                    c.close();
-                    updateWhere.append(")");
-
-                    if (count > 0) {
-                        int presentCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent, updateWhere.toString(), null);
-                        totalUnhidden += presentCount;
-                    }
-
-                    if (count < WINDOW_SIZE) break;
-                    offset += WINDOW_SIZE;
-                }
-                log.debug("updateVolumeHiddenStates: unhidden {} rows", totalUnhidden);
+                // Direct UPDATE is efficient; no need for windowing
+                int presentCount = mCr.update(VideoStoreInternal.FILES_IMPORT, cvPresent, wherePresent, null);
+                log.debug("updateVolumeHiddenStates: unhidden {} rows", presentCount);
             }
         }
     }
@@ -1108,40 +1023,9 @@ public class VideoStoreImportImpl {
         }
         where.append(")");
 
-        // Use windowed approach to avoid cursor errors for large datasets
-        // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
-        int totalHidden = 0;
-        int offset = 0;
-        while (!mIsImportInterrupted) {
-            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
-                where.toString(), null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
-
-            if (c == null || c.getCount() == 0) {
-                if (c != null) c.close();
-                break;
-            }
-
-            StringBuilder updateWhere = new StringBuilder("_id IN (");
-            boolean firstId = true;
-            int count = 0;
-            while (c.moveToNext() && count < WINDOW_SIZE) {
-                if (!firstId) updateWhere.append(",");
-                updateWhere.append(c.getLong(0));
-                firstId = false;
-                count++;
-            }
-            c.close();
-            updateWhere.append(")");
-
-            if (count > 0) {
-                int hidden = mCr.update(VideoStoreInternal.FILES_IMPORT, cv, updateWhere.toString(), null);
-                totalHidden += hidden;
-            }
-
-            if (count < WINDOW_SIZE) break; // No more rows to process
-            offset += WINDOW_SIZE;
-        }
-        log.debug("hideFilesFromVolumes: hidden {} files from unmounted volumes", totalHidden);
+        // Direct UPDATE is efficient; no need for windowing (UPDATE doesn't return cursors)
+        int hidden = mCr.update(VideoStoreInternal.FILES_IMPORT, cv, where.toString(), null);
+        log.debug("hideFilesFromVolumes: hidden {} files from unmounted volumes", hidden);
     }
 
     private void unhideFilesFromVolumes(List<String> volumePaths) {
@@ -1159,40 +1043,9 @@ public class VideoStoreImportImpl {
         }
         where.append(")");
 
-        // Use windowed approach to avoid cursor errors for large datasets
-        // Since SQLite doesn't support LIMIT in UPDATE, we query IDs first then update
-        int totalUnhidden = 0;
-        int offset = 0;
-        while (!mIsImportInterrupted) {
-            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"},
-                where.toString(), null, "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset);
-
-            if (c == null || c.getCount() == 0) {
-                if (c != null) c.close();
-                break;
-            }
-
-            StringBuilder updateWhere = new StringBuilder("_id IN (");
-            boolean firstId = true;
-            int count = 0;
-            while (c.moveToNext() && count < WINDOW_SIZE) {
-                if (!firstId) updateWhere.append(",");
-                updateWhere.append(c.getLong(0));
-                firstId = false;
-                count++;
-            }
-            c.close();
-            updateWhere.append(")");
-
-            if (count > 0) {
-                int unhidden = mCr.update(VideoStoreInternal.FILES_IMPORT, cv, updateWhere.toString(), null);
-                totalUnhidden += unhidden;
-            }
-
-            if (count < WINDOW_SIZE) break; // No more rows to process
-            offset += WINDOW_SIZE;
-        }
-        log.debug("unhideFilesFromVolumes: unhidden {} files from mounted volumes", totalUnhidden);
+        // Direct UPDATE is efficient; no need for windowing (UPDATE doesn't return cursors)
+        int unhidden = mCr.update(VideoStoreInternal.FILES_IMPORT, cv, where.toString(), null);
+        log.debug("unhideFilesFromVolumes: unhidden {} files from mounted volumes", unhidden);
     }
 
     private void checkDatabaseForUnmountedVolumes(List<String> mountedVolumePaths, List<String> unmountedVolumePaths) {
@@ -1276,46 +1129,13 @@ public class VideoStoreImportImpl {
         }
         where.append(")");
 
-        // DELETE (not hide) files that are missing from mounted volumes since they're actually gone
-        // Use windowed approach to avoid cursor errors for large datasets
-        int totalDeleted = 0;
-        int offset = 0;
-        while (!mIsImportInterrupted) {
-            // For DELETE operations, we need to query first to get IDs, then delete in batches
-            String sortOrder = "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset;
-            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, where.toString(), null, sortOrder);
-
-            if (c == null || c.getCount() == 0) {
-                if (c != null) c.close();
-                break;
-            }
-
-            StringBuilder deleteWhere = new StringBuilder("_id IN (");
-            boolean firstId = true;
-            int count = 0;
-            while (c.moveToNext() && count < WINDOW_SIZE) {
-                if (!firstId) deleteWhere.append(",");
-                deleteWhere.append(c.getLong(0));
-                firstId = false;
-                count++;
-            }
-            deleteWhere.append(")");
-            c.close();
-
-            if (count > 0) {
-                int deleted = mCr.delete(VideoStoreInternal.FILES_IMPORT, deleteWhere.toString(), null);
-                totalDeleted += deleted;
-                log.debug("hideDeletedFilesFromMountedVolumes: deleted {} files in batch", deleted);
-            }
-
-            if (count < WINDOW_SIZE) break; // No more rows to process
-            offset += WINDOW_SIZE;
-        }
-        log.debug("hideDeletedFilesFromMountedVolumes: DELETED {} files from mounted volumes", totalDeleted);
+        // Direct DELETE is efficient; no need for windowing
+        int deleted = mCr.delete(VideoStoreInternal.FILES_IMPORT, where.toString(), null);
+        log.debug("hideDeletedFilesFromMountedVolumes: DELETED {} files from mounted volumes", deleted);
     }
 
     /**
-     * More aggressive deletion for recently remounted volumes using windowed approach
+     * More aggressive deletion for recently remounted volumes
      */
     private void hideDeletedFilesFromRecentlyMountedVolumes(List<String> volumePaths, String existingFiles, long timestamp) {
         if (volumePaths.isEmpty() || TextUtils.isEmpty(existingFiles)) return;
@@ -1331,41 +1151,9 @@ public class VideoStoreImportImpl {
 
         // For recently mounted volumes, DELETE ALL files that aren't in current MediaStore scan
         // This ensures deleted files are properly removed even during incremental scans
-        // Use windowed approach to avoid cursor errors for large datasets
-        int totalDeleted = 0;
-        int offset = 0;
-        while (!mIsImportInterrupted) {
-            // For DELETE operations, we need to query first to get IDs, then delete in batches
-            String sortOrder = "_id ASC LIMIT " + WINDOW_SIZE + " OFFSET " + offset;
-            Cursor c = mCr.query(VideoStoreInternal.FILES_IMPORT, new String[]{"_id"}, where.toString(), null, sortOrder);
-
-            if (c == null || c.getCount() == 0) {
-                if (c != null) c.close();
-                break;
-            }
-
-            StringBuilder deleteWhere = new StringBuilder("_id IN (");
-            boolean firstId = true;
-            int count = 0;
-            while (c.moveToNext() && count < WINDOW_SIZE) {
-                if (!firstId) deleteWhere.append(",");
-                deleteWhere.append(c.getLong(0));
-                firstId = false;
-                count++;
-            }
-            deleteWhere.append(")");
-            c.close();
-
-            if (count > 0) {
-                int deleted = mCr.delete(VideoStoreInternal.FILES_IMPORT, deleteWhere.toString(), null);
-                totalDeleted += deleted;
-                log.debug("hideDeletedFilesFromRecentlyMountedVolumes: deleted {} files in batch", deleted);
-            }
-
-            if (count < WINDOW_SIZE) break; // No more rows to process
-            offset += WINDOW_SIZE;
-        }
-        log.debug("hideDeletedFilesFromRecentlyMountedVolumes: DELETED {} files from recently mounted volumes", totalDeleted);
+        // Direct DELETE is efficient; no need for windowing
+        int deleted = mCr.delete(VideoStoreInternal.FILES_IMPORT, where.toString(), null);
+        log.debug("hideDeletedFilesFromRecentlyMountedVolumes: DELETED {} files from recently mounted volumes", deleted);
     }
 
     /**
