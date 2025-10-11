@@ -133,13 +133,13 @@ public class AutoScrapeService extends Service {
 
     public static void startService(Context context) {
         log.debug("startService in foreground");
-        mContext = context;
+        mContext = context.getApplicationContext();
         ContextCompat.startForegroundService(context, new Intent(context, AutoScrapeService.class));
     }
 
     public static void startServiceAfterNetworkScan(Context context) {
         log.debug("startServiceAfterNetworkScan - forced start after network scan");
-        mContext = context;
+        mContext = context.getApplicationContext();
         Intent intent = new Intent(context, AutoScrapeService.class);
         intent.putExtra("FORCE_AFTER_NETWORK_SCAN", true);
         ContextCompat.startForegroundService(context, intent);
@@ -368,9 +368,15 @@ public class AutoScrapeService extends Service {
      * Register content observer and start autoscrap if enabled
      * @param context
      */
-    public static void registerObserver(final Context context) {
+    public static void registerObserver(Context context) {
         log.debug("registerObserver");
-        final Context appContext = context.getApplicationContext();
+        // Extract application context immediately and don't reference the original context parameter
+        // This prevents the ContentObserver from capturing the Activity context
+        Context appContext = context.getApplicationContext();
+        registerObserverInternal(appContext);
+    }
+
+    private static void registerObserverInternal(final Context appContext) {
         appContext.getContentResolver().registerContentObserver(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, false, new ContentObserver(null) {
             @Override
             public void onChange(boolean selfChange) {
@@ -381,10 +387,10 @@ public class AutoScrapeService extends Service {
                         log.trace("registerObserver.onChange: already scraping, not launching service!");
                         return;
                     }
-                    
+
                     // Look for all the videos not yet processed and not located in the Camera folder
                     String[] selectionArgs = new String[]{ Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getPath() + "/Camera" + "/%" };
-                    Cursor cursor = context.getContentResolver().query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, SCRAPER_ACTIVITY_COLS, WHERE_NOT_SCRAPED, selectionArgs, null);
+                    Cursor cursor = appContext.getContentResolver().query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, SCRAPER_ACTIVITY_COLS, WHERE_NOT_SCRAPED, selectionArgs, null);
 
                     if (cursor != null) {
                         final int cursorGetCount = cursor.getCount();

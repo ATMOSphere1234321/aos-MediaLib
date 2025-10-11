@@ -46,7 +46,7 @@ public class Blacklist {
          * update of the database to (un-)hide or rescan files.
          * For now it's only blacklisting files ending with "sample" or "trailer"
          */
-        mContext = context;
+        mContext = context.getApplicationContext();
         updateBlacklisteds();
     }
 
