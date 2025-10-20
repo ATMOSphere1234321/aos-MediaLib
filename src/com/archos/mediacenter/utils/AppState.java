@@ -42,7 +42,7 @@ public class AppState {
 
     public static boolean isForeGround() {
         synchronized (sStartedActivities) {
-            log.debug("isForeGround=" + (!sStartedActivities.isEmpty()));
+            log.debug("isForeGround={}", (!sStartedActivities.isEmpty()));
             return !sStartedActivities.isEmpty();
         }
     }
@@ -66,7 +66,7 @@ public class AppState {
     }
 
     private static void notifyListener(Activity activity, boolean foreground) {
-        log.debug("notifyListener: " + foreground);
+        log.debug("notifyListener: {}", foreground);
         // copy keyset into an array to allow removing of listener from listener.
         OnForeGroundListener[] onForegroundListenerArray = null;
         synchronized (sListeners) {
@@ -88,7 +88,7 @@ public class AppState {
             new ActivityLifecycleCallbacks() {
                 @Override
                 public void onActivityStopped(Activity activity) {
-                    log.debug("onActivityStopped:" + activity);
+                    log.debug("onActivityStopped:{}", activity);
                     int activityKey = System.identityHashCode(activity);
                     synchronized (sStartedActivities) {
                         boolean foregroundOld = isForeGround();
@@ -98,7 +98,7 @@ public class AppState {
                             boolean foregroundNew = isForeGround();
                             if (foregroundNew != foregroundOld)
                                 notifyListener(activity, foregroundNew);
-                            log.debug("onActivityStopped isForeGround: " + isForeGround());
+                            log.debug("onActivityStopped isForeGround: {}", isForeGround());
                         }
                     }
                 }
@@ -114,7 +114,7 @@ public class AppState {
                 }
                 @Override
                 public void onActivityStarted(Activity activity) {
-                    log.debug("onActivityStarted:" + activity);
+                    log.debug("onActivityStarted:{}", activity);
                     if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
                         if (!isActuallyForeground(activity))
                             return;
@@ -127,7 +127,7 @@ public class AppState {
                             boolean foregroundNew = isForeGround();
                             if (foregroundNew != foregroundOld)
                                 notifyListener(activity, foregroundNew);
-                            log.debug("onActivityStarted isForeGround: " + isForeGround());
+                            log.debug("onActivityStarted isForeGround: {}", isForeGround());
                         } else {
                             sChangingConfiguration = false;
                         }
@@ -135,23 +135,23 @@ public class AppState {
                 }
                 @Override
                 public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
-                    log.debug("onActivitySaveInstanceState:" + activity);
+                    log.debug("onActivitySaveInstanceState:{}", activity);
                 }
                 @Override
                 public void onActivityResumed(Activity activity) {
-                    log.debug("onActivityResumed:" + activity);
+                    log.debug("onActivityResumed:{}", activity);
                 }
                 @Override
                 public void onActivityPaused(Activity activity) {
-                    log.debug("onActivityPaused:" + activity);
+                    log.debug("onActivityPaused:{}", activity);
                 }
                 @Override
                 public void onActivityDestroyed(Activity activity) {
-                    log.debug("onActivityDestroyed:" + activity);
+                    log.debug("onActivityDestroyed:{}", activity);
                 }
                 @Override
                 public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-                    log.debug("onActivityCreated:" + activity);
+                    log.debug("onActivityCreated:{}", activity);
                 }
             };
 }

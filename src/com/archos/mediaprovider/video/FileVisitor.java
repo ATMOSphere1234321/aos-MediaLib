@@ -82,20 +82,20 @@ public class FileVisitor {
                                 }
                         }
                     } catch (IOException e) {
-                        if (log.isTraceEnabled()) log.error("recurse: IOException for " + file.getName(), e);
-                        else log.error("recurse: IOException for " + file.getName());
+                        if (log.isTraceEnabled()) log.error("recurse: IOException for {}", file.getName(), e);
+                        else log.error("recurse: IOException for {}", file.getName());
                         listener.onListingError(file, e);
                     } catch (AuthenticationException e) {
-                        if (log.isTraceEnabled()) log.error("recurse: AuthenticationException for " + file.getName(), e);
-                        else log.error("recurse: AuthenticationException for " + file.getName());
+                        if (log.isTraceEnabled()) log.error("recurse: AuthenticationException for {}", file.getName(), e);
+                        else log.error("recurse: AuthenticationException for {}", file.getName());
                         listener.onListingError(file, e);
                     } catch (SftpException e) {
-                        if (log.isTraceEnabled()) log.error("recurse: SftpException for " + file.getName(), e);
-                        else log.error("recurse: SftpException for " + file.getName());
+                        if (log.isTraceEnabled()) log.error("recurse: SftpException for {}", file.getName(), e);
+                        else log.error("recurse: SftpException for {}", file.getName());
                         listener.onListingError(file, e);
                     } catch (JSchException e) {
-                        if (log.isTraceEnabled()) log.error("recurse: JSchException for " + file.getName(), e);
-                        else log.error("recurse: JSchException for " + file.getName());
+                        if (log.isTraceEnabled()) log.error("recurse: JSchException for {}", file.getName(), e);
+                        else log.error("recurse: JSchException for {}", file.getName());
                         listener.onListingError(file, e);
                     }
                 }

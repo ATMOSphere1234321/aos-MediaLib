@@ -118,7 +118,7 @@ public class HttpCache {
         mCacheDirectory = directory;
         mCacheTimeOut = maxAge;
 
-        log.debug("HttpCache: creating cache dir " + directory.getPath());
+        log.debug("HttpCache: creating cache dir {}", directory.getPath());
 
         if (mCacheDirectory == null)
             throw new RuntimeException("You must specify a Directory");
@@ -140,7 +140,7 @@ public class HttpCache {
             for (File f : list) {
                 if (fileNeedsRefresh(f)) {
                     if (!f.delete()) {
-                        log.debug("could not delete old file: " + f);
+                        log.debug("could not delete old file: {}", f);
                     }
                 } else if (f.isFile()) {
                     mFileMap.put(f.getName(), f);
@@ -192,7 +192,7 @@ public class HttpCache {
         String timeString = String.format("%.2f s", timeSec);
         String speedString = String.format("%.2f kB/s", speedKbs);
         String sizeString = String.format("%.2f kB", sizeKb);
-        log.debug("XXSPEED", "[" + url + "] " + sizeString + " in " + timeString + " (~" + speedString + ")");
+        log.debug("XXSPEED [{}] {} in {} (~{})", url, sizeString, timeString, speedString);
     }
 
     /**
@@ -203,7 +203,7 @@ public class HttpCache {
      * @return a File or null if the download failed
      */
     public File getFile(String url, boolean useGzip, Map<String, String> extraHeaders) {
-        log.debug("getFile: request [" + url + "]");
+        log.debug("getFile: request [{}]", url);
         if (url == null) {
             log.warn("getFile(null)");
             return null;
@@ -213,10 +213,10 @@ public class HttpCache {
         if (mPreferredDirectory != null) {
             File preferred = getResultingPreferredCacheFile(url);
             if (fileIsValid(preferred)) {
-                log.debug("getFile: already have this file " + preferred.getPath());
+                log.debug("getFile: already have this file {}", preferred.getPath());
                 return preferred;
             } else {
-                log.debug("getFile: we do not have this " + preferred.getPath());
+                log.debug("getFile: we do not have this {}", preferred.getPath());
             }
         }
         // do not proceed if the file is already downloading..
@@ -226,7 +226,7 @@ public class HttpCache {
         try {
             ret = mFileMap.get(url2Filename(url));
             if (ret == null || !ret.exists() || fileNeedsRefresh(ret)) {
-                log.debug("getFile: downloading " + ThreadInfo());
+                log.debug("getFile: downloading {}", ThreadInfo());
                 // someone may have cleared the cache and we need to recreate the directory.
                 if (!mCacheDirectory.exists()) {
                     if (!mCacheDirectory.mkdirs()) {
@@ -260,18 +260,18 @@ public class HttpCache {
                         logSpeed(url, time, size);
                     }
                     if (inProgressFile.renameTo(generatedFile)) {
-                        log.debug("getFile: file renamed into " + generatedFile.getPath());
+                        log.debug("getFile: file renamed into {}", generatedFile.getPath());
                         mFileMap.put(url2Filename(url), generatedFile);
                         log.debug("getFile: mFileMap");
                         ret = generatedFile;
                         downloadSuccess = true;
                     } else {
-                        log.warn("failed to rename " + inProgressFile + " to " +  generatedFile);
+                        log.warn("failed to rename {} to {}", inProgressFile, generatedFile);
                         inProgressFile.delete();
                         generatedFile.delete();
                     }
                 } catch (IOException e) {
-                    log.warn("getFile: Exception: " + e);
+                    log.warn("getFile: Exception: {}", e);
                 } finally {
                     closeSilently(downloader);
                     // if stream are != null close them
@@ -287,7 +287,7 @@ public class HttpCache {
                     if (fallbackFile != null && fallbackFile.exists()) {
                         ret = fallbackFile;
                         downloadSuccess = true;
-                        log.debug("getFile: using " + ret.getAbsolutePath() + " as fallback");
+                        log.debug("getFile: using {} as fallback", ret.getAbsolutePath());
                     }
                 }
             }
@@ -295,7 +295,7 @@ public class HttpCache {
             // this is not the error
             mUrlLock.unlock(url);
             // ... and threads waiting so they can check the list again
-            log.debug("getFile: Exiting getFile() " + ThreadInfo());
+            log.debug("getFile: Exiting getFile() {}", ThreadInfo());
         }
 
         return ret;
@@ -307,7 +307,8 @@ public class HttpCache {
             if ((f.lastModified() + mCacheTimeOut) < System.currentTimeMillis()) {
                 if (log.isDebugEnabled()) {
                     DateFormat fmt = DateFormat.getInstance();
-                    log.debug("fileNeedsRefresh: File " + f.getPath() + " too old f:" + fmt.format(new Date(f.lastModified())) + " now:" + fmt.format(new Date()));
+                    log.debug("fileNeedsRefresh: File {} too old f:{} now:{}", f.getPath(),
+                            fmt.format(new Date(f.lastModified())), fmt.format(new Date()));
                 }
                 return true;
             }

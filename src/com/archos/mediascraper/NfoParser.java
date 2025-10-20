@@ -144,11 +144,8 @@ public class NfoParser {
         SAXParserFactory parserFactory = SAXParserFactory.newInstance();
         try {
             return parserFactory.newSAXParser();
-        } catch (ParserConfigurationException e) {
-            log.error("Exception: " + e, e);
-            throw new RuntimeException(e);
-        } catch (SAXException e) {
-            log.error("Exception: " + e, e);
+        } catch (ParserConfigurationException | SAXException e) {
+            log.error("Exception", e);
             throw new RuntimeException(e);
         }
     }
@@ -237,7 +234,7 @@ public class NfoParser {
 
     public static BaseTags getTagForFile(Uri file, Context context) {
         NfoFile nfo = determineNfoFile(file);
-        log.debug("getTagForFile: found nfo file " + nfo.videoNfo + ", nfo.hasNfo()=" + nfo.hasNfo());
+        log.debug("getTagForFile: found nfo file {}, nfo.hasNfo()={}", nfo.videoNfo, nfo.hasNfo());
         if (nfo != null && nfo.hasNfo()) {
             return getTagForFile(nfo, context, null);
         }
@@ -308,18 +305,18 @@ public class NfoParser {
                 }
             } catch (SAXException e) {
                 // could not parse
-                log.debug("Exception: " + e, e);
+                log.error("XML parsing failed for the NFO file.", e);
             } catch (IOException e) {
                 // could not read file
-                log.debug("Exception: " + e, e);
+                log.error("Failed to read the NFO file.", e);
             } catch (Exception e) {
-                log.debug("Exception: " + e, e);
-            }finally {
+                log.error("Failed to read the NFO file.", e);
+            } finally {
                 if(nfoInputStream!=null)
                     try {
                         nfoInputStream.close();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        log.error("Failure closing stream", e);
                     }
             }
         }
@@ -390,16 +387,16 @@ public class NfoParser {
             return result;
         } catch (SAXException e) {
             // could not parse
-            log.debug("Exception: " + e, e);
+            log.error("XML parsing failed for the NFO file.", e);
         } catch (Exception e) {
             // could not read file
-            log.debug("Exception: " + e, e);
+            log.error("Failed to read the NFO file.", e);
         }finally {
             if(nfoInputStream!=null)
                 try {
                     nfoInputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    log.error("Failure closing stream", e);
                 }
         }
         return null;

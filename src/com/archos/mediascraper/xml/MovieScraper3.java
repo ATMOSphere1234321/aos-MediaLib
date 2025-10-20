@@ -89,16 +89,16 @@ public class MovieScraper3 extends BaseScraper2 {
     public ScrapeSearchResult getMatches2(SearchInfo info, int maxItems) {
         // check input
         if (info == null || !(info instanceof MovieSearchInfo)) {
-            log.error("bad search info: " + info == null ? "null" : "tvshow in movie scraper");
+            log.error("bad search info: {}", info == null ? "null" : "tvshow in movie scraper");
             return new ScrapeSearchResult(null, true, ScrapeStatus.ERROR, null);
         }
         MovieSearchInfo searchInfo = (MovieSearchInfo) info;
-        log.debug("getMatches2: movie search:" + searchInfo.getName());
+        log.debug("getMatches2: movie search:{}", searchInfo.getName());
         if (tmdb == null) reauth();
         if (searchService == null) searchService = tmdb.searchService();
         // get configured language
         String language = Scraper.getLanguage(mContext);
-        log.debug("movie search:" + searchInfo.getName() + " year:" + searchInfo.getYear() + " language:" + language);
+        log.debug("movie search:{} year:{} language:{}", searchInfo.getName(), searchInfo.getYear(), language);
         SearchMovieResult searchResult = SearchMovie2.search(searchInfo.getName(), language, searchInfo.getYear(), maxItems, searchService, adultScrape);
         // TODO: this triggers scrape for all search results, is this intended?
         if (searchResult.status == ScrapeStatus.OKAY) {
@@ -114,7 +114,7 @@ public class MovieScraper3 extends BaseScraper2 {
     protected ScrapeDetailResult getDetailsInternal(SearchResult result, Bundle options) {
         // TODO: why it searches every first level result?
         String language = Scraper.getLanguage(mContext);
-        log.debug("getDetailsInternal: language=" + language);
+        log.debug("getDetailsInternal: language={}", language);
 
         long movieId = result.getId();
         Uri searchFile = result.getFile();
@@ -160,7 +160,7 @@ public class MovieScraper3 extends BaseScraper2 {
 
         // if there was no movie description in the native language get it from default
         if (tag.getPlot() == null || tag.getPlot().isEmpty()) {
-            log.debug("ScrapeDetailResult: getting description in en because plot non existent in " + language);
+            log.debug("ScrapeDetailResult: getting description in en because plot non existent in {}", language);
             MovieIdDescription2.addDescription(movieId, tag, moviesService);
         }
         tag.downloadPoster(mContext);

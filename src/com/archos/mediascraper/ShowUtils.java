@@ -112,7 +112,7 @@ public final class ShowUtils {
      *  If the filename doesn't match a tv show pattern, returns null.
      */
     public static Map<String, String> parseShowName(String filename) {
-        log.debug("parseShowName: " + filename);
+        log.debug("parseShowName: {}", filename);
         final HashMap<String, String> buffer = new HashMap<String, String>();
         Pair<String, String> nameYear;
         Pair<String, String> nameCountry;
@@ -135,7 +135,7 @@ public final class ShowUtils {
                             year = nameYear.second;
                         }
                     }
-                    log.debug("getMatch: patternsShowFirst " + name + " season " + matcher.group(2) + " episode " + matcher.group(3) + " year " + year + " country " + nameCountry.second);
+                    log.debug("getMatch: patternsShowFirst {} season {} episode {} year {} country {}", name, matcher.group(2), matcher.group(3), year, nameCountry.second);
                     buffer.put(SHOW, name);
                     String season = matcher.group(2);
                     buffer.put(SEASON, (season == null || season.isEmpty()) ? "1" : season);
@@ -157,7 +157,7 @@ public final class ShowUtils {
                         name = removeAfterEmptyParenthesis(nameYear.first);
                         name = cleanUpName(name);
                         nameCountry = getCountryOfOrigin(name);
-                        log.debug("getMatch: patternsEpisodeFirst " + nameCountry.first + " season " + matcher.group(1) + " episode " + matcher.group(2) + " year " + nameYear.second);
+                        log.debug("getMatch: patternsEpisodeFirst {} season {} episode {} year {}", nameCountry.first, matcher.group(1), matcher.group(2), nameYear.second);
                         buffer.put(SHOW, nameCountry.first);
                         buffer.put(SEASON, matcher.group(1));
                         buffer.put(EPNUM, matcher.group(2));
@@ -186,15 +186,15 @@ public final class ShowUtils {
         }
         // remove trailing '/' if it exists
         filename = removeTrailingSlash(filename);
-        log.debug("isTvShow: parsing " + filename);
+        log.debug("isTvShow: parsing {}", filename);
         for(Pattern regexp: patternsShowFirst) {
             Matcher m = regexp.matcher(filename);
             try {
                 if(m.matches()) {
-                    log.debug("isTvShow: match found " + regexp.toString());
+                    log.debug("isTvShow: match found {}", regexp.toString());
                     return true;
                 } else {
-                    log.debug("isTvShow: match not found " + regexp.toString());
+                    log.debug("isTvShow: match not found {}", regexp.toString());
                 }
             } catch (IllegalArgumentException ignored) {
                 if (log.isDebugEnabled()) log.debug("isTvShow: IllegalArgumentException");
@@ -220,7 +220,7 @@ public final class ShowUtils {
         try {
             encode = URLEncoder.encode(input, "UTF-8");
         } catch (UnsupportedEncodingException e1) {
-            log.error(ShowUtils.class.getSimpleName(), "Error: " + e1, e1);
+            log.error("{} Error: {}", ShowUtils.class.getSimpleName(), e1, e1);
         }
         return encode;
     }

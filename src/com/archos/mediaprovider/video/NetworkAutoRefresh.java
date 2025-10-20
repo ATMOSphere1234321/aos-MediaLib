@@ -96,7 +96,7 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                 SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss.SSS");
                 Date dt = new Date();
                 String S = sdf.format(dt);
-                log.debug("onReceive: skipping rescan : " + S + " period = " + pref.getInt(AUTO_RESCAN_PERIOD, 0)+" is scanning ? "+String.valueOf(com.archos.mediaprovider.video.NetworkScannerReceiver.isScannerWorking()));
+                log.debug("onReceive: skipping rescan : {} period = {} is scanning ? {}", S, pref.getInt(AUTO_RESCAN_PERIOD, 0), String.valueOf(com.archos.mediaprovider.video.NetworkScannerReceiver.isScannerWorking()));
                 return;
             }
             pref.edit().putLong(AUTO_RESCAN_LAST_SCAN, System.currentTimeMillis()).commit();
@@ -114,7 +114,7 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                         int rescan = cursor.getInt(rescanKey);
                         // if this uri is to be rescan automatically, add it to the list
                         if (rescan == 1) {
-                            log.debug("onReceive: add to scan list " + uri);
+                            log.debug("onReceive: add to scan list {}", uri);
                             toUpdate.add(uri);
                         }
                     }
@@ -136,7 +136,7 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                 boolean triggeredScan = false;
                 int scanCount = 0;
                 for (Uri uri : toUpdate) {
-                    log.debug("onReceive: scanning "+uri);
+                    log.debug("onReceive: scanning {}", uri);
                     if (shouldSkipScanForInactiveServer(context, uri)) {
                         log.debug("onReceive: skip scan for inactive server {}", uri);
                         continue;
@@ -157,12 +157,12 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                     scanCount++;
                     // Increment the network scan counter for each folder
                     AutoScrapeService.incrementNetworkScanCount();
-                    log.debug("onReceive: incremented network scan count for " + uri);
+                    log.debug("onReceive: incremented network scan count for {}", uri);
                 }
 
                 // Start AutoScrapeService after network scanning to scrape newly found videos
                 if (triggeredScan && AutoScrapeService.isEnable(context)) {
-                    log.debug("onReceive: starting AutoScrapeService after network scan, total folders: " + scanCount);
+                    log.debug("onReceive: starting AutoScrapeService after network scan, total folders: {}", scanCount);
                     AutoScrapeService.startServiceAfterNetworkScan(context);
                 }
             }

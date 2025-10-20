@@ -184,7 +184,7 @@ public class ScraperImage {
         String lUrl = cur.getString(cur.getColumnIndexOrThrow(type.largeUrlColumn));
         String tFile = cur.getString(cur.getColumnIndexOrThrow(type.thumbFileColumn));
         String tUrl = cur.getString(cur.getColumnIndexOrThrow(type.thumbUrlColumn));
-        log.trace("fromCursor lFile=" + lFile + ", lUrl=" + lUrl + ", tFile=" + tFile + ", tUrl=" + tUrl);
+        log.trace("fromCursor lFile={}, lUrl={}, tFile={}, tUrl={}", lFile, lUrl, tFile, tUrl);
         int season = -1;
         if (type.seasonColumn != null)
             season = cur.getInt(cur.getColumnIndexOrThrow(type.seasonColumn));
@@ -283,11 +283,11 @@ public class ScraperImage {
     public void generateFileNames(Context context) {
         if (mThumbFile == null && mThumbUrl != null) {
             mThumbFile = getFilePath(mThumbUrl, true, context);
-            log.trace("mThumbFile = " + mThumbFile);
+            log.trace("mThumbFile = {}", mThumbFile);
         }
         if (mLargeFile == null && mLargeUrl != null) {
             mLargeFile = getFilePath(mLargeUrl, false, context);
-            log.trace("mLargeFile = " + mLargeFile);
+            log.trace("mLargeFile = {}", mLargeFile);
         }
     }
     public String getLargeUrl() {
@@ -349,7 +349,7 @@ public class ScraperImage {
         if (nameSeed != null) {
             seedHash = nameSeed.hashCode();
         } else {
-            log.warn("getFileName: nameSeed is null! for url " +  url);
+            log.warn("getFileName: nameSeed is null! for url {}", url);
             seedHash = String.valueOf(System.currentTimeMillis()).hashCode();
         }
 
@@ -366,23 +366,23 @@ public class ScraperImage {
             case SHOW_POSTER:
             case COLLECTION_POSTER:
                 ret =  MediaScraper.getPosterDirectory(context);
-                log.trace("getDir: for poster: " + ret.getPath());
+                log.trace("getDir: for poster: {}", ret.getPath());
                 break;
             case MOVIE_BACKDROP:
             case SHOW_BACKDROP:
             case COLLECTION_BACKDROP:
                 ret = MediaScraper.getBackdropDirectory(context);
-                log.trace("getDir: for backdrop: " + ret.getPath());
+                log.trace("getDir: for backdrop: {}", ret.getPath());
                 break;
             case EPISODE_PICTURE:
                 ret = MediaScraper.getPictureDirectory(context);
-                log.trace("getDir: for picture: " + ret.getPath());
+                log.trace("getDir: for picture: {}", ret.getPath());
                 break;
             default:
                 // that would be really bad, kind of impossible though
                 log.trace("getDir: could not determine Directory, fallback to public dir");
                 ret = Environment.getExternalStorageDirectory();
-                log.trace("getDir: default " + ret.getPath());
+                log.trace("getDir: default {}", ret.getPath());
                 break;
         }
         // if dir does not exists, create it.
@@ -402,18 +402,18 @@ public class ScraperImage {
             case SHOW_POSTER:
             case COLLECTION_POSTER:
                 ret = MediaScraper.getImageCacheDirectory(context);
-                log.trace("getCacheDir: for poster " + ret.getPath());
+                log.trace("getCacheDir: for poster {}", ret.getPath());
                 break;
             case MOVIE_BACKDROP:
             case SHOW_BACKDROP:
             case COLLECTION_BACKDROP:
                 ret = MediaScraper.getBackdropCacheDirectory(context);
-                log.trace("getCacheDir: for backdrop " + ret.getPath());
-                log.trace("getCacheDir: for backdrop " + ret.getPath());
+                log.trace("getCacheDir: for backdrop {}", ret.getPath());
+                log.trace("getCacheDir: for backdrop {}", ret.getPath());
                 break;
             case EPISODE_PICTURE:
                 ret = MediaScraper.getPictureCacheDirectory(context);
-                log.trace("getCacheDir: for picture " + ret.getPath());
+                log.trace("getCacheDir: for picture {}", ret.getPath());
                 break;
             default:
                 // that would be really bad, kind of impossible though
@@ -455,8 +455,8 @@ public class ScraperImage {
     public final boolean download(Context context) {
         // fallback to thumbnail if there is no full poster/backdrop e.g. when thetvdb is fubar
        if(!download(context, false, 0, 0, false, false)) {
-           log.warn("download: failed downloading large image " + mLargeUrl + ", downloading thumb instead " + mThumbUrl);
-           log.warn("\t" + mLargeFile + "/" + mThumbFile);
+           log.warn("download: failed downloading large image {}, downloading thumb instead {}", mLargeUrl, mThumbUrl);
+           log.warn("\t{}/{}", mLargeFile, mThumbFile);
            return download(context, true, 0, 0, false, true);
        }
        return true;
@@ -477,7 +477,7 @@ public class ScraperImage {
     private boolean download(Context context, boolean thumb, int maxWidth, int maxHeight, boolean fake, boolean thumbAsMain) {
         String file = mLargeFile;
         String url = mLargeUrl;
-        log.debug("download: file=" + file + ", url=" + url);
+        log.debug("download: file={}, url={}", file, url);
         boolean success = false ;
         if (thumb) {
             file = mThumbFile;
@@ -491,7 +491,7 @@ public class ScraperImage {
         String lockString = file == null ? "null" : file;
         sLock.lock(lockString);
         try {
-            log.debug("download: download " + mType.name());
+            log.debug("download: download {}", mType.name());
             // maybe large file exists already
             if (fileIfExists(file) != null) {
                 log.debug("download: using existing file.");
@@ -547,7 +547,7 @@ public class ScraperImage {
                 // and ArchosWidget and we have no common resouces :/
                 maxWidth = POSTER_WIDTH;
                 maxHeight = POSTER_HEIGHT;
-                log.trace("saveSizedImage: target: Poster(" + maxWidth + "," + maxHeight + ")");
+                log.trace("saveSizedImage: target: Poster({},{})", maxWidth, maxHeight);
                 break;
             case MOVIE_BACKDROP:
             case SHOW_BACKDROP:
@@ -562,17 +562,17 @@ public class ScraperImage {
                     maxHeight = displayMetrics.heightPixels;
                     maxWidth = displayMetrics.widthPixels;
                 }
-                log.trace("saveSizedImage: target Backdrop(" + maxWidth + "," + maxHeight + ")");
+                log.trace("saveSizedImage: target Backdrop({},{})", maxWidth, maxHeight);
                 break;
             case EPISODE_PICTURE:
                 maxWidth = PICTURE_WIDTH;
                 maxHeight = PICTURE_HEIGHT;
-                log.trace("saveSizedImage: target: Picture(" + maxWidth + "," + maxHeight + ")");
+                log.trace("saveSizedImage: target: Picture({},{})", maxWidth, maxHeight);
                 break;
             default:
                 maxWidth = POSTER_WIDTH;
                 maxHeight = POSTER_HEIGHT;
-                log.trace("saveSizedImage: target Unknown, fallback to (" + maxWidth + "," + maxHeight + ")");
+                log.trace("saveSizedImage: target Unknown, fallback to ({},{})", maxWidth, maxHeight);
                 break;
         }
 
@@ -593,14 +593,14 @@ public class ScraperImage {
             File cached = HttpCache.getStaticFile(url, null, null);
             imageSource = (cached==null) ? null : Uri.fromFile(cached);
         }
-        if (dbgTimer != null) log.trace("saveSizedImage: downloading took " + dbgTimer.step());
+        if (dbgTimer != null) log.trace("saveSizedImage: downloading took {}", dbgTimer.step());
         if (imageSource == null) {
-            log.warn("saveSizedImage: downloading failed for " + url);
+            log.warn("saveSizedImage: downloading failed for {}", url);
             return false;
         }
         boolean saveOk = ImageScaler.scale(imageSource, targetName, maxWidth, maxHeight, type.scaleType);
-        log.debug("saveSizedImage: going through ImageScaler to convert " + imageSource.getPath() + " -> " + targetName + " went " + saveOk);
-        if (dbgTimer != null) log.trace("saveSizedImage: " + dbgTimer.total() + "download() in total");
+        log.debug("saveSizedImage: going through ImageScaler to convert {} -> {} went {}", imageSource.getPath(), targetName, saveOk);
+        if (dbgTimer != null) log.trace("saveSizedImage: {}download() in total", dbgTimer.total());
         return saveOk;
     }
 
@@ -674,7 +674,7 @@ public class ScraperImage {
                 updateValues.put(ScraperStore.Movie.BACKDROP, mLargeFile);
                 break;
             default:
-                log.warn("setAsDefault: unknown type:" + mType);
+                log.warn("setAsDefault: unknown type:{}", mType);
                 break;
         }
         if (context != null && updateUri != null) {

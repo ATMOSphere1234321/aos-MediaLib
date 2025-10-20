@@ -38,7 +38,7 @@ public class ShowId {
         ShowIdResult myResult = new ShowIdResult();
         ShowTags parserResult = null;
 
-        log.debug("getBaseInfo: quering tmdb for showId " + showId + " in " + language);
+        log.debug("getBaseInfo: quering tmdb for showId {} in {}", showId, language);
         try {
             // use appendToResponse to get imdbId
             Response<TvShow> seriesResponse = tmdb.tvService().tv(showId, language, new AppendToResponse(AppendToResponseItem.EXTERNAL_IDS)).execute();
@@ -52,10 +52,10 @@ public class ShowId {
                     myResult.status = ScrapeStatus.NOT_FOUND;
                     // fallback to english if no result
                     if (!language.equals("en")) {
-                        log.debug("getBaseInfo: retrying search for showId " + showId + " in en");
+                        log.debug("getBaseInfo: retrying search for showId {} in en", showId);
                         return getBaseInfo(showId, "en", tmdb, context);
                     }
-                    log.debug("getBaseInfo: movieId " + showId + " not found");
+                    log.debug("getBaseInfo: movieId {} not found", showId);
                     break;
                 default:
                     if (seriesResponse.isSuccessful()) {
@@ -66,19 +66,19 @@ public class ShowId {
                             myResult.status = ScrapeStatus.OKAY;
                         } else {
                             if (!language.equals("en")) {
-                                log.debug("getBaseInfo: retrying search for showId " + showId + " in en");
+                                log.debug("getBaseInfo: retrying search for showId {} in en", showId);
                                 return getBaseInfo(showId, "en", tmdb, context);
                             }
                             myResult.status = ScrapeStatus.NOT_FOUND;
                         }
                     } else { // an error at this point is PARSER related
-                        log.debug("getBaseInfo: error " + seriesResponse.code());
+                        log.debug("getBaseInfo: error {}", seriesResponse.code());
                         myResult.status = ScrapeStatus.ERROR_PARSER;
                     }
                     break;
             }
         } catch (IOException e) {
-            log.error("getBaseInfo: caught IOException getting summary for showId=" + showId);
+            log.error("getBaseInfo: caught IOException getting summary for showId={}", showId);
             myResult.status = ScrapeStatus.ERROR_PARSER;
             myResult.reason = e;
         }

@@ -80,12 +80,12 @@ public class MovieIdParser2 {
             result.setYear(cal.get(Calendar.YEAR));
         }
         if (movie.belongs_to_collection != null) {
-            log.debug("getResult collection id: " + movie.belongs_to_collection.id + ", for " + movie.belongs_to_collection.name);
+            log.debug("getResult collection id: {}, for {}", movie.belongs_to_collection.id, movie.belongs_to_collection.name);
             result.setCollectionId(movie.belongs_to_collection.id);
             result.setCollectionBackdropPath(movie.belongs_to_collection.backdrop_path);
             result.setCollectionPosterPath(movie.belongs_to_collection.poster_path);
             result.setCollectionName(movie.belongs_to_collection.name);
-            log.debug("getResult collection overview: " + movie.belongs_to_collection.overview);
+            log.debug("getResult collection overview: {}", movie.belongs_to_collection.overview);
         } else
             result.setCollectionId(-1);
         if (movie.title != null) result.setTitle(movie.title);
@@ -133,9 +133,9 @@ public class MovieIdParser2 {
             for (Videos.Video trailer: movie.videos.results) {
                 if (i < limitTrailers) {
                     if (trailer.site != null && trailer.iso_639_1 != null && trailer.type !=null) {
-                        log.debug("getResult: addTrailers found " + trailer.name + " for service " + trailer.site + " of type " + trailer.type + " in " + trailer.iso_639_1);
+                        log.debug("getResult: addTrailers found {} for service {} of type {} in {}", trailer.name, trailer.site, trailer.type, trailer.iso_639_1);
                         if (trailer.site.equals("YouTube") && ("Trailer".equals(trailer.type.toString())||"Teaser".equals(trailer.type.toString()))) {
-                            log.debug("getResult: addTrailers adding it " + trailer.name);
+                            log.debug("getResult: addTrailers adding it {}", trailer.name);
                             ScraperTrailer videoTrailer = new ScraperTrailer(ScraperTrailer.Type.MOVIE_TRAILER, trailer.name, trailer.key, trailer.site, trailer.iso_639_1);
                             trailers.add(videoTrailer);
                             i++;
@@ -174,17 +174,17 @@ public class MovieIdParser2 {
                 }
             });
             for(Pair<Image, String> poster : tempPosters) {
-                log.debug("getResult: generating ScraperImage for poster for " + movie.title + ", large=" + ScraperImage.TMPL + poster.first.file_path);
+                log.debug("getResult: generating ScraperImage for poster for {}, large={}{}", movie.title, ScraperImage.TMPL, poster.first.file_path);
                 posters.add(genPoster(movie.title, poster.first.file_path, poster.second, mContext));
             }
             for(Pair<Image, String> backdrop : tempBackdrops) {
-                log.debug("getResult: generating ScraperImage for backdrop for " + movie.title + ", large=" + ScraperImage.TMPL + backdrop.first.file_path);
+                log.debug("getResult: generating ScraperImage for backdrop for {}, large={}{}", movie.title, ScraperImage.TMPL, backdrop.first.file_path);
                 posters.add(genBackdrop(movie.title, backdrop.first.file_path, backdrop.second, mContext));
             }
             log.debug("getResult: setting posters and backdrops");
             result.setPosters(posters);
             result.setBackdrops(backdrops);
-            log.debug("getResult: global " + movie.title + " poster " + movie.poster_path + ", backdrop " + movie.backdrop_path);
+            log.debug("getResult: global {} poster {}, backdrop {}", movie.title, movie.poster_path, movie.backdrop_path);
             // this must be done after setPosters/setBackdrops otherwise default is removed
             if (movie.poster_path != null) result.addDefaultPosterTMDB(mContext, movie.poster_path);
             if (movie.backdrop_path != null) result.addDefaultBackdropTMDB(mContext, movie.backdrop_path);
@@ -199,7 +199,7 @@ public class MovieIdParser2 {
         image.setLargeUrl(ScraperImage.TMPL + path);
         image.setThumbUrl(ScraperImage.TMPT + path);
         image.generateFileNames(context);
-        log.debug("genPoster: " + title + ", has poster " + image.getLargeUrl() + " path " + image.getLargeFile());
+        log.debug("genPoster: {}, has poster {} path {}", title, image.getLargeUrl(), image.getLargeFile());
         return image;
     }
 
@@ -209,7 +209,7 @@ public class MovieIdParser2 {
         image.setLargeUrl(ScraperImage.TMBL + path);
         image.setThumbUrl(ScraperImage.TMBT + path);
         image.generateFileNames(context);
-        log.debug("genBackdrop: " + title + ", has backdrop " + image.getLargeUrl() + " path " + image.getLargeFile());
+        log.debug("genBackdrop: {}, has backdrop {} path {}", title, image.getLargeUrl(), image.getLargeFile());
         return image;
     }
 
@@ -278,7 +278,7 @@ public class MovieIdParser2 {
                     localizedGenres.add(mContext.getString(R.string.movie_genre_western));
                     break;
                 default:
-                    log.warn("getLocalizedGenres: unknown genre: id=" + genre.id + ", name=" + genre.name);
+                    log.warn("getLocalizedGenres: unknown genre: id={}, name={}", genre.id, genre.name);
                     localizedGenres.add(genre.name);
             }
         }

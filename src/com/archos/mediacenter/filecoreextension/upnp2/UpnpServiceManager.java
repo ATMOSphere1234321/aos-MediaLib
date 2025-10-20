@@ -142,7 +142,7 @@ public class UpnpServiceManager {
                     @Override
                     public void propertyChange(PropertyChangeEvent evt) {
                         if (evt.getOldValue() != evt.getNewValue()) {
-                            log.debug("NetworkState for " + evt.getPropertyName() + " changed:" + evt.getOldValue() + " -> " + evt.getNewValue());
+                            log.debug("NetworkState for {} changed:{} -> {}", evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
                             //we need to restart upnp service on network state change
                             if (mAndroidUpnpService!=null&&mState==State.RUNNING&&mHasStarted) {
                                 log.debug("restarting");
@@ -413,8 +413,9 @@ public class UpnpServiceManager {
             Action action = service.getAction("Browse");
             if (action == null) return;
 
-            log.debug("deviceAdded: " + device.getDisplayString() + " " + device.getDetails().getFriendlyName() + " " + device.getDetails().getSerialNumber() + " " + device.getDetails().getManufacturerDetails().getManufacturer());
-            log.debug("deviceAdded: addDevice with hash code " + device.hashCode());
+            log.debug("deviceAdded: {} {} {} {}", device.getDisplayString(), device.getDetails().getFriendlyName(),
+                    device.getDetails().getSerialNumber(), device.getDetails().getManufacturerDetails().getManufacturer());
+            log.debug("deviceAdded: addDevice with hash code {}", device.hashCode());
             synchronized (this) {
                 // Add to list
                 mDevices.put(Integer.valueOf(device.hashCode()), device);

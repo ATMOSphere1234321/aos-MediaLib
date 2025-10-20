@@ -509,7 +509,7 @@ public class AvosMediaPlayer implements IMediaPlayer {
             case MEDIA_ERROR:
                 // For PV specific error values (msg.arg2) look in
                 // opencore/pvmi/pvmf/include/pvmf_return_codes.h
-                log.error("Error (" + msg.arg1 + "," + msg.arg2 + ")");
+                log.error("Error ({},{})", msg.arg1, msg.arg2);
                 boolean error_was_handled = false;
                 if (mOnErrorListener != null) {
                     error_was_handled = mOnErrorListener.onError(mMediaPlayer, msg.arg1, msg.arg2,
@@ -556,7 +556,7 @@ public class AvosMediaPlayer implements IMediaPlayer {
                 break;
 
             default:
-                log.error("Unknown message type " + msg.what);
+                log.error("Unknown message type {}", msg.what);
                 return;
             }
         }

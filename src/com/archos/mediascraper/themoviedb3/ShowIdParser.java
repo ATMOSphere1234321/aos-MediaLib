@@ -44,16 +44,16 @@ public class ShowIdParser {
         ShowTags result = new ShowTags();
 
         if (serie.overview != null) {
-            log.debug("getResult: " + serie.name + " overview/plot " + serie.overview);
+            log.debug("getResult: {} overview/plot {}", serie.name, serie.overview);
             result.setPlot(serie.overview);
         } else {
-            log.warn("getResult: " + serie.name + " has no overview/plot");
+            log.warn("getResult: {} has no overview/plot", serie.name);
         }
 
         result.setRating(Math.round(serie.vote_average.floatValue() * 10)/10.0f);
         result.setTitle(serie.name + (( year != null) ? " " + year : ""));
 
-        log.debug("getResult: found title=" + serie.name);
+        log.debug("getResult: found title={}", serie.name);
 
         if (serie.content_ratings != null && serie.content_ratings.results != null)
             for (ContentRating results: serie.content_ratings.results)
@@ -62,7 +62,7 @@ public class ShowIdParser {
 
         if (serie.external_ids != null) result.setImdbId(serie.external_ids.imdb_id);
         result.setOnlineId(serie.id);
-        log.debug("getResult: onlineId=" + serie.id + ", imdbId=" + serie.external_ids.imdb_id);
+        log.debug("getResult: onlineId={}, imdbId={}", serie.id, serie.external_ids.imdb_id);
         result.setGenres(getLocalizedGenres(serie.genres));
 
         for (Network network : serie.networks)
@@ -71,13 +71,13 @@ public class ShowIdParser {
         result.setPremiered(serie.first_air_date);
 
         if (serie.poster_path != null) {
-            log.debug("getResult: " + serie.id + " has poster_path=" + ScraperImage.TMPL + serie.poster_path);
+            log.debug("getResult: {} has poster_path={}{}", serie.id, ScraperImage.TMPL, serie.poster_path);
             result.addDefaultPosterTMDB(mContext, serie.poster_path);
-        } else log.debug("getResult: no poster_path for " + serie.id);
+        } else log.debug("getResult: no poster_path for {}", serie.id);
         if (serie.backdrop_path != null) {
-            log.debug("getResult: " + serie.id + " has backdrop_path=" + ScraperImage.TMBL + serie.backdrop_path);
+            log.debug("getResult: {} has backdrop_path={}{}", serie.id, ScraperImage.TMBL, serie.backdrop_path);
             result.addDefaultBackdropTMDB(mContext, serie.backdrop_path);
-        } else log.debug("getResult: no backdrop_path for " + serie.id);
+        } else log.debug("getResult: no backdrop_path for {}", serie.id);
 
         if (serie.credits != null) {
             if (serie.credits.guest_stars != null)
@@ -91,7 +91,7 @@ public class ShowIdParser {
                     if (crew.job.equals(DIRECTOR))
                         result.addDirectorIfAbsent(crew.name);
         } else {
-            log.warn("getResult: credit is null for showId " + serie.name);
+            log.warn("getResult: credit is null for showId {}", serie.name);
         }
 
         return result;
@@ -153,7 +153,7 @@ public class ShowIdParser {
                     localizedGenres.add(mContext.getString(R.string.tvshow_genre_western));
                     break;
                 default:
-                    log.warn("unknown genre: id=" + genre.id + ", name=" + genre.name);
+                    log.warn("unknown genre: id={}, name={}", genre.id, genre.name);
                     localizedGenres.add(genre.name);
             }
         }

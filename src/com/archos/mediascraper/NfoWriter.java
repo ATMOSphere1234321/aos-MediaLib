@@ -330,7 +330,7 @@ public class NfoWriter {
             if (editor.exists()) {
                 editor.delete();
             }
-            log.trace("exportInternal: " + video);
+            log.trace("exportInternal: {}", video);
             BufferedWriter  writer = new BufferedWriter(new OutputStreamWriter(
                     editor.getOutputStream(), StringUtils.CHARSET_UTF8));
 

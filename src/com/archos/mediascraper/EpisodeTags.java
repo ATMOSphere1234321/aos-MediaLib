@@ -121,7 +121,7 @@ public class EpisodeTags extends BaseTags {
         //---------------------------------------------------
         long showId = mShowTags.save(context, videoId);
 
-        log.debug("Save called for episode " + mTitle + " showId " + showId + " onlineId " + mOnlineId);
+        log.debug("Save called for episode {} showId {} onlineId {}", mTitle, showId, mOnlineId);
 
         //---------------------------------------------------------------------------------------
         // Create a new entry for this episode in the database.
@@ -216,10 +216,8 @@ public class EpisodeTags extends BaseTags {
             if (results != null && results.length > 0) {
                 returnValue = ContentUris.parseId(results[0].uri);
             }
-        } catch (RemoteException e) {
-            log.error("Exception :" + e, e);
-        } catch (OperationApplicationException e) {
-            log.error("Exception :" + e, e);
+        } catch (RemoteException | OperationApplicationException e) {
+            log.error("Exception", e);
         }
         return returnValue;
     }
@@ -338,7 +336,7 @@ public class EpisodeTags extends BaseTags {
         try {
             mAired = sDateFormatter.parse(string);
         } catch (ParseException e) {
-            log.error("Illegal Date format [" + string + "]");
+            log.error("Illegal Date format [{}]", string);
             mAired = DEFAULT_DATE;
         }
     }
@@ -357,7 +355,7 @@ public class EpisodeTags extends BaseTags {
         // also download the showtags cover
         if (mShowTags != null) {
             mShowTags.downloadPoster(context);
-        } else log.warn("downloadPoster: showTags is null for " + mShowTitle);
+        } else log.warn("downloadPoster: showTags is null for {}", mShowTitle);
     }
 
     @Override
@@ -441,7 +439,7 @@ public class EpisodeTags extends BaseTags {
     }
 
     public void setEpisodePicture(String string, Context ct, boolean isPoster) {
-        log.debug("setEpisodePicture: " + string + " isPoster=" + isPoster);
+        log.debug("setEpisodePicture: {} isPoster={}", string, isPoster);
         ScraperImage image;
         if (isPoster)
             image = new ScraperImage(Type.EPISODE_POSTER, "");

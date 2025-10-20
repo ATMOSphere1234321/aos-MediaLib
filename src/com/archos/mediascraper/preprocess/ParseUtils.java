@@ -96,12 +96,12 @@ public class ParseUtils {
     // only apply to movieName (1928) junk -> movieName () junk -> movieName, junk can be null
     public static String removeAfterEmptyParenthesis2(String input) {
         Pair<String, String> result = twoPatternExtractor2(input, EMPTY_PARENTHESIS_PATTERN);
-        log.debug("removeAfterEmptyParenthesis input: " + input + " output " + result.first);
+        log.debug("removeAfterEmptyParenthesis input: {} output {}", input, result.first);
         return result.first;
     }
 
     public static String removeAfterEmptyParenthesis(String input) {
-        log.debug("removeAfterEmptyParenthesis input: " + input);
+        log.debug("removeAfterEmptyParenthesis input: {}", input);
         Matcher matcher = EMPTY_PARENTHESIS_PATTERN.matcher(input);
         int start = 0;
         int stop = 0;
@@ -114,7 +114,7 @@ public class ParseUtils {
         // get the first match and extract it from the string
         if (found)
             input = input.substring(0, start);
-        log.debug("removeAfterEmptyParenthesis remove junk after (): " + input);
+        log.debug("removeAfterEmptyParenthesis remove junk after (): {}", input);
         return input;
     }
 
@@ -125,37 +125,37 @@ public class ParseUtils {
     // matches "[space or punctuation/brackets etc]year", year is group 1
     // "[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)"
     public static Pair<String, String> yearExtractor(String input) {
-        log.debug("yearExtractor input: " + input);
+        log.debug("yearExtractor input: {}", input);
         return twoPatternExtractor2(input, YEAR_PATTERN);
     }
 
     public static Pair<String, String> yearExtractorEndString(String input) {
-        log.debug("yearExtractor input: " + input);
+        log.debug("yearExtractor input: {}", input);
         return twoPatternExtractor2(input, YEAR_PATTERN_END_STRING);
     }
 
     // matches "[space or punctuation/brackets etc](year)", year is group 1
     public static Pair<String, String> parenthesisYearExtractor(String input) {
-        log.debug("parenthesisYearExtractor input: " + input);
+        log.debug("parenthesisYearExtractor input: {}", input);
         return twoPatternExtractor2(input, PARENTHESIS_YEAR_PATTERN);
     }
 
     // matches country of origin ((US|UK|FR)), country is group 1
     public static Pair<String, String> getCountryOfOrigin(String input) {
         String countryOfOrigin = null;
-        log.debug("getCountryOfOrigin input: " + input);
+        log.debug("getCountryOfOrigin input: {}", input);
         return twoPatternExtractor2(input, COUNTRY_OF_ORIGIN);
     }
 
     public static Pair<String, String> twoPatternExtractor2(String input, Pattern pattern) {
-        log.debug("twoPatternExtractor2 input: " + input);
+        log.debug("twoPatternExtractor2 input: {}", input);
         String isolated = null;
         Matcher matcher = pattern.matcher(input);
         if (matcher.find()) {
             input =  matcher.group(1);
             isolated = matcher.group(2);
         }
-        log.debug("twoPatternExtractor output: " + input + " isolated: " + isolated);
+        log.debug("twoPatternExtractor output: {} isolated: {}", input, isolated);
         return new Pair<>(input, isolated);
     }
 

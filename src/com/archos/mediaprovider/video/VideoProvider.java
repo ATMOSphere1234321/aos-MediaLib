@@ -161,7 +161,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                 @Override
                 public void propertyChange(PropertyChangeEvent evt) {
                     if (evt.getOldValue() != evt.getNewValue()) {
-                        log.trace("NetworkState for " + evt.getPropertyName() + " changed:" + evt.getOldValue() + " -> " + evt.getNewValue());
+                        log.trace("NetworkState for {} changed:{} -> {}", evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
                         RemoteStateService.start(context);
                     }
                 }
@@ -191,7 +191,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                                 editor = FileEditorFactoryWithUpnp.getFileEditorForUrl(FileUtils.encodeUri(Uri.parse(mCurrentThumbRequest.mPath)), null);
                             else
                                 editor = FileEditorFactoryWithUpnp.getFileEditorForUrl(Uri.parse(mCurrentThumbRequest.mPath), null);
-                            log.debug(mCurrentThumbRequest.mPath+" does file exists ? "+ String.valueOf(editor.exists()));
+                            log.debug("{} does file exists ? {}", mCurrentThumbRequest.mPath, String.valueOf(editor.exists()));
 
                             if (editor.exists()) {
                                 log.debug("mCurrentThumbRequest");
@@ -199,7 +199,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                             } else {
                                 // original file hasn't been stored yet
                                 synchronized (mMediaThumbQueue) {
-                                    log.warn("original file hasn't been stored yet: " + mCurrentThumbRequest.mPath);
+                                    log.warn("original file hasn't been stored yet: {}", mCurrentThumbRequest.mPath);
                                 }
                             }
                         } catch (IOException ex) {
@@ -241,7 +241,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
     @Override
     public Cursor query(Uri uri, String[] projectionIn, String selection, String[] selectionArgs,
             String sort, CancellationSignal cancellationSignal) {
-        log.debug("QUERY " + uri + ", selection=" + selection + ", selectionArgs=" + Arrays.toString(selectionArgs) + ", sort=" + sort);
+        log.debug("QUERY {}, selection={}, selectionArgs={}, sort={}", uri, selection, Arrays.toString(selectionArgs), sort);
         int table = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -370,7 +370,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
     };
     @Override
     public String getType(Uri url) {
-        log.debug("getType" + url);
+        log.debug("getType{}", url);
 
         // determine match
         int match = URI_MATCHER.match(url);
@@ -406,7 +406,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        log.debug("INSRT " + uri + " PID:" + Process.myPid() + " TID:" + Process.myTid() + ", values=" + values);
+        log.debug("INSRT {} PID:{} TID:{}, values={}", uri, Process.myPid(), Process.myTid(), values);
         int match = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -538,7 +538,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
             return false;
         // it's possible that we cannot create the directory
         if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
-            log.error("ensureFileExists: could not create " + file.getParent());
+            log.error("ensureFileExists: could not create {}", file.getParent());
             return false;
         }
         try {
@@ -561,7 +561,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        log.debug("DELTE " + uri + ", selection=" + selection + ", selectionArgs=" + Arrays.toString(selectionArgs));
+        log.debug("DELTE {}, selection={}, selectionArgs={}", uri, selection, Arrays.toString(selectionArgs));
         int match = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -613,9 +613,9 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
     @Override
     public int update(Uri uri, ContentValues initialValues, String userWhere,
             String[] whereArgs) {
-        log.debug("UPDTE " + uri + ", userWhere=" + userWhere + ", whereArgs=" + Arrays.toString(whereArgs) + ", initialValues=" + initialValues);
+        log.debug("UPDTE {}, userWhere={}, whereArgs={}, initialValues={}", uri, userWhere, Arrays.toString(whereArgs), initialValues);
         int count;
-        // log.trace("update for uri="+uri+", initValues="+initialValues);
+        // log.trace("update for uri={}, initValues={}", uri, initialValues);
         int match = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -753,7 +753,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
     private static void valuesRemove(ContentValues cv, String what) {
         if (cv.containsKey(what)) {
-            log.error("Removing: " + what + " since that is not supported.");
+            log.error("Removing: {} since that is not supported.", what);
             cv.remove(what);
         }
     }
@@ -913,7 +913,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
         String[] whereArgs = new String[] { origId };
         Cursor c = query(origUri, new String[] { BaseColumns._ID, MediaColumns.DATA,
                 VideoColumns.MINI_THUMB_MAGIC, VideoColumns.ARCHOS_THUMB_TRY}, LIGHT_INDEX_STORAGE_QUERY, whereArgs , null);
-        log.debug("is cursor null ? "+String.valueOf(c==null));
+        log.debug("is cursor null ? {}", String.valueOf(c==null));
         if (c == null) return false;
 
         boolean result = false;
@@ -922,13 +922,13 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
             long id = c.getLong(0);
             String path = c.getString(1);
-            log.debug("trying to create thumb for "+path);
+            log.debug("trying to create thumb for {}", path);
 
             long magic = c.getLong(2);
             int nbTry = c.getInt(3);
             if (magic == 0 && nbTry >= THUMB_TRY_MAX|| !FileUtils.isLocal(Uri.parse(path))&&!PreferenceManager.getDefaultSharedPreferences(getContext()).getBoolean(PREFERENCE_CREATE_REMOTE_THUMBS, false)) {
                 // thumbnail creation failed more than one time: abort.
-                log.debug("thumbnail creation failed more than "+THUMB_TRY_MAX+" times: abort. ");
+                log.debug("thumbnail creation failed more than {} times: abort. ", THUMB_TRY_MAX);
 
                 c.close();
                 return false;
@@ -936,7 +936,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
             MediaThumbRequest req = requestMediaThumbnail(path, origUri,
                     MediaThumbRequest.PRIORITY_HIGH, magic);
-            log.debug("is MediaThumbRequest null ? "+String.valueOf(req==null));
+            log.debug("is MediaThumbRequest null ? {}", String.valueOf(req==null));
             if (req == null) {
                 return false;
             }
@@ -964,7 +964,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                         if (c.moveToFirst()) {
                             magic = c.getLong(0);
                             nbTry = c.getInt(1) + 1;
-                            log.debug("MediaThumbRequest set try to "+String.valueOf(nbTry));
+                            log.debug("MediaThumbRequest set try to {}", String.valueOf(nbTry));
 
                             if (magic == 0) {
                                 ContentValues values = new ContentValues();
@@ -1059,7 +1059,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
     @Override
     public int bulkInsert(Uri uri, ContentValues[] values) {
-        log.debug("bulkInsert " + uri);
+        log.debug("bulkInsert {}", uri);
         int match = URI_MATCHER.match(uri);
 
         // let ScraperProvider handle that
@@ -1207,7 +1207,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
             values.put(Video.Thumbnails.WIDTH, Integer.valueOf(thumbnail.getWidth()));
             values.put(Video.Thumbnails.HEIGHT, Integer.valueOf(thumbnail.getHeight()));
             try {
-                log.debug("insert Thumbnail " + mThumbUri + " val:" + values);
+                log.debug("insert Thumbnail {} val:{}", mThumbUri, values);
                 return mCr.insert(mThumbUri, values);
             } catch (Exception ex) {
                 log.error("MediaThumbRequest: caught Exception", ex);
@@ -1262,11 +1262,11 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
                     bitmap = createVideoThumbnail(mContext, mPath,
                             Video.Thumbnails.MINI_KIND);
-                    log.debug("test 2 for bitmap  "+String.valueOf(bitmap==null));
+                    log.debug("test 2 for bitmap  {}", String.valueOf(bitmap==null));
 
                 }
                 if (bitmap == null) {
-                    log.warn("Can't create mini thumbnail for " + mPath);
+                    log.warn("Can't create mini thumbnail for {}", mPath);
                     return;
                 }
 
@@ -1301,7 +1301,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                 return null;
             } else {
                 Bitmap res = createVideoThumbnail_(ctx, filePath, kind);
-                log.debug("createVideoThumbnail: " + res);
+                log.debug("createVideoThumbnail: {}", res);
                 return res;
             }
         }
@@ -1321,11 +1321,11 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                     Thread t = new Thread(){
                         public void run(){
                             try {
-                                log.debug("get Thumb for "+filePath);
+                                log.debug("get Thumb for {}", filePath);
                                 result.setBitmap(service.getThumbnail(filePath, -1));
 
                             } catch (RemoteException e) {
-                                log.debug("get Thumb for "+filePath+ " failed (RemoteException)");
+                                log.debug("get Thumb for {} failed (RemoteException)", filePath);
 
                                 log.error("can't get thumbnail, service crashed?", e);
                             }
@@ -1334,7 +1334,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
                     t.start();
                     t.join();
                     bitmap = result.bm;
-                    log.debug("MediaThumbnailService gave us: " + bitmap);
+                    log.debug("MediaThumbnailService gave us: {}", bitmap);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -1351,11 +1351,11 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
 
                 } catch (IllegalArgumentException ex) {
                     // Assume this is a corrupt video file
-                    log.debug("IllegalArgumentException "+ex.toString());
+                    log.debug("IllegalArgumentException {}", ex.toString());
 
                 } catch (RuntimeException ex) {
                     // Assume this is a corrupt video file.
-                    log.debug("RuntimeException "+ex.toString());
+                    log.debug("RuntimeException {}", ex.toString());
 
                 } finally {
                     try {
@@ -1391,7 +1391,7 @@ public class VideoProvider extends ContentProvider implements DefaultLifecycleOb
     }
 
     protected void handleForeGround(boolean foreground) {
-        log.debug("handleForeGround: foreground=" + foreground);
+        log.debug("handleForeGround: foreground={}", foreground);
         final Context context = getContext();
         if (context == null || ! ProcessLifecycleOwner.get().getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) {
             log.error("handleForeGround: context is null or not foreground, return");

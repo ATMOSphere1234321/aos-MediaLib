@@ -152,7 +152,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
         @Override
         public void handleMessage(Message msg) {
-            log.debug("handleMessage msg=" + msg.toString());
+            log.debug("handleMessage msg={}", msg.toString());
             if (msg.what == MSG_INTENT) {
                 Intent intent = (Intent) msg.obj;
                 String action = intent.getAction();
@@ -175,7 +175,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 if (mTrakt != null) {
                     if (action.equals(INTENT_ACTION_WATCHING)) {
                         final float progress = intent.getFloatExtra("progress", -1);
-                        log.debug("postWatching progress=" + progress);
+                        log.debug("postWatching progress={}", progress);
                         if (videoInfo == null && videoID >= 0)
                             videoInfo = VideoDbInfo.fromId(getContentResolver(), videoID);
                         if (videoInfo != null) {
@@ -189,7 +189,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                                         values, VideoStore.Video.VideoColumns._ID + " = " + videoInfo.id, null);
 
                             }
-                            log.debug("postWatching, result: " + result.status);
+                            log.debug("postWatching, result: {}", result.status);
                             if (result.status != Status.ERROR) {
                                 // continue the service even in case of network error
                                 mBusy = true;
@@ -197,7 +197,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                         }
                     } else if (action.equals(INTENT_ACTION_WATCHING_STOP)) {
                         final float progress = intent.getFloatExtra("progress", -1);
-                        log.debug("postWatchingStop progress=" + progress);
+                        log.debug("postWatchingStop progress={}", progress);
                         if (videoInfo == null && videoID >= 0)
                             videoInfo = VideoDbInfo.fromId(getContentResolver(), videoID);
                         if (videoInfo != null) {
@@ -221,12 +221,12 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
                                 }
                             }
-                            log.debug("postWatchingStop, result: " + result.status);
+                            log.debug("postWatchingStop, result: {}", result.status);
                             mBusy = false;
                         }
                     } else if (action.equals(INTENT_ACTION_WATCHING_PAUSE)) {
                         final float progress = intent.getFloatExtra("progress", -1);
-                        log.debug("postWatchingPause progress=" + progress);
+                        log.debug("postWatchingPause progress={}", progress);
                         if (videoInfo == null && videoID >= 0)
                             videoInfo = VideoDbInfo.fromId(getContentResolver(), videoID);
                         if (videoInfo != null) {
@@ -250,13 +250,13 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
                                 }
                             }
-                            log.debug("postWatchingPause, result: " + result.status);
+                            log.debug("postWatchingPause, result: {}", result.status);
                             mBusy = false;
                         }
                     } else if (action.equals(INTENT_ACTION_MARK_AS)) {
                         // get last activity before doing some activity on trakt
                         traktAction = intent.getStringExtra("action");
-                        log.debug("markAs: " + traktAction);
+                        log.debug("markAs: {}", traktAction);
 
                         if (traktAction != null && videoInfo != null) {
                             final boolean wasBusy = mBusy;
@@ -290,7 +290,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     result = Trakt.Result.getError();
                 if (traktAction != null && videoInfo != null) {
                     final Status status = result.status;
-                    log.debug("markAs: Trakt.Status: " + status + ", scrapeStatus: " + videoInfo.scrapeStatus);
+                    log.debug("markAs: Trakt.Status: {}, scrapeStatus: {}", status, videoInfo.scrapeStatus);
                     if (status == Status.SUCCESS || status == Status.SUCCESS_ALREADY) {
                         if (lastActivityFlag == 0) {
                             // last activity is us
@@ -368,7 +368,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             videoInfo.traktLibrary = action.equals(Trakt.ACTION_LIBRARY) ? 1 : 0;
 
         if (videoInfo.id != -1) {
-            log.debug("saveTraktStatus, id: "+videoInfo.id);
+            log.debug("saveTraktStatus, id: {}", videoInfo.id);
             final String where = VideoStore.Video.VideoColumns._ID + " = " + videoInfo.id;
             ContentResolver resolver = getContentResolver();
             ContentValues values = new ContentValues(1);
@@ -528,7 +528,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 resultTrakt.objType == Trakt.Result.ObjectType.MOVIES) {
             videos = (java.util.List<PlaybackResponse>) resultTrakt.obj;
         }
-        log.debug("syncPlaybackStatus: processing batch of " + ((videos !=null) ? videos.size() : "null"));
+        log.debug("syncPlaybackStatus: processing batch of {}", ((videos !=null) ? videos.size() : "null"));
         //from db to trakt
         // get all videos watched on device not yet synced to trakt (traktResume < 0: negative traktResume means set but not yet synced)
         // filter videos that are scraped and that have been played and not synced yet
@@ -567,7 +567,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                                 }
                             }
                         if (send) {
-                            log.debug("syncPlaybackStatus: db->trakt " + videoInfo.scraperTitle + (videoInfo.isShow ? ", s" + videoInfo.scraperSeasonNr + "e" + videoInfo.scraperEpisodeNr : ""));
+                            log.debug("syncPlaybackStatus: db->trakt {}{}", videoInfo.scraperTitle, (videoInfo.isShow ? ", s" + videoInfo.scraperSeasonNr + "e" + videoInfo.scraperEpisodeNr : ""));
                             ContentValues values = new ContentValues();
                             Trakt.Result result;
                             if (Trakt.shouldMarkAsSeen(Math.abs(videoInfo.traktResume))) {
@@ -633,7 +633,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                                 if (i.lastTimePlayed < lastWatched && newResumePercent > 0) {
                                     // trakt lastTimePlayed > db lastTimePlayed: in this case update archos last time played since trakt was the latest compared to db
                                     // exclude null newResumePercent since some other players use this to store library (e.g. infuse) and avoid pollution
-                                    log.debug("syncPlaybackStatus: trakt->db update Archos last time played by trakt which is the latest " + lastPlayedDateString);
+                                    log.debug("syncPlaybackStatus: trakt->db update Archos last time played by trakt which is the latest {}", lastPlayedDateString);
                                     toConsider = true;
                                     values.put(VideoStore.Video.VideoColumns.ARCHOS_LAST_TIME_PLAYED, lastWatched);
                                 }
@@ -670,7 +670,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     }
 
     private Trakt.Status syncMoviesToDb(String library) {
-        log.debug("syncMoviesToDb: library=" + library);
+        log.debug("syncMoviesToDb: library={}", library);
         final ContentResolver cr = getContentResolver();
 
         Trakt.Result result = mTrakt.getAllMovies(library, true);
@@ -699,7 +699,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     }
 
     private Trakt.Status syncShowsToDb(String library) {
-        log.debug("syncShowsToDb: library=" + library);
+        log.debug("syncShowsToDb: library={}", library);
         final ContentResolver cr = getContentResolver();
         Trakt.Result result = mTrakt.getAllShows(library);
         if (result.status == Trakt.Status.ERROR_NETWORK)
@@ -866,16 +866,16 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
     private int getFlagsFromTraktLastActivity(Trakt.Result result, long movieTime, long showTime) {
         int flag = 0;
-        log.debug("getFlagsFromTraktLastActivity: getLastActivity input is flag=" + flag + ", movieTime=" + movieTime + ", showTime=" + showTime);
+        log.debug("getFlagsFromTraktLastActivity: getLastActivity input is flag={}, movieTime={}, showTime={}", flag, movieTime, showTime);
         if (result != null && result.status == Trakt.Status.SUCCESS &&
                 result.objType == Trakt.Result.ObjectType.LAST_ACTIVITY) {
             LastActivities lastActivity = (LastActivities) result.obj;
-            log.debug("lastActivity: movie: " + lastActivity.movies.watched_at.toEpochSecond() + " vs " + movieTime);
+            log.debug("lastActivity: movie: {} vs {}", lastActivity.movies.watched_at.toEpochSecond(), movieTime);
             if (lastActivity.movies.watched_at.toEpochSecond()> movieTime) { // new fully watched videos more recent than last sync movies
                 log.debug("getFlagsFromTraktLastActivity: new activity watched on movies on trakt side detected");
                 flag |= FLAG_SYNC_TO_DB_WATCHED | FLAG_SYNC_MOVIES; // need to sync watched states and movies
             }
-            log.debug("lastActivity: show: " + lastActivity.episodes.watched_at.toEpochSecond() + " vs " + showTime);
+            log.debug("lastActivity: show: {} vs {}", lastActivity.episodes.watched_at.toEpochSecond(), showTime);
             if (lastActivity.episodes.watched_at.toEpochSecond()>showTime) { // new fully watched videos more recent than last sync shows
                 log.debug("getFlagsFromTraktLastActivity: new activity watched on shows on trakt side detected");
                 flag |= FLAG_SYNC_TO_DB_WATCHED | FLAG_SYNC_SHOWS; // need to sync watched states and shows
@@ -929,7 +929,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
          *  for items removed from trakt
          */
 
-        log.debug("sync with flag=" + flag);
+        log.debug("sync with flag={}", flag);
         /*
         if ((flag & FLAG_SYNC_NOW) != 0)
             removeListener();
@@ -943,7 +943,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         long movieTime = Trakt.getLastTimeMovieWatched(mPreferences);
         long showTime = Trakt.getLastTimeShowWatched(mPreferences);
 
-        log.debug("sync: last sync time is movieTime=" + movieTime + ", showTime=" + showTime);
+        log.debug("sync: last sync time is movieTime={}, showTime={}", movieTime, showTime);
 
         if (showTime == 0 && movieTime == 0) {
             log.debug("sync: first time syncing: full sync");
@@ -981,11 +981,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     continue;
                 // for markAs and unMarkAs
                 for (boolean toMark : new boolean[]{ true, false } ) {
-                    log.debug("syncing movies("+toMark+") " + library + " from DB to trakt.tv");
+                    log.debug("syncing movies({}) {} from DB to trakt.tv", toMark, library);
                     Trakt.Status status = syncMoviesToTrakt(library, toMark);
                     if (status == Trakt.Status.ERROR_NETWORK)
                         return handleSyncStatus(status, flag, "syncMoviesToTrakt");
-                    log.debug("syncing shows("+toMark+") " + library + " from DB to trakt.tv");
+                    log.debug("syncing shows({}) {} from DB to trakt.tv", toMark, library);
                     status = syncShowsToTrakt(library, toMark);
                     if (status == Trakt.Status.ERROR_NETWORK)
                         return handleSyncStatus(status, flag, "syncShowsToTrakt");
@@ -1022,16 +1022,16 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             for (String library : libraries) {
 
                 if (syncMoviesFromTrakt) {
-                    log.debug("syncing movies " + library + " from trakt.tv to DB");
+                    log.debug("syncing movies {} from trakt.tv to DB", library);
                     Trakt.Status status = syncMoviesToDb(library);
-                    log.debug("syncing movies " + library + " from trakt.tv to DB finished : "+status);
+                    log.debug("syncing movies {} from trakt.tv to DB finished : {}", library, status);
                     if (status == Trakt.Status.ERROR_NETWORK)
                         return handleSyncStatus(status, flag, "syncMoviesToDb");
                 }
                 if (syncShowsFromTrakt) {
-                    log.debug("syncing shows " + library + " from trakt.tv to DB");
+                    log.debug("syncing shows {} from trakt.tv to DB", library);
                     Trakt.Status status = syncShowsToDb(library);
-                    log.debug("syncing shows " + library + " from trakt.tv to DB finished : "+status);
+                    log.debug("syncing shows {} from trakt.tv to DB finished : {}", library, status);
                     if (status == Trakt.Status.ERROR_NETWORK)
                         return handleSyncStatus(status, flag, "syncShowsToDb");
                 }
@@ -1082,7 +1082,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
             if(!isIn){
                 //add to DB
-                log.debug("add new list to DB "+list.name);
+                log.debug("add new list to DB {}", list.name);
                 VideoStore.List.ListObj item = new VideoStore.List.ListObj(list.name, list.ids.trakt, VideoStore.List.SyncStatus.STATUS_OK);
                 localLists.add(item);
                 getContentResolver().insert(VideoStore.List.LIST_CONTENT_URI, item.toContentValues());
@@ -1095,7 +1095,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             if(wasLocallyDeleted){
                 //delete remote + remove from DB
                 Trakt.Result result1 = mTrakt.deleteList(0, String.valueOf(list.ids.trakt));
-                log.debug("delete remote list "+list.name);
+                log.debug("delete remote list {}", list.name);
                 if(result1.status == Status.SUCCESS){
                     getContentResolver().delete(VideoStore.List.LIST_CONTENT_URI, VideoStore.List.Columns.TRAKT_ID +"= ?", new String[]{String.valueOf(list.ids.trakt)});
                 }
@@ -1115,7 +1115,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 //might not have been deleted, just new
                 if(localList.syncStatus==VideoStore.List.SyncStatus.STATUS_NOT_SYNC){
                     //add to trakt
-                    log.debug(" add List To Trakt "+localList.title);
+                    log.debug(" add List To Trakt {}", localList.title);
                     Trakt.Result result1 = mTrakt.addList(0,localList.title);
                     if(result1.status==Status.SUCCESS){
                         log.debug(" add List To Trakt Status.SUCCESS");
@@ -1127,7 +1127,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     }
                 } else{
                     //was deleted
-                    log.debug(" deleting list from DB "+localList.title);
+                    log.debug(" deleting list from DB {}", localList.title);
                     getContentResolver().delete(VideoStore.List.LIST_CONTENT_URI, VideoStore.List.Columns.TRAKT_ID +"= ?", new String[]{String.valueOf(localList.traktId)});
                 }
             }
@@ -1300,14 +1300,14 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        log.debug("Received start id " + startId + ": " + intent);
+        log.debug("Received start id {}: {}", startId, intent);
         networkState = NetworkState.instance(getApplicationContext());
         if (propertyChangeListener == null)
             propertyChangeListener = new PropertyChangeListener() {
                 @Override
                 public void propertyChange(PropertyChangeEvent evt) {
                     if (evt.getOldValue() != evt.getNewValue()) {
-                        log.debug("NetworkState for " + evt.getPropertyName() + " changed:" + evt.getOldValue() + " -> " + evt.getNewValue());
+                        log.debug("NetworkState for {} changed:{} -> {}", evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
                         if (mNetworkState == null) mNetworkState = NetworkState.instance(getApplicationContext());
                         if (mNetworkState.isConnected()) { // network state has changed and we are connected now
                             // anti flood mechanism

@@ -46,7 +46,7 @@ public class ShowIdEpisodeSearch {
             put("include_adult", String.valueOf(adultScrape));
         }};
 
-        log.debug("getEpisodeShowResponse: quering tmdb for showId " + showId + " season " + season + " episode " + episode + " in " + language);
+        log.debug("getEpisodeShowResponse: quering tmdb for showId {} season {} episode {} in {}", showId, season, episode, language);
 
         String showKey = showId + "|" + language;
         ShowIdEpisodeSearchResult myResult = sShowCache.get(showKey);
@@ -68,10 +68,10 @@ public class ShowIdEpisodeSearch {
                         myResult.status = ScrapeStatus.NOT_FOUND;
                         // fallback to english if no result
                         if (!language.equals("en")) {
-                            log.debug("getEpisodeShowResponse: retrying search for showId " + showId + " in en");
+                            log.debug("getEpisodeShowResponse: retrying search for showId {} in en", showId);
                             return getEpisodeShowResponse(showId, season, episode,"en", adultScrape, tmdb);
                         }
-                        log.debug("getEpisodeShowResponse: showId " + showId + " not found");
+                        log.debug("getEpisodeShowResponse: showId {} not found", showId);
                         // record valid answer
                         sShowCache.put(showKey, myResult);
                         break;
@@ -82,7 +82,7 @@ public class ShowIdEpisodeSearch {
                                 myResult.status = ScrapeStatus.OKAY;
                             } else {
                                 if (!language.equals("en")) {
-                                    log.debug("getEpisodeShowResponse: retrying search for showId " + showId + " in en");
+                                    log.debug("getEpisodeShowResponse: retrying search for showId {} in en", showId);
                                     return getEpisodeShowResponse(showId, season, episode,"en", adultScrape, tmdb);
                                 }
                                 myResult.status = ScrapeStatus.NOT_FOUND;
@@ -90,13 +90,13 @@ public class ShowIdEpisodeSearch {
                             // record valid answer
                             sShowCache.put(showKey, myResult);
                         } else { // an error at this point is PARSER related
-                            log.debug("getEpisodeShowResponse: error " + seriesResponse.code());
+                            log.debug("getEpisodeShowResponse: error {}", seriesResponse.code());
                             myResult.status = ScrapeStatus.ERROR_PARSER;
                         }
                         break;
                 }
             } catch (IOException e) {
-                log.error("getEpisodeShowResponse: caught IOException getting result for showId=" + showId);
+                log.error("getEpisodeShowResponse: caught IOException getting result for showId={}", showId);
                 myResult.status = ScrapeStatus.ERROR_PARSER;
                 myResult.reason = e;
             }
@@ -105,10 +105,10 @@ public class ShowIdEpisodeSearch {
     }
 
     public static void debugLruCache(LruCache<String, ShowIdEpisodeSearchResult> lruCache) {
-        log.debug("debugLruCache: size=" + lruCache.size());
-        log.debug("debugLruCache: putCount=" + lruCache.putCount());
-        log.debug("debugLruCache: hitCount=" + lruCache.hitCount());
-        log.debug("debugLruCache: missCount=" + lruCache.missCount());
-        log.debug("debugLruCache: evictionCount=" + lruCache.evictionCount());
+        log.debug("debugLruCache: size={}", lruCache.size());
+        log.debug("debugLruCache: putCount={}", lruCache.putCount());
+        log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
+        log.debug("debugLruCache: missCount={}", lruCache.missCount());
+        log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
     }
 }

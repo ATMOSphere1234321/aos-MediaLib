@@ -1267,17 +1267,17 @@ public final class ScraperTables {
 
     public static void upgradeTo(SQLiteDatabase db, int toVersion) {
         if (toVersion == 37) {
-            log.debug("upgradeTo: " + toVersion);
+            log.debug("upgradeTo: {}", toVersion);
             db.execSQL("ALTER TABLE " + MOVIE_TABLE_NAME + " ADD COLUMN " + VideoStore.Video.VideoColumns.NOVA_PINNED + " INTEGER DEFAULT (0)");
             db.execSQL("ALTER TABLE " + SHOW_TABLE_NAME + " ADD COLUMN " + VideoStore.Video.VideoColumns.NOVA_PINNED + " INTEGER DEFAULT (0)");
         }
         if (toVersion == 38) {
-            log.debug("upgradeTo: " + toVersion);
+            log.debug("upgradeTo: {}", toVersion);
             db.execSQL("ALTER TABLE " + MOVIE_TABLE_NAME + " ADD COLUMN " + VideoStore.Video.VideoColumns.SCRAPER_C_ID + " INTEGER DEFAULT (-1)");
             db.execSQL(CREATE_MOVIE_COLLECTION_TABLE);
         }
         if (toVersion == 39) {
-            log.debug("upgradeTo: " + toVersion);
+            log.debug("upgradeTo: {}", toVersion);
             // create indexes to every non foreign keys with delete to speed up huge batch of delete in files_scanned during directory moves on network shares
             // performance hit comes from the cascade of triggers
             // without index, each delete from master table requires search through entire child table for foreign key'd items in O(N)
@@ -1317,16 +1317,16 @@ public final class ScraperTables {
             //db.execSQL(EPISODE_DELETE_TRIGGER_DROP);
             //db.execSQL(SHOW_DELETE_TRIGGER_DROP);
             //db.execSQL(MOVIE_DELETE_TRIGGER_DROP);
-            log.debug("upgradeTo: creating episode_delete trigger " + EPISODE_DELETE_TRIGGER_CREATE_v2);
+            log.debug("upgradeTo: creating episode_delete trigger {}", EPISODE_DELETE_TRIGGER_CREATE_v2);
             db.execSQL(EPISODE_DELETE_TRIGGER_CREATE_v2);
-            log.debug("upgradeTo: creating show_delete trigger " + SHOW_DELETE_TRIGGER_CREATE_v2);
+            log.debug("upgradeTo: creating show_delete trigger {}", SHOW_DELETE_TRIGGER_CREATE_v2);
             db.execSQL(SHOW_DELETE_TRIGGER_CREATE_v2);
-            log.debug("upgradeTo: creating movie_delete trigger " + MOVIE_DELETE_TRIGGER_CREATE_v2);
+            log.debug("upgradeTo: creating movie_delete trigger {}", MOVIE_DELETE_TRIGGER_CREATE_v2);
             db.execSQL(MOVIE_DELETE_TRIGGER_CREATE_v2);
             log.debug("upgradeTo: all good");
         }
         if (toVersion == 40) {
-            log.debug("upgradeTo: " + toVersion);
+            log.debug("upgradeTo: {}", toVersion);
             db.execSQL("ALTER TABLE " + MOVIE_TABLE_NAME + " ADD COLUMN " + ScraperStore.Movie.WRITERS_FORMATTED + " TEXT DEFAULT ''");
             db.execSQL("ALTER TABLE " + SHOW_TABLE_NAME + " ADD COLUMN " + ScraperStore.Show.WRITERS_FORMATTED + " TEXT DEFAULT ''");
             db.execSQL("ALTER TABLE " + EPISODE_TABLE_NAME + " ADD COLUMN " + ScraperStore.Episode.WRITERS_FORMATTED + " TEXT DEFAULT ''");
@@ -1351,7 +1351,7 @@ public final class ScraperTables {
             db.execSQL("CREATE INDEX WRITERS_SHOW_idx ON WRITERS_SHOW(writer_writers)");
         }
         if (toVersion == 45) {
-            log.debug("upgradeTo: " + toVersion + " - adding performance indexes for scraper data");
+            log.debug("upgradeTo: {} - adding performance indexes for scraper data", toVersion);
             db.execSQL(CREATE_EPISODE_SEASON_EPISODE_IDX);
             db.execSQL(CREATE_MOVIE_YEAR_IDX);
             db.execSQL(CREATE_MOVIE_RATING_IDX);
@@ -1359,13 +1359,13 @@ public final class ScraperTables {
             db.execSQL(CREATE_MOVIE_VIDEO_ID_IDX);
         }
         if (toVersion == 46) {
-            log.debug("upgradeTo: " + toVersion + " - adding additional performance indexes for scraper data");
+            log.debug("upgradeTo: {} - adding additional performance indexes for scraper data", toVersion);
             db.execSQL(CREATE_SHOW_RATING_IDX);
             db.execSQL(CREATE_EPISODE_AIRED_IDX);
             db.execSQL(CREATE_MOVIE_COLLECTION_IDX);
         }
         if (toVersion == 47) {
-            log.debug("upgradeTo: " + toVersion + " - adding WatchingUpNextLoader performance indexes");
+            log.debug("upgradeTo: {} - adding WatchingUpNextLoader performance indexes", toVersion);
             db.execSQL(CREATE_EPISODE_SERIES_ORDERING_IDX);
             db.execSQL(CREATE_MOVIE_COLLECTION_YEAR_IDX);
             db.execSQL(CREATE_EPISODE_WATCHED_ORDERING_IDX);

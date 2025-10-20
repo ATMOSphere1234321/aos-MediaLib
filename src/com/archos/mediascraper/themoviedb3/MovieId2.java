@@ -50,7 +50,7 @@ public class MovieId2 {
         Response<Credits> creditsResponse = null;
         MovieTags parserResult = null;
 
-        log.debug("getBaseInfo: quering tmdb for movieId " + movieId + " in " + language);
+        log.debug("getBaseInfo: quering tmdb for movieId {} in {}", movieId, language);
         try {
             movieResponse = moviesService.summary((int) movieId, language, new AppendToResponse(AppendToResponseItem.EXTERNAL_IDS, AppendToResponseItem.IMAGES, AppendToResponseItem.CREDITS, AppendToResponseItem.RELEASE_DATES, AppendToResponseItem.VIDEOS), options).execute();
             switch (movieResponse.code()) {
@@ -63,10 +63,10 @@ public class MovieId2 {
                     myResult.status = ScrapeStatus.NOT_FOUND;
                     // fallback to english if no result
                     if (!language.equals("en")) {
-                        log.debug("getBaseInfo: retrying search for movieId " + movieId + " in en");
+                        log.debug("getBaseInfo: retrying search for movieId {} in en", movieId);
                         return getBaseInfo(movieId, "en", moviesService, context);
                     }
-                    log.debug("getBaseInfo: movieId " + movieId + " not found");
+                    log.debug("getBaseInfo: movieId {} not found", movieId);
                     break;
                 default:
                     if (movieResponse.isSuccessful()) {
@@ -76,19 +76,19 @@ public class MovieId2 {
                             myResult.status = ScrapeStatus.OKAY;
                         } else {
                             if (!language.equals("en")) {
-                                log.debug("getBaseInfo: retrying search for movieId " + movieId + " in en");
+                                log.debug("getBaseInfo: retrying search for movieId {} in en", movieId);
                                 return getBaseInfo(movieId, "en", moviesService, context);
                             }
                             myResult.status = ScrapeStatus.NOT_FOUND;
                         }
                     } else { // an error at this point is PARSER related
-                        log.debug("getBaseInfo: error " + movieResponse.code());
+                        log.debug("getBaseInfo: error {}", movieResponse.code());
                         myResult.status = ScrapeStatus.ERROR_PARSER;
                     }
                     break;
             }
         } catch (IOException e) {
-            log.error("getBaseInfo: caught IOException getting summary for movieId=" + movieId);
+            log.error("getBaseInfo: caught IOException getting summary for movieId={}", movieId);
             myResult.status = ScrapeStatus.ERROR_PARSER;
             myResult.reason = e;
         }

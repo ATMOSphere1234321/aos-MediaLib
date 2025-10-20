@@ -47,14 +47,14 @@ public class ShowIdSeasonSearch {
             put("include_adult", String.valueOf(adultScrape));
         }};
 
-        log.debug("getSeasonShowResponse: quering tmdb for showId " + showId + " season " + season + " in " + language);
+        log.debug("getSeasonShowResponse: quering tmdb for showId {} season {} in {}", showId, season, language);
 
         String showKey = showId + "|" + "s" + season + "|" + language;
         ShowIdSeasonSearchResult myResult = sShowCache.get(showKey);
         if (log.isTraceEnabled()) debugLruCache(sShowCache);
 
         if (myResult == null) {
-            log.debug("getSeasonShowResponse: not in cache fetching s" + season + " for showId " + showId);
+            log.debug("getSeasonShowResponse: not in cache fetching s{} for showId {}", season, showId);
             myResult = new ShowIdSeasonSearchResult();
             try {
                 // use appendToResponse to get imdbId
@@ -70,10 +70,10 @@ public class ShowIdSeasonSearch {
                         myResult.status = ScrapeStatus.NOT_FOUND;
                         // fallback to english if no result
                         if (!language.equals("en")) {
-                            log.debug("getSeasonShowResponse: retrying search for showId " + showId + " in en");
+                            log.debug("getSeasonShowResponse: retrying search for showId {} in en", showId);
                             return getSeasonShowResponse(showId, season,"en", adultScrape, tmdb);
                         }
-                        log.debug("getSeasonShowResponse: showId " + showId + " not found");
+                        log.debug("getSeasonShowResponse: showId {} not found", showId);
                         // record valid answer
                         sShowCache.put(showKey, myResult);
                         break;
@@ -84,7 +84,7 @@ public class ShowIdSeasonSearch {
                                 myResult.status = ScrapeStatus.OKAY;
                             } else {
                                 if (!language.equals("en")) {
-                                    log.debug("getSeasonShowResponse: retrying search for showId " + showId + " in en");
+                                    log.debug("getSeasonShowResponse: retrying search for showId {} in en", showId);
                                     return getSeasonShowResponse(showId, season,"en", adultScrape, tmdb);
                                 }
                                 myResult.status = ScrapeStatus.NOT_FOUND;
@@ -92,13 +92,13 @@ public class ShowIdSeasonSearch {
                             // record valid answer
                             sShowCache.put(showKey, myResult);
                         } else { // an error at this point is PARSER related
-                            log.debug("getSeasonShowResponse: error " + seriesResponse.code());
+                            log.debug("getSeasonShowResponse: error {}", seriesResponse.code());
                             myResult.status = ScrapeStatus.ERROR_PARSER;
                         }
                         break;
                 }
             } catch (IOException e) {
-                log.error("getSeasonShowResponse: caught IOException getting result for showId=" + showId);
+                log.error("getSeasonShowResponse: caught IOException getting result for showId={}", showId);
                 myResult.status = ScrapeStatus.ERROR_PARSER;
                 myResult.reason = e;
             }
@@ -107,10 +107,10 @@ public class ShowIdSeasonSearch {
     }
 
     public static void debugLruCache(LruCache<String, ShowIdSeasonSearchResult> lruCache) {
-        log.debug("debugLruCache: size=" + lruCache.size());
-        log.debug("debugLruCache: putCount=" + lruCache.putCount());
-        log.debug("debugLruCache: hitCount=" + lruCache.hitCount());
-        log.debug("debugLruCache: missCount=" + lruCache.missCount());
-        log.debug("debugLruCache: evictionCount=" + lruCache.evictionCount());
+        log.debug("debugLruCache: size={}", lruCache.size());
+        log.debug("debugLruCache: putCount={}", lruCache.putCount());
+        log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
+        log.debug("debugLruCache: missCount={}", lruCache.missCount());
+        log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
     }
 }

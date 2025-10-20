@@ -112,7 +112,7 @@ public class Scraper {
         String defaultLanguage = Locale.getDefault().getLanguage();
         String result;
         // TO CHECK: perhaps below code does not do much since Locale.getDefault().getLanguage() returns 2 letter codes even if a variant of the language is used
-        log.debug("getLanguage: defaultScraperLanguage=" + defaultLanguage);
+        log.debug("getLanguage: defaultScraperLanguage={}", defaultLanguage);
         // if defaultLanguage is of the form xx-yy take result as xx
         if (defaultLanguage.length() > 2 && defaultLanguage.charAt(2) == '-') {
             result = defaultLanguage.substring(0, 2);
@@ -122,12 +122,12 @@ public class Scraper {
         // zh = Mandarin -> Chinese Simplified (zh-cn) or Chinese
         // cn = Cantonese -> Chinese Traditional (zh-tw)
         if (defaultLanguage.toLowerCase().startsWith("zh-tw")) {
-            log.warn("getLanguage: curing defaultScraperLanguage=" + defaultLanguage + " zh-tw -> to cn");
+            log.warn("getLanguage: curing defaultScraperLanguage={} zh-tw -> to cn", defaultLanguage);
             result = "cn";  // Traditional Chinese
         }
         // treat brazilian portuguese as an exception, tmdb understands pt-br
         if (defaultLanguage.toLowerCase().startsWith("pt-br")) {
-            log.warn("getLanguage: curing defaultScraperLanguage=" + defaultLanguage + ", keeping pt-br");
+            log.warn("getLanguage: curing defaultScraperLanguage={}, keeping pt-br", defaultLanguage);
             result = "pt-br";  // Brazilian Portuguese
         }
         return PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext()).getString("favScraperLang", result);

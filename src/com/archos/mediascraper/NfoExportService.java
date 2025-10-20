@@ -193,7 +193,7 @@ public class NfoExportService extends IntentService implements DefaultLifecycleO
     }
 
     private void exportFile(Uri data) {
-        log.debug("exportFile: " + data.getPath());
+        log.debug("exportFile: {}", data.getPath());
         MetaFile2 file = null;
         try {
             file = MetaFile2Factory.getMetaFileForUrl(data);

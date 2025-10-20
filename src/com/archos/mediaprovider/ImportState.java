@@ -44,7 +44,7 @@ public enum ImportState {
         try {
             if (mAndroidScanning) {
                 // ignore
-                log.debug("Android scanning: not setting " + state.name());
+                log.debug("Android scanning: not setting {}", state.name());
             } else {
                 setStateLocked(state);
             }
@@ -92,7 +92,7 @@ public enum ImportState {
 
     private void setStateLocked(State state) {
         if (log.isDebugEnabled() && mState != state) {
-            log.debug("State " + mState.name() + " -> " + state.name());
+            log.debug("State {} -> {}", mState.name(), state.name());
         }
         mState = state;
     }
@@ -105,7 +105,7 @@ public enum ImportState {
     public State getState() {
         mLock.lock();
         try {
-            log.debug("getState=" + mState.name());
+            log.debug("getState={}", mState.name());
             return mState;
         } finally {
             mLock.unlock();
@@ -119,7 +119,7 @@ public enum ImportState {
     public boolean isInitialImport() {
         mLock.lock();
         try {
-            log.debug("isInitialImport=" + (mState == State.INITIAL_IMPORT));
+            log.debug("isInitialImport={}", (mState == State.INITIAL_IMPORT));
             return mState == State.INITIAL_IMPORT;
         } finally {
             mLock.unlock();
@@ -129,7 +129,7 @@ public enum ImportState {
     public boolean isRegularImport() {
         mLock.lock();
         try {
-            log.debug("isInitialImport=" + (mState == State.REGULAR_IMPORT));
+            log.debug("isInitialImport={}", (mState == State.REGULAR_IMPORT));
             return mState == State.REGULAR_IMPORT;
         } finally {
             mLock.unlock();
@@ -142,7 +142,7 @@ public enum ImportState {
     public int getNumberOfFilesRemainingToImport() {
         mLock.lock();
         try {
-            log.debug("mNumberOfFilesRemainingToImport=" +mNumberOfFilesRemainingToImport);
+            log.debug("mNumberOfFilesRemainingToImport={}", mNumberOfFilesRemainingToImport);
             return mNumberOfFilesRemainingToImport;
         } finally {
             mLock.unlock();

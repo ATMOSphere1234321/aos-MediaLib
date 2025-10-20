@@ -41,7 +41,7 @@ public class NetworkScannerReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Uri uri = intent.getData();
         String action = intent.getAction();
-        log.debug("onReceive intent:" + intent + " uri:" + uri);
+        log.debug("onReceive intent:{} uri:{}", intent, uri);
         // we need uri telling us what is scanned
         if (uri == null)
             return;
@@ -56,7 +56,7 @@ public class NetworkScannerReceiver extends BroadcastReceiver {
     private static synchronized void add(Uri uri) {
         if (uri == null)
             return;
-        log.debug("add uri:" + uri);
+        log.debug("add uri:{}", uri);
         String path = uri.toString();
         sCurrentlyScanned.add(path);
     }
@@ -64,7 +64,7 @@ public class NetworkScannerReceiver extends BroadcastReceiver {
     private static synchronized void remove(Uri uri) {
         if (uri == null)
             return;
-        log.debug("remove uri:" + uri);
+        log.debug("remove uri:{}", uri);
         String path = uri.toString();
         sCurrentlyScanned.remove(path);
     }
@@ -72,7 +72,7 @@ public class NetworkScannerReceiver extends BroadcastReceiver {
     private static void dump() {
         log.debug("> --- DUMP --- <");
         for (String key : sCurrentlyScanned) {
-            log.debug("> [" + key + "]");
+            log.debug("> [{}]", key);
         }
         log.debug("> ------------ <");
     }
@@ -84,7 +84,7 @@ public class NetworkScannerReceiver extends BroadcastReceiver {
 
     public static synchronized boolean isScannerWorking() {
         // if there is a path in here then scanner is working.
-        log.debug("isScannerWorking: sCurrentlyScanned.size()=" + sCurrentlyScanned.size() + " " + (sCurrentlyScanned.size() > 0));
+        log.debug("isScannerWorking: sCurrentlyScanned.size()={} {}", sCurrentlyScanned.size(), (sCurrentlyScanned.size() > 0));
         return sCurrentlyScanned.size() > 0;
     }
 }

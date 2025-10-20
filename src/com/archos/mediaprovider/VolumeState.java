@@ -56,7 +56,7 @@ public class VolumeState {
             } else {
                 mStorageId = storageId;
             }
-            log.debug("Volume: mMountPoint=" + mMountPoint + ", volumeIndex=" + volumeIndex + ", mStorageId=" + mStorageId);
+            log.debug("Volume: mMountPoint={}, volumeIndex={}, mStorageId={}", mMountPoint, volumeIndex, mStorageId);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
                 mMounted = 1;
         }
@@ -73,7 +73,7 @@ public class VolumeState {
             int newMounted = mounted ? 1 : 0;
             if (newMounted != mMounted) {
                 mMounted = newMounted;
-                log.debug("setMountState: mount state changed for " + mMountPoint + " : " + mMounted);
+                log.debug("setMountState: mount state changed for {} : {}", mMountPoint, mMounted);
                 return true;
             }
             return false;
@@ -164,7 +164,7 @@ public class VolumeState {
         public void onReceive(Context context, Intent intent) {
             String path = intent.getData().getPath();
             ensureVolumes();
-            log.debug("mUnMountReceiver: path=" + path);
+            log.debug("mUnMountReceiver: path={}", path);
             boolean found = false;
             for (Volume volume : mVolumes) {
                 if (volume.getMountPoint().equals(path)
@@ -177,7 +177,7 @@ public class VolumeState {
             // If volume not in our tracked list (e.g., USB unmounted after app restart),
             // create a temporary Volume object and notify observers
             if (!found) {
-                log.debug("mUnMountReceiver: volume not in tracked list, creating temporary volume for: " + path);
+                log.debug("mUnMountReceiver: volume not in tracked list, creating temporary volume for: {}", path);
                 // Use a high index for temporary volumes to avoid conflicts
                 Volume tempVolume = new Volume(path, 1000);
                 tempVolume.setMountState(false);
@@ -189,7 +189,7 @@ public class VolumeState {
         @Override
         public void onReceive(Context context, Intent intent) {
             String path = intent.getData().getPath();
-            log.debug("mMountReceiver: path=" + path);
+            log.debug("mMountReceiver: path={}", path);
             ensureVolumes();
             boolean found = false;
             for (Volume volume : mVolumes) {
@@ -203,7 +203,7 @@ public class VolumeState {
             // If volume not in our tracked list (e.g., new USB mounted after app restart),
             // create a temporary Volume object and notify observers
             if (!found) {
-                log.debug("mMountReceiver: volume not in tracked list, creating temporary volume for: " + path);
+                log.debug("mMountReceiver: volume not in tracked list, creating temporary volume for: {}", path);
                 // Use a high index for temporary volumes to avoid conflicts
                 Volume tempVolume = new Volume(path, 1000);
                 tempVolume.setMountState(true);
@@ -259,17 +259,17 @@ public class VolumeState {
         ArrayList<Volume> vols = new ArrayList<>();
         for(String s : storageManager.getExtSdcards()) {
             vols.add(new Volume(s, i));
-            log.debug("ensureVolumesV23: add volume " + s);
+            log.debug("ensureVolumesV23: add volume {}", s);
             i++;
         }
         for(String s : storageManager.getExtUsbStorages()) {
             vols.add(new Volume(s, i));
-            log.debug("ensureVolumesV23: add volume " + s);
+            log.debug("ensureVolumesV23: add volume {}", s);
             i++;
         }
         for(String s : storageManager.getExtOtherStorages()) {
             vols.add(new Volume(s, i));
-            log.debug("ensureVolumesV23: add volume " + s);
+            log.debug("ensureVolumesV23: add volume {}", s);
             i++;
         }
         if (vols.size() > 0) {
@@ -312,13 +312,13 @@ public class VolumeState {
             Method getVolumePaths = StorageManager.class.getMethod("getVolumePaths");
             return (String[]) getVolumePaths.invoke(storageManager);
         } catch (NoSuchMethodException e) {
-            log.error("getVolumePaths: " + e.getMessage(), e);
+            log.error("getVolumePaths: {}", e.getMessage(), e);
         } catch (IllegalAccessException e) {
-            log.error("getVolumePaths: " + e.getMessage(), e);
+            log.error("getVolumePaths: {}", e.getMessage(), e);
         } catch (IllegalArgumentException e) {
-            log.error("getVolumePaths: " + e.getMessage(), e);
+            log.error("getVolumePaths: {}", e.getMessage(), e);
         } catch (InvocationTargetException e) {
-            log.error("getVolumePaths: " + e.getMessage(), e);
+            log.error("getVolumePaths: {}", e.getMessage(), e);
         }
         return null;
     }

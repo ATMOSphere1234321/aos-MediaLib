@@ -262,7 +262,7 @@ public class Trakt {
     public static OAuthClientRequest getAuthorizationRequest(SharedPreferences pref) throws OAuthSystemException{
         String sampleState = new BigInteger(130, new SecureRandom()).toString(32);
         String url = getTraktV2().buildAuthorizationUrl(sampleState);
-        log.debug("getAuthorizationRequest: url is " + url);
+        log.debug("getAuthorizationRequest: url is {}", url);
         return OAuthClientRequest
                 .authorizationLocation(url)
                 .buildQueryMessage();
@@ -280,7 +280,7 @@ public class Trakt {
             final accessToken mAccessToken = new accessToken();
             mAccessToken.access_token = response.body().access_token;
             mAccessToken.refresh_token = response.body().refresh_token;
-            log.debug("getAccessToken: access_token is " + mAccessToken.access_token);
+            log.debug("getAccessToken: access_token is {}", mAccessToken.access_token);
             return mAccessToken;
         } catch (IOException | NullPointerException e) {
             log.error("getAccessToken: caught IoException ", e);
@@ -434,7 +434,7 @@ public class Trakt {
     }
 
     public Result postWatching(final String action,final VideoDbInfo videoInfo, final float progress, final int trial) {
-        log.debug("postWatching for action=" + action + ", progress=" + progress + ", trial=" + trial);
+        log.debug("postWatching for action={}, progress={}, trial={}", action, progress, trial);
         PlaybackResponse playbackResponse = null;
         AuthParam param = fillParam(videoInfo);
         if (videoInfo.isShow) {
@@ -443,12 +443,12 @@ public class Trakt {
             SyncEpisode se = new SyncEpisode();
             EpisodeIds ids = new EpisodeIds();
             if(showParam.episode_tmdb_id!=null) {
-                log.debug("postWatching: showid=" + showParam.episode_tmdb_id);
+                log.debug("postWatching: showid={}", showParam.episode_tmdb_id);
                 ids.tmdb = Integer.valueOf(showParam.episode_tmdb_id);
             }
             se.id(ids);
             ScrobbleProgress ep = new ScrobbleProgress(se, progress, "", "");
-            log.debug("postWatching: EpisodeProgres=" + ep.progress + ", episode id " + se.ids.tmdb);
+            log.debug("postWatching: EpisodeProgres={}, episode id {}", ep.progress, se.ids.tmdb);
             switch (action) {
                 case "start":
                     log.debug("postWatching: sending startWatching");
@@ -476,7 +476,7 @@ public class Trakt {
             SyncMovie sm= new SyncMovie();
             sm.id(mi);
             ScrobbleProgress mp = new ScrobbleProgress(sm, progress, "", "");
-            log.debug("postWatching: MovieProgress=" + mp);
+            log.debug("postWatching: MovieProgress={}", mp);
             switch (action) {
                 case "start":
                     log.debug("postWatching: sending startWatching");
@@ -531,7 +531,7 @@ public class Trakt {
             try {
                 retrofit2.Response<AccessToken> token = mTraktV2.refreshAccessToken(refreshToken);
                 if (!token.isSuccessful()) {
-                    log.debug("Failed refreshing token " + token.toString());
+                    log.debug("Failed refreshing token {}", token.toString());
                     Intent intent = new Intent(TRAKT_ISSUE_REFRESH_TOKEN);
                     intent.setPackage(ArchosUtils.getGlobalContext().getPackageName());
                     mContext.sendBroadcast(intent);
@@ -541,7 +541,7 @@ public class Trakt {
                 setRefreshToken(pref, token.body().refresh_token);
                 return true;
             } catch (IOException ioe) {
-                log.error("getAccessToken: caught IOException " + ioe);
+                log.error("getAccessToken: caught IOException {}", ioe);
                 return false;
             }
         }
@@ -592,11 +592,11 @@ public class Trakt {
         return exec(call, MAX_TRIAL);
     }
     public <T> T exec(retrofit2.Call<T> call, int remaining) {
-        log.debug("exec: call, remaining trials=" + remaining);
+        log.debug("exec: call, remaining trials={}", remaining);
         try {
             retrofit2.Response<T> res = call.execute();
             if (!res.isSuccessful()) {
-                log.error("exec request error code is " + res.code(), new Throwable());
+                log.error("exec request error code is {}", res.code(), new Throwable());
                 // TODO check this new retry case with 409
                 // 409	Conflict - resource already created is happening often but no retry...
                 if (res.code() == 401 || res.code() == 409 ) {
@@ -845,7 +845,7 @@ public class Trakt {
     }
 
     public static boolean shouldMarkAsSeen(float progress) {
-        log.debug("shouldMarkAsSeen: " + progress);
+        log.debug("shouldMarkAsSeen: {}", progress);
         return progress >= SCROBBLE_THRESHOLD;
     }
 

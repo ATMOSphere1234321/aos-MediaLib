@@ -348,7 +348,7 @@ public class ISO639codes {
         if (matcher.find()) {
             String languageCode1 = matcher.group(1);
             String languageCode2 = matcher.group(2);
-            log.debug("findLanguageInString: languageCode1=" + languageCode1 + " languageCode2=" + languageCode2);
+            log.debug("findLanguageInString: languageCode1={} languageCode2={}", languageCode1, languageCode2);
             if (languageCode1 != null) {
                 languageCode = languageCode1;
                 if (languageCode1.equals("und") || languageCode1.equals("Unknown")) result = ""; // und = undefined
@@ -363,7 +363,7 @@ public class ISO639codes {
             matcher = regexPattern.matcher(string);
             if (matcher.find()) {
                 languageCode = matcher.group();
-                log.debug("findLanguageInString: languageCode=" + languageCode);
+                log.debug("findLanguageInString: languageCode={}", languageCode);
                 if (languageCode.equals("und") || languageCode.equals("Unknown")) result = ""; // und = undefined
                 else result = ISO639codes.getLanguageNameForLetterCode(languageCode);
             } else result = "";
@@ -393,7 +393,7 @@ public class ISO639codes {
     public static String replaceLanguageCodeInString(String string) {
         // treat strings being "l_XYZ" or "l_XY" or "XYZ" or "XY" or "title (l_XYZ)" or "title (l_XY)"
         // and replace it with locale language corresponding to XY or XYZ letter code
-        log.debug("replaceLanguageCodeInString: input string=" + string);
+        log.debug("replaceLanguageCodeInString: input string={}", string);
         if (string == null) return "";
         // avoid name=" (l_eng)" with starting space seen in Modern Family show
         String cleanString = removeStartingSpacesAndSurroundingParenthesis(string);
@@ -405,7 +405,7 @@ public class ISO639codes {
         if (matcher.find()) {
             String languageCode1 = matcher.group(1);
             String languageCode2 = matcher.group(2);
-            log.debug("replaceLanguageCodeInString: languageCode1=" + languageCode1 + " languageCode2=" + languageCode2);
+            log.debug("replaceLanguageCodeInString: languageCode1={} languageCode2={}", languageCode1, languageCode2);
             if (languageCode1 != null) {
                 languageCode = languageCode1;
                 if (languageCode1.equals("und") || languageCode1.equals("Unknown")) result = ""; // und = undefined
@@ -421,11 +421,11 @@ public class ISO639codes {
             matcher = regexPattern.matcher(cleanString);
             if (matcher.find()) {
                 languageCode = matcher.group();
-                log.debug("replaceLanguageCodeInString: languageCode=" + languageCode);
+                log.debug("replaceLanguageCodeInString: languageCode={}", languageCode);
                 if (languageCode.equals("und") || languageCode.equals("Unknown")) result = ""; // und = undefined
                 else result = capitalizeFirstLetter(cleanString.replaceAll(pattern, ISO639codes.getLanguageNameForLetterCode(languageCode)));
             } else {
-                log.error("replaceLanguageCodeInString: no languageCode in " + cleanString);
+                log.error("replaceLanguageCodeInString: no languageCode in {}", cleanString);
                 result = cleanString;
             }
         }

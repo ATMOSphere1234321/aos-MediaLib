@@ -155,7 +155,7 @@ public class IndexHelper implements LoaderManager.LoaderCallbacks<Cursor>, Loade
 
         @Override
         protected Void doInBackground(Void... params) {
-            log.debug("position: "+mVideoInfo.resume+" - id: "+mVideoInfo.id);
+            log.debug("position: {} - id: {}", mVideoInfo.resume, mVideoInfo.id);
             if (mVideoInfo.id != -1) {
                 // this stores the audioTrack and subtitleTrack in the same column
                 int playerParams = VideoStore.paramsFromTracks(mVideoInfo.audioTrack, mVideoInfo.subtitleTrack);
@@ -174,7 +174,7 @@ public class IndexHelper implements LoaderManager.LoaderCallbacks<Cursor>, Loade
                                 values, where, null);
             }
             XmlDb xmlDb = null;
-            log.debug("mExportDb: "+mExportDb+" - isLocal: "+FileUtils.isLocal(mVideoInfo.uri)+" isSlowRemote "+FileUtils.isSlowRemote(mVideoInfo.uri));
+            log.debug("mExportDb: {} - isLocal: {} isSlowRemote {}", mExportDb, FileUtils.isLocal(mVideoInfo.uri), FileUtils.isSlowRemote(mVideoInfo.uri));
             if (mExportDb &&
                     !FileUtils.isLocal(mVideoInfo.uri)&&
                     mVideoInfo.duration>0
@@ -339,7 +339,7 @@ public class IndexHelper implements LoaderManager.LoaderCallbacks<Cursor>, Loade
         if (mAutoScrape && !mLocalVideoInfo.isScraped&& UriUtils.isIndexable(mUri))
             requestScraping();
         if (mListener != null) {
-            log.debug("onVideoDbInfo "+mLocalVideoInfo+" "+mRemoteVideoInfo);
+            log.debug("onVideoDbInfo {} {}", mLocalVideoInfo, mRemoteVideoInfo);
             mListener.onVideoDb(mLocalVideoInfo, mRemoteVideoInfo);
         }
     }
@@ -425,7 +425,7 @@ public class IndexHelper implements LoaderManager.LoaderCallbacks<Cursor>, Loade
     }
 
     public void writeVideoInfo(VideoDbInfo videoInfo, boolean exportDb) {
-        log.debug("writeVideoInfo "+exportDb);
+        log.debug("writeVideoInfo {}", exportDb);
         new WriteVideoInfoTask(mContext, videoInfo, exportDb).execute();
     }
 }

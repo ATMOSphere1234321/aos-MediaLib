@@ -50,9 +50,9 @@ public class ScraperCache {
         try {
             double fillRatio = cache.size() / (double) cache.maxSize() * 100;
             double hitRatio = cache.hitCount() / (double) cache.requestCount() * 100;
-            log.trace("Cache filled " + fillRatio + "% (size=" + cache.size() + "/maxsize=" + cache.maxSize() + ")" );
-            log.trace("Cache hit " + hitRatio + "% (hit="+ cache.hitCount() + "/requests=" + cache.requestCount() + ")");
-            log.trace("Cache request count " + cache.requestCount() + ", network count " + cache.networkCount());
+            log.trace("Cache filled {}% (size={}/maxsize={})", fillRatio, cache.size(), cache.maxSize());
+            log.trace("Cache hit {}% (hit={}/requests={})", hitRatio, cache.hitCount(), cache.requestCount());
+            log.trace("Cache request count {}, network count {}", cache.requestCount(), cache.networkCount());
         } catch (IOException e) {
             log.error("caught IOException", e);
         }
@@ -61,7 +61,7 @@ public class ScraperCache {
     public static Cache getCache(Context context) {
         if (cache == null) {
             File cacheDir = new File(context.getCacheDir(), SCRAPER_CACHE);
-            log.debug("getCache: directory " + context.getCacheDir() + "/" + SCRAPER_CACHE);
+            log.debug("getCache: directory {}/{}", context.getCacheDir(), SCRAPER_CACHE);
             if (!cacheDir.exists()) cacheDir.mkdirs();
             cache = new Cache(cacheDir, cacheSize);
         }

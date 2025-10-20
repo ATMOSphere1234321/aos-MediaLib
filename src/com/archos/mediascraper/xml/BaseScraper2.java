@@ -61,10 +61,10 @@ public abstract class BaseScraper2 {
         try {
             mParser = parserFactory.newSAXParser();
         } catch (ParserConfigurationException e) {
-            log.debug("Exception: " + e, e);
+            log.error("Exception", e);
             throw new RuntimeException(e);
         } catch (SAXException e) {
-            log.debug("Exception: " + e, e);
+            log.debug("Exception", e);
             throw new RuntimeException(e);
         }
         mName = internalGetPreferenceName();

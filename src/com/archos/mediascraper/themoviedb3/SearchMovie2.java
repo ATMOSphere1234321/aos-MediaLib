@@ -43,7 +43,7 @@ public class SearchMovie2 {
         Response<MovieResultsPage> response = null;
         Boolean notFound = false;
 
-        log.debug("search " + query + " for year " + year + " in "+ language);
+        log.debug("search {} for year {} in {}", query, year, language);
 
         Integer annee = null;
         if (year != null) {
@@ -54,7 +54,7 @@ public class SearchMovie2 {
                 annee = null;
             }
         }
-        log.debug("search: quering tmdb for " + query + " year " + annee + " in " + language);
+        log.debug("search: quering tmdb for {} year {} in {}", query, annee, language);
         try {
             // by default no adult search
             response = searchService.movie(query, null, language,
@@ -71,7 +71,7 @@ public class SearchMovie2 {
                 case 404 -> { // not found
                     myResult.status = ScrapeStatus.NOT_FOUND;
                     notFound = true;
-                    log.debug("search: " + query + " not found");
+                    log.debug("search: {} not found", query);
                 }
                 case 500, 503, 504 -> { // internal server error
                     log.error("search: internal server error");
@@ -82,7 +82,7 @@ public class SearchMovie2 {
                     log.debug("search: found");
                     if (response.isSuccessful()) {
                         if (response.body() != null) {
-                            log.debug("search: response body has " + response.body().total_results + " results");
+                            log.debug("search: response body has {} results", response.body().total_results);
                             if (response.body().total_results != null && response.body().total_results == 0)
                                 notFound = true;
                             parserResult = SearchMovieParser2.getResult(response, query, language, year, resultLimit);
@@ -94,7 +94,7 @@ public class SearchMovie2 {
                             myResult.status = ScrapeStatus.NOT_FOUND;
                         }
                     } else { // an error at this point is PARSER related
-                        log.debug("search: response is not successful for " + query);
+                        log.debug("search: response is not successful for {}", query);
                         myResult.status = ScrapeStatus.ERROR_PARSER;
                     }
                 }
@@ -110,12 +110,12 @@ public class SearchMovie2 {
             if (year == null) { // perhaps year is in title without (year)
                 // reprocess name with year_extractor without parenthesis since we need to match The.Flash.2014.sXXeYY but not first to cope with Paris.Police.1900
                 Pair<String, String> nameYear = yearExtractor(query);
-                log.debug("search: not found trying to extract year name=" + nameYear.first + ", year=" + nameYear.second);
+                log.debug("search: not found trying to extract year name={}, year={}", nameYear.first, nameYear.second);
                 if (nameYear.second != null) // avoid infinite loop
                     return search(nameYear.first, language, nameYear.second, resultLimit, searchService, adultScrape);
                 else myResult.status = ScrapeStatus.NOT_FOUND;
             } else {
-                log.debug("search: retrying search for '" + query + "' without year.");
+                log.debug("search: retrying search for '{}' without year.", query);
                 return search(query, language, null, resultLimit, searchService, adultScrape);
             }
         }

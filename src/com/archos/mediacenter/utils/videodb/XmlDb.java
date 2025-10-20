@@ -127,29 +127,29 @@ public class XmlDb implements Callback {
                 return;
             if (localName.equals("path")) {
                 String path = getString();
-                log.debug("endElement: path=" + path);
+                log.debug("endElement: path={}", path);
                 mCurrentEntry.setFile(getFilePath(mLocation, path));
             } else if (localName.equals("last_position")) {
                 mCurrentEntry.resume = getInt();
-                log.debug("endElement: last_position=" + mCurrentEntry.resume);
+                log.debug("endElement: last_position={}", mCurrentEntry.resume);
             } else if (localName.equals("bookmark_position")) {
                 mCurrentEntry.bookmark = getInt();
-                log.debug("endElement: bookmark_position=" + mCurrentEntry.bookmark);
+                log.debug("endElement: bookmark_position={}", mCurrentEntry.bookmark);
             } else if (localName.equals("audio_track")) {
                 mCurrentEntry.audioTrack = getInt();
-                log.debug("endElement: audio_track=" + mCurrentEntry.audioTrack);
+                log.debug("endElement: audio_track={}", mCurrentEntry.audioTrack);
             } else if (localName.equals("subtitle_track")) {
                 mCurrentEntry.subtitleTrack = getInt();
-                log.debug("endElement: subtitle_track=" + mCurrentEntry.subtitleTrack);
+                log.debug("endElement: subtitle_track={}", mCurrentEntry.subtitleTrack);
             } else if (localName.equals("subtitle_delay")) {
                 mCurrentEntry.subtitleDelay = getInt();
-                log.debug("endElement: subtitle_delay=" + mCurrentEntry.subtitleDelay);
+                log.debug("endElement: subtitle_delay={}", mCurrentEntry.subtitleDelay);
             } else if (localName.equals("subtitle_ratio")) {
                 mCurrentEntry.subtitleRatio = getInt();
-                log.debug("endElement: subtitle_ratio=" + mCurrentEntry.subtitleRatio);
+                log.debug("endElement: subtitle_ratio={}", mCurrentEntry.subtitleRatio);
             } else if (localName.equals("last_time_played")) {
                 mCurrentEntry.lastTimePlayed = Long.decode(getString());
-                log.debug("endElement: last_time_played=" + mCurrentEntry.lastTimePlayed);
+                log.debug("endElement: last_time_played={}", mCurrentEntry.lastTimePlayed);
             } else if (localName.equals("network_database")) {
                 mResult = mCurrentEntry;
                 sRemoteCache.put(mCurrentEntry.uri, mCurrentEntry);
@@ -227,9 +227,9 @@ public class XmlDb implements Callback {
 
         @Override
         protected Void doInBackground(Void... params) {
-            log.debug("doInBackground: " + mVideoDbInfo.uri);
+            log.debug("doInBackground: {}", mVideoDbInfo.uri);
             boolean ret = writeXml(mVideoDbInfo);
-            log.debug("writeXml: " + ret);
+            log.debug("writeXml: {}", ret);
             return null;
         }
 
@@ -270,13 +270,13 @@ public class XmlDb implements Callback {
             try {
                 fis = FileEditorFactoryWithUpnp.getFileEditorForUrl(location, null).getInputStream();
             } catch (MalformedURLException e1) {
-                log.error("parseXml: Error: " + e1);
+                log.error("parseXml: Error: {}", e1);
                 return null;
             } catch (IOException e2) {
-                log.error("parseXml: Error: " + e2);
+                log.error("parseXml: Error: {}", e2);
                 return null;
             } catch (Exception e) {
-                log.error("parseXml: Error: " + e);
+                log.error("parseXml: Error: {}", e);
                 return null;
             }
 
@@ -474,14 +474,14 @@ public class XmlDb implements Callback {
             if(xmlUri==null)
                 return false;
             FileEditor fileEditor = FileEditorFactoryWithUpnp.getFileEditorForUrl(xmlUri, null);
-            log.debug("xmlPath: "+ xmlUri);
+            log.debug("xmlPath: {}", xmlUri);
             // Delete existing file to avoid overwrite issue (end of previous content still there is the new content is shorter)
             if (fileEditor.exists()) {
                 fileEditor.delete();
             }
             os = fileEditor.getOutputStream();
         } catch (Exception e1) {
-            log.error("writeXml: Error: " + e1);
+            log.error("writeXml: Error: {}", e1);
             try {
                 if (os != null) os.close();
             } catch (IOException ioe) {
@@ -493,14 +493,14 @@ public class XmlDb implements Callback {
             try {
                 os.write(xmlContent.getBytes());
             } catch (IOException e) {
-                log.error("writeXml: Error writing " + e);
+                log.error("writeXml: Error writing {}", e);
                 return false;
             } finally {
                 if(os!=null)
                     try {
                         os.close();
                     } catch (IOException e) {
-                        log.error("writeXml: Error closing " + e);
+                        log.error("writeXml: Error closing {}", e);
                     }
             }
         }
@@ -623,7 +623,7 @@ public class XmlDb implements Callback {
     }
 
     public void parseXmlLocation(final Uri videoFileUri) {
-        log.debug("parseCommon:" + videoFileUri);
+        log.debug("parseCommon:{}", videoFileUri);
         ParseTask task;
         if (sRemoteWriteTasks.get(videoFileUri.toString()) != null) {
             log.debug("writing task is running: assume we are up to date");

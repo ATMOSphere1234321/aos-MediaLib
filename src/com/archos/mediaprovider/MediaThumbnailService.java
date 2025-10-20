@@ -128,7 +128,7 @@ public class MediaThumbnailService extends Service {
                         Toast.makeText(ArchosUtils.getGlobalContext(), "timeout: sMediaThumbnailService == null", Toast.LENGTH_LONG).show();
                         sFirst = false;
                     }
-                    log.debug("bind_sync end of wait : sMediaThumbnailService == null "+(sMediaThumbnailService == null));
+                    log.debug("bind_sync end of wait : sMediaThumbnailService == null {}", (sMediaThumbnailService == null));
 
                 } catch (InterruptedException e) {
                     if(sFirst)

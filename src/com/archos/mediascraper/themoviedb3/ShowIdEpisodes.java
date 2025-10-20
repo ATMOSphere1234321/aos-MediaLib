@@ -54,14 +54,14 @@ public class ShowIdEpisodes {
 
         if (tvEpisodes != null) {
             for (TvEpisode tvEpisode : tvEpisodes) {
-                log.debug("getEpisodes: filling showid " + showId + " s" + tvEpisode.season_number + "e" + tvEpisode.episode_number);
+                log.debug("getEpisodes: filling showid {} s{}e{}", showId, tvEpisode.season_number, tvEpisode.episode_number);
                 EpisodeTags episodeTags = new EpisodeTags();
                 // note: tvEpisode.credits is null thus use tvEpisode.guest_stars and tvEpisode.crew instead
                 if (tvEpisode.guest_stars != null) {
                     for (CastMember guestStar : tvEpisode.guest_stars)
                         episodeTags.addActorIfAbsent(guestStar.name, guestStar.character);
                 } else {
-                    log.warn("getEpisodes: guest_star is null for showId " + showId);
+                    log.warn("getEpisodes: guest_star is null for showId {}", showId);
                 }
                 if (tvEpisode.crew != null) {
                     for (CrewMember crew : tvEpisode.crew) {
@@ -70,7 +70,7 @@ public class ShowIdEpisodes {
                             episodeTags.addDirectorIfAbsent(crew.name);
                     }
                 } else {
-                    log.debug("getEpisodes: crew is null for showId " + showId);
+                    log.debug("getEpisodes: crew is null for showId {}", showId);
                 }
                 if (tvEpisode.crew != null) {
                     for (CrewMember crew : tvEpisode.crew) {
@@ -79,11 +79,11 @@ public class ShowIdEpisodes {
                             episodeTags.addWriterIfAbsent(crew.name);
                     }
                 } else {
-                    log.debug("getEpisodes: crew is null for showId " + showId);
+                    log.debug("getEpisodes: crew is null for showId {}", showId);
                 }
 
                 // set episode poster according to corresponding season poster
-                log.debug("getEpisodes: tvEpisode.season_number=" + tvEpisode.season_number + ", tvSeasons.size=" + tvSeasons.size());
+                log.debug("getEpisodes: tvEpisode.season_number={}, tvSeasons.size={}", tvEpisode.season_number, tvSeasons.size());
 
                 if (tvSeasons != null) {
                     tvSeason = tvSeasons.get(tvEpisode.season_number);
@@ -100,26 +100,26 @@ public class ShowIdEpisodes {
                             if (seasonPoster == null) {
                                 seasonPoster = ShowIdImagesParser.genPoster(showTags.getTitle(), tvSeason.poster_path, language, false, context);
                                 sSeasonPosterImageCache.put(posterKey, seasonPoster);
-                                log.trace("getEpisodes: cached season poster ScraperImage for " + posterKey);
+                                log.trace("getEpisodes: cached season poster ScraperImage for {}", posterKey);
                             } else {
-                                log.trace("getEpisodes: reusing cached season poster ScraperImage for " + posterKey);
+                                log.trace("getEpisodes: reusing cached season poster ScraperImage for {}", posterKey);
                             }
                             episodeTags.addDefaultPoster(seasonPoster);
                         } else {
                             log.debug("getEpisodes: tvSeason.poster_path is null get showTag default poster");
                             episodeTags.addDefaultPoster(showTags.getDefaultPoster());
                         }
-                        log.debug("getEpisodes: " + showTags.getTitle() + " s" + tvEpisode.season_number + ", has poster " + episodeTags.getDefaultPoster().getLargeUrl() + " path " + episodeTags.getDefaultPoster().getLargeFile());
+                        log.debug("getEpisodes: {} s{}, has poster {} path {}", showTags.getTitle(), tvEpisode.season_number, episodeTags.getDefaultPoster().getLargeUrl(), episodeTags.getDefaultPoster().getLargeFile());
                     }
                 } else {
-                    log.debug("getEpisodes: no poster set for " + showTags.getTitle() + "s" + tvEpisode.season_number);
+                    log.debug("getEpisodes: no poster set for {}s{}", showTags.getTitle(), tvEpisode.season_number);
                 }
-                log.debug("getEpisodes: " + tvEpisode.name + " has plot " + tvEpisode.overview);
+                log.debug("getEpisodes: {} has plot {}", tvEpisode.name, tvEpisode.overview);
                 episodeTags.setPlot(tvEpisode.overview);
                 episodeTags.setRating(Math.round(tvEpisode.vote_average.floatValue() * 10)/10.0f); // round up first decimal
                 episodeTags.setTitle(tvEpisode.name);
                 episodeTags.setImdbId(showTags.getImdbId());
-                log.trace("getEpisodes: showId=" + showId + " episode has onlineId=" + tvEpisode.id);
+                log.trace("getEpisodes: showId={} episode has onlineId={}", showId, tvEpisode.id);
                 episodeTags.setOnlineId(tvEpisode.id);
                 episodeTags.setAired(tvEpisode.air_date);
                 episodeTags.setEpisode(tvEpisode.episode_number);
@@ -127,11 +127,11 @@ public class ShowIdEpisodes {
                 episodeTags.setShowId(showId);
                 episodeTags.setShowTags(showTags);
                 if (tvEpisode.still_path != null) {
-                    log.trace("getEpisodes: showId=" + showId + " episode has still=" + tvEpisode.still_path);
+                    log.trace("getEpisodes: showId={} episode has still={}", showId, tvEpisode.still_path);
                     episodeTags.setEpisodePicture(tvEpisode.still_path, context, false);
                 } else {
                     // TODO MARC wrong AR it is picture style
-                    log.trace("getEpisodes: showId=" + showId + " episode has null still using season poster instead...");
+                    log.trace("getEpisodes: showId={} episode has null still using season poster instead...", showId);
                     // when no still revert to episodeTags.getDefaultPoster() that should be the season poster (global poster is showTags.getDefaultPoster().getLargeUrl())
                     if (episodeTags.getDefaultPoster() != null)
                         episodeTags.setEpisodePicture(episodeTags.getDefaultPoster().getLargeUrl(), context, true);
@@ -141,7 +141,7 @@ public class ShowIdEpisodes {
                 if ((tvEpisode.overview == null || tvEpisode.overview.length() == 0 || tvEpisode.name == null || tvEpisode.name.length() == 0)
                         && !language.equals("en")) { // missing overview in native language
                     if (globalEpisodes.get(tvEpisode.id) == null) { // missing: get whole serie
-                        log.debug("getEpisodes: description in " + language + " missing for tvEpisode.name s" + tvEpisode.season_number + "e" + tvEpisode.episode_number + "fallback in en for the whole season");
+                        log.debug("getEpisodes: description in {} missing for tvEpisode.name s{}e{} fallback in en for the whole season", language, tvEpisode.season_number, tvEpisode.episode_number);
                         ShowIdSeasonSearchResult globalSeasonIdSearchResult = ShowIdSeasonSearch.getSeasonShowResponse(showId, tvEpisode.season_number, "en", adultScrape, tmdb);
                         // stack all episodes in en to find later the overview and name
                         if (globalSeasonIdSearchResult.status == ScrapeStatus.OKAY) {
@@ -149,7 +149,7 @@ public class ShowIdEpisodes {
                                 for (TvEpisode globalTvEpisode : globalSeasonIdSearchResult.tvSeason.episodes)
                                     globalEpisodes.put(globalTvEpisode.id, globalTvEpisode);
                             } else { // an error at this point is PARSER related
-                                log.debug("getEpisodes: error " + globalSeasonIdSearchResult.status);
+                                log.debug("getEpisodes: error {}", globalSeasonIdSearchResult.status);
                             }
                         }
                     }

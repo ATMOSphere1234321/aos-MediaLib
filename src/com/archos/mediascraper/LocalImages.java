@@ -72,7 +72,7 @@ public class LocalImages {
         if (video != null) {
             File result = path2File(video.toString(), context);
             if (result != null && result.exists()) {
-                log.debug("Found cached Poster:" + result.getPath() + " for " +video.toString());
+                log.debug("Found cached Poster:{} for {}", result.getPath(), video.toString());
                 return result;
             }
         }
@@ -98,7 +98,7 @@ public class LocalImages {
         if (result == null ) {
             Uri poster = findPoster(video);
             if (poster != null) {
-                log.debug("Found Poster:" + poster.toString() + " for " + video.toString());
+                log.debug("Found Poster:{} for {}", poster.toString(), video.toString());
                 result = saveResized(video, poster, context);
             }
         }

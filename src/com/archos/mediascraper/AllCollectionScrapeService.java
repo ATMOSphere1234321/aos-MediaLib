@@ -121,7 +121,7 @@ public class AllCollectionScrapeService extends IntentService {
     }
 
     public void rescrapeCollection(Context context, Long collectionId) {
-        log.debug("rescrapeCollection: " + collectionId);
+        log.debug("rescrapeCollection: {}", collectionId);
         if (collectionId != null && collectionId > 0) {
             handleCursor(getCollectionCursor(collectionId));
         }
@@ -255,7 +255,7 @@ public class AllCollectionScrapeService extends IntentService {
     }
 
     private void rescrapeCollection(Long collectionId) {
-        log.debug("rescrapeCollection: " + collectionId);
+        log.debug("rescrapeCollection: {}", collectionId);
         if (collectionId != null && collectionId > 0) {
             // update notification
             nb.setContentText(getString(R.string.rescraping_collection) + " " + collectionId.toString());
@@ -270,7 +270,7 @@ public class AllCollectionScrapeService extends IntentService {
 
     private void handleCursor(Cursor cursor) {
 
-        log.debug("bind: " + DatabaseUtils.dumpCursorToString(cursor));
+        log.debug("bind: {}", DatabaseUtils.dumpCursorToString(cursor));
 
         if (tmdb == null) reauth();
         if (collectionService == null) collectionService = tmdb.collectionService();
@@ -281,7 +281,7 @@ public class AllCollectionScrapeService extends IntentService {
             // do the processing
             while (cursor.moveToNext() && isForeground) {
                 long collectionId = cursor.getLong(0);
-                log.debug("handleCursor: scraping " + collectionId);
+                log.debug("handleCursor: scraping {}", collectionId);
                 // scrape collectionId
                 CollectionResult collectionResult = MovieCollection.getInfo(collectionId, language, collectionService);
 
@@ -293,7 +293,7 @@ public class AllCollectionScrapeService extends IntentService {
                     collectionTag.setPlot(collectionInfo.description);
                     collectionTag.setPosterPath(collectionInfo.poster);
                     collectionTag.setBackdropPath(collectionInfo.backdrop);
-                    log.debug("handleCursor: scraping " + collectionTag.mTitle);
+                    log.debug("handleCursor: scraping {}", collectionTag.mTitle);
                     // generates the various posters/backdrops based on URL
                     collectionTag.downloadImage(getApplicationContext());
                     collectionTag.save(getApplicationContext(), true);

@@ -126,11 +126,10 @@ public class ShowTags extends VideoTags {
             mTitleDate = mTitle + " " + mPremieredYear;
             isPremieredYearAvailable = true;
         }
-        log.debug("save: mTitleDate " + mTitleDate);
+        log.debug("save: mTitleDate {}", mTitleDate);
 
-        log.debug("save: called for show mTitle=" + mTitle + " mId=" + mId +
-                " mOnlineId=" + mOnlineId + " mTitleDate=" + mTitleDate +
-                " mPremieredYear=" + mPremieredYear);
+        log.debug("save: called for show mTitle={} mId={} mOnlineId={} mTitleDate={} mPremieredYear={}",
+                mTitle, mId, mOnlineId, mTitleDate, mPremieredYear);
 
         // global logic to avoid creating already existing title conflicting with UNIQUE db requirement
         if (isShowNameOnlineIdAlreadyKnown(mTitle, mOnlineId, context)) {
@@ -208,16 +207,16 @@ public class ShowTags extends VideoTags {
             }
             if (showFound) {
                 // update if it is already there
-                log.debug("Updating show base info: mTitle " + mTitle + " -> finalTitle " + finalTitle + " showId " + showId);
+                log.debug("Updating show base info: mTitle {} -> finalTitle {} showId {}", mTitle, finalTitle, showId);
                 Uri uri = ContentUris.withAppendedId(ScraperStore.Show.URI.ID, showId);
                 int update = cr.update(uri, values, null, null);
                 if (update != 1) {
-                    log.error("update Show id " + showId + " failed");
+                    log.error("update Show id {} failed", showId);
                     return -1;
                 }
             } else {
                 // insert if not in db otherwise crash with UNIQUE name constraint
-                log.debug("Inserting new show: mTitle " + mTitle + " -> finalTitle " + finalTitle);
+                log.debug("Inserting new show: mTitle {} -> finalTitle {}", mTitle, finalTitle);
                 Uri uri = ScraperStore.Show.URI.BASE;
                 Uri inserted = cr.insert(uri, values);
                 long result = inserted == null ? -1 : ContentUris.parseId(inserted);
@@ -322,13 +321,11 @@ public class ShowTags extends VideoTags {
 
         // finally push stuff to database.
         if (!allOperations.isEmpty()) {
-            log.debug("Performing " + allOperations.size() + " db operations.");
+            log.debug("Performing {} db operations.", allOperations.size());
             try {
                 cr.applyBatch(ScraperStore.AUTHORITY, allOperations);
-            } catch (RemoteException e) {
-                log.error("Exception :" + e, e);
-            } catch (OperationApplicationException e) {
-                log.error("Exception :" + e, e);
+            } catch (RemoteException | OperationApplicationException e) {
+                log.error("Exception", e);
             }
         } else
             log.debug("Nothing to be done for this show.");
@@ -393,7 +390,7 @@ public class ShowTags extends VideoTags {
         try {
             mPremiered = sDateFormatter.parse(string);
         } catch (ParseException e) {
-            log.error("Illegal Date format [" + string + "]");
+            log.error("Illegal Date format [{}]", string);
             mPremiered = new Date(0);
         }
     }
@@ -564,19 +561,19 @@ public class ShowTags extends VideoTags {
 
     private boolean isShowNameAlreadyKnown(String showName, Context context) {
         boolean isKnown = isKnown(new String[] {ScraperStore.Show.ID}, NAME_SELECTION, new String[] { showName }, context);
-        log.debug("isShowNameAlreadyKnown: " + showName + " " + isKnown);
+        log.debug("isShowNameAlreadyKnown: {} {}", showName, isKnown);
         return isKnown;
     }
 
     private boolean isShowOnlineIdAlreadyKnown(long onlineId, Context context) {
         boolean isKnown = isKnown(new String[] {ScraperStore.Show.ID}, ONLINEID_SELECTION, new String[] { String.valueOf(onlineId) }, context);
-        log.debug("isShowIdAlreadyKnown: " + onlineId + " " + isKnown);
+        log.debug("isShowIdAlreadyKnown: {} {}", onlineId, isKnown);
         return isKnown;
     }
 
     private boolean isShowNameOnlineIdAlreadyKnown(String showName, long onlineId, Context context) {
         boolean isKnown = isKnown(new String[] {ScraperStore.Show.ID, ScraperStore.Show.ONLINE_ID}, NAME_ONLINEID_SELECTION, new String[] { showName, String.valueOf(onlineId) }, context);
-        log.debug("isShowNameAlreadyKnown: " + showName + " " + isKnown);
+        log.debug("isShowNameAlreadyKnown: {} {}", showName, isKnown);
         return isKnown;
     }
 
@@ -590,13 +587,13 @@ public class ShowTags extends VideoTags {
 
     private void updateInfo(String selection, String[] selectionArgs, ContentResolver contentResolver) {
 
-        log.debug("updateInfo: " + selection + ", selectionArgs " + selectionArgs);
+        log.debug("updateInfo: {}, selectionArgs {}", selection, selectionArgs);
         Cursor cursor = contentResolver.query(ScraperStore.Show.URI.ALL, BASE_PROJECTION,
                 selection, selectionArgs, null);
 
         if (cursor != null) {
             if (cursor.moveToFirst()) {
-                log.debug("save: show found in db " + DatabaseUtils.dumpCursorToString(cursor));
+                log.debug("save: show found in db {}", DatabaseUtils.dumpCursorToString(cursor));
                 showFound = true;
                 // The show was found in the database -> get stored infos
                 showId = cursor.getLong(0);
@@ -610,12 +607,12 @@ public class ShowTags extends VideoTags {
                 updateCover = newStringIsNotEmpty(storedCover, newCover);
                 updateBackdrop = newStringIsNotEmpty(storedBD, newBackdrop);
 
-                log.debug("updateInfo: show found in db: storedCover " + storedCover + ", newCover " + newCover);
-                log.debug("updateInfo: show found in db: storedBD " + storedBD + ", newBackdrop " + newBackdrop);
-                log.debug("updateInfo: show found in db: storedRating " + storedRating + ", mRating " + mRating);
-                log.debug("updateInfo: show found in db: storedCRating " + storedCRating + ", mContentRating " + mContentRating);
-                log.debug("updateInfo: show found in db: storedImdb " + storedImdb + ", mImdbId " + mImdbId);
-                log.debug("updateInfo: show found in db: storedOnlineId " + storedOnlineId + ", mOnlineId " + mOnlineId);
+                log.debug("updateInfo: show found in db: storedCover {}, newCover {}", storedCover, newCover);
+                log.debug("updateInfo: show found in db: storedBD {}, newBackdrop {}", storedBD, newBackdrop);
+                log.debug("updateInfo: show found in db: storedRating {}, mRating {}", storedRating, mRating);
+                log.debug("updateInfo: show found in db: storedCRating {}, mContentRating {}", storedCRating, mContentRating);
+                log.debug("updateInfo: show found in db: storedImdb {}, mImdbId {}", storedImdb, mImdbId);
+                log.debug("updateInfo: show found in db: storedOnlineId {}, mOnlineId {}", storedOnlineId, mOnlineId);
                 // compare old vs new
                 baseInfoChanged =
                         updateCover || updateBackdrop ||
@@ -624,7 +621,8 @@ public class ShowTags extends VideoTags {
                                 newStringIsBetter(storedImdb, mImdbId) ||
                                 newLongIsBetter(storedOnlineId, mOnlineId);
 
-                log.debug("updateInfo: show found in db: updateCover " + updateCover + ", updateBackdrop " + updateBackdrop + " baseInfoChanged " + baseInfoChanged);
+                log.debug("updateInfo: show found in db: updateCover {}, updateBackdrop {} baseInfoChanged {}",
+                        updateCover, updateBackdrop, baseInfoChanged);
 
                 // since show exists check other data for changes too
                 int storedPosterCount = storedPosterCount(showId, contentResolver);

@@ -88,7 +88,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
     @Override
     public void onCreate() {
         super.onCreate();
-        log.debug("onCreate() "+this);
+        log.debug("onCreate() {}", this);
         // Register as a lifecycle observer
         ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
@@ -106,7 +106,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        log.debug("onStartCommand: " + intent);
+        log.debug("onStartCommand: {}", intent);
         if (!isForeground) return START_NOT_STICKY; // prevent to be executed if app is in background
         if (intent != null && ACTION_CHECK_SMB.equals(intent.getAction())) {
             NetworkState state = NetworkState.instance(this);
@@ -140,22 +140,22 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
         if(mUpnpId==null) mUpnpId =new ConcurrentHashMap<>();
         else mUpnpId.clear();
         final ContentResolver cr = context.getContentResolver();
-        log.debug("handleDb: hasConnection=" + hasConnection + ", hasLocalConnection=" + hasLocalConnection);
+        log.debug("handleDb: hasConnection={}, hasLocalConnection={}", hasConnection, hasLocalConnection);
         if (hasConnection) {
             //Lmhosts.reset();
             final long now = System.currentTimeMillis() / 1000;
             // list all servers in the db
             Cursor c = cr.query(SERVER_URI, PROJECTION_SERVERS, SELECTION_ALL_NETWORK, null, null);
             if (c != null) {
-                log.debug("found " + c.getCount() + " servers");
+                log.debug("found {} servers", c.getCount());
                 mServerDbUpdated = false;
                 while (c.moveToNext() && isForeground) {
                     final long id = c.getLong(COLUMN_ID);
                     final String server = c.getString(COLUMN_DATA);
                     final int active = c.getInt(COLUMN_ACTIVE);
-                    log.debug("handleDb: server: " + server + " active: " + active);
+                    log.debug("handleDb: server: {} active: {}", server, active);
                     if(server.startsWith("sftp")||server.startsWith("ftp")||server.startsWith("webdav")||server.startsWith("sshj")) { //for distant folders, we don't check existence (for now)
-                        log.debug("handleDb: ftp server is assumed to exist: " + server);
+                        log.debug("handleDb: ftp server is assumed to exist: {}", server);
                         if (updateServerDb(id, cr, active, 1, now))
                             mServerDbUpdated = true;
                     } else if(!server.startsWith("upnp")) { // SMB goes there even if on cellular only
@@ -167,7 +167,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
                                 serverFile = new JcifsFileEditor(serverUri);
                             else serverFile = FileEditorFactoryWithUpnp.getFileEditorForUrl(serverUri, null);
                             if (serverFile == null) {
-                                log.warn("bad server [" + server + "]");
+                                log.warn("bad server [{}]", server);
                                 continue;
                             }
                             // To check: with mdns it might take long to get IP of server (there is no longer a resolver available)
@@ -183,7 +183,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
                                         }
                                         if (i < REMOTE_CHECK_RETRY_COUNT - 1) { // do not sleep after last attempt
                                             try {
-                                                log.debug("handleDb: server " + server + " not found, retrying in " + REMOTE_CHECK_RETRY_DELAY_MS + "ms (" + (i + 1) + "/" + REMOTE_CHECK_RETRY_COUNT + ")");
+                                                log.debug("handleDb: server {} not found, retrying in {}ms ({}/{})", server, REMOTE_CHECK_RETRY_DELAY_MS, (i + 1), REMOTE_CHECK_RETRY_COUNT);
                                                 Thread.sleep(REMOTE_CHECK_RETRY_DELAY_MS);
                                             } catch (InterruptedException e) {
                                                 log.error("handleDb: sleep interrupted", e);
@@ -191,17 +191,17 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
                                         }
                                     }
                                     if (serverExists) {
-                                        log.debug("handleDb: server exists: " + server);
+                                        log.debug("handleDb: server exists: {}", server);
                                         if (updateServerDb(id, cr, active, 1, now))
                                             mServerDbUpdated = true;
                                     } else {
                                         String smbDiscoveryInfo = SambaDiscovery.getIpFromShareName(serverUri.getHost());
                                         if (smbDiscoveryInfo == null) {
-                                            log.debug("handleDb: server does not exist after " + REMOTE_CHECK_RETRY_COUNT + " retries: " + server);
+                                            log.debug("handleDb: server does not exist after {} retries: {}", REMOTE_CHECK_RETRY_COUNT, server);
                                             if (updateServerDb(id, cr, active, 0, now))
                                                 mServerDbUpdated = true;
                                         } else {
-                                            log.debug("handleDb: server exists in SambaDiscovery, not jcifs-ng: " + server);
+                                            log.debug("handleDb: server exists in SambaDiscovery, not jcifs-ng: {}", server);
                                             if (updateServerDb(id, cr, active, 1, now))
                                                 mServerDbUpdated = true;
                                         }
@@ -265,7 +265,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
 
     protected final static boolean updateServerDb(long id, ContentResolver cr, int oldState,
                                                   int newState, long time) {
-        log.debug("updateServerDb: id=" + id + ", oldState=" + oldState + ", newState=" + newState);
+        log.debug("updateServerDb: id={}, oldState={}, newState={}", id, oldState, newState);
         if (oldState == newState) return false;
         ContentValues cv = new ContentValues();
         cv.put(VideoStore.SmbServer.SmbServerColumns.ACTIVE, String.valueOf(newState));
@@ -277,7 +277,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
         String[] selectionArgs = new String[] {
                 String.valueOf(id)
         };
-        log.debug("DB: update server: " + id + " values:" + cv);
+        log.debug("DB: update server: {} values:{}", id, cv);
         int result = cr.update(SERVER_URI, cv, SELECTION_ID, selectionArgs);
         return result > 0;
     }
@@ -294,7 +294,7 @@ public class RemoteStateService extends Service implements UpnpServiceManager.Li
                     break;
                 }
             }
-            log.debug("UPNP : is in list ?  "+deviceName+ " "+String.valueOf(isInList));
+            log.debug("UPNP : is in list ?  {} {}", deviceName, String.valueOf(isInList));
             long id = mUpnpId.get(deviceName).first;
             updateServerDb(id, cr, mUpnpId.get(deviceName).second, isInList?1:0, now);
             mUpnpId.put(deviceName, new Pair<>(id,isInList?1:0 ));

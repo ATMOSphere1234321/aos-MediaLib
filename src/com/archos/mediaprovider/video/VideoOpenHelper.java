@@ -1284,7 +1284,7 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        log.debug("Creating Database at version " + DATABASE_CREATE_VERSION);
+        log.debug("Creating Database at version {}", DATABASE_CREATE_VERSION);
         // create table for imported files
         db.execSQL(CREATE_FILES_IMPORT_TABLE_V21);
         db.execSQL(CREATE_FILES_IMPORT_TRIGGER_INSERT_V21);
@@ -1362,9 +1362,9 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // create db sets initial version to 10
         // TODO: nova first release is has db version 34, reimport upgrade into create, do not forget mirror action on ScraperTables
-        log.debug("onUpgrade: upgrading Database from " + oldVersion + " to " + newVersion);
+        log.debug("onUpgrade: upgrading Database from {} to {}", oldVersion, newVersion);
         if (oldVersion < DATABASE_CREATE_VERSION) {
-            log.debug("onUpgrade: upgrade not supported for version " + oldVersion + ", recreating the database.");
+            log.debug("onUpgrade: upgrade not supported for version {}, recreating the database.", oldVersion);
             // triggers database deletion
             deleteDatabase();
         }
@@ -1466,11 +1466,11 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
             ScraperTables.upgradeTo(db, 46);
         }
         if (oldVersion < 47) { // add WatchingUpNextLoader performance optimizations
-            log.debug("onUpgrade: " + 47 + " - optimizing WatchingUpNextLoader performance");
+            log.debug("onUpgrade: {} - optimizing WatchingUpNextLoader performance", 47);
             ScraperTables.upgradeTo(db, 47);
         }
         if (oldVersion < 48) { // add network scanner performance indexes
-            log.debug("onUpgrade: " + 48 + " - adding indexes for network scanner performance");
+            log.debug("onUpgrade: {} - adding indexes for network scanner performance", 48);
             db.execSQL(CREATE_FILES_SCANNED_IDX_UNIQUE_ID);
             db.execSQL(CREATE_FILES_SCANNED_IDX_DATA);
         }
@@ -1497,7 +1497,7 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
         log.debug("convertBackdrops");
         Cursor c = db.query(VIDEO_VIEW_NAME, PROJECTION, SELECTION, null, null, null, null);
         if (c != null) {
-            log.debug("convertBackdrops - found " + c.getCount());
+            log.debug("convertBackdrops - found {}", c.getCount());
             while (c.moveToNext()) {
                 String data = c.getString(0);
                 long id = c.getLong(1);
@@ -1516,14 +1516,14 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
                     ContentValues cv = image.toContentValues(id);
                     long imageId = db.insert(ScraperTables.MOVIE_BACKDROPS_TABLE_NAME,
                             BaseColumns._ID, cv);
-                    log.debug("convertBackdrops - " + image.toString() + " imageId:"  + imageId);
+                    log.debug("convertBackdrops - {} imageId:{}", image.toString(), imageId);
                     if (imageId > 0) {
                         ContentValues update = new ContentValues();
                         update.put(ScraperStore.Movie.BACKDROP_ID, Long.valueOf(imageId));
                         update.put(ScraperStore.Movie.BACKDROP, image.getLargeFile());
                         String[] whereArgs = { String.valueOf(id) };
                         int upd = db.update(ScraperTables.MOVIE_TABLE_NAME, update, SELECTION_ID, whereArgs);
-                        log.debug("convertBackdrops - update table result:"  + upd);
+                        log.debug("convertBackdrops - update table result:{}", upd);
                     }
                 } else if (type == ScraperStore.SCRAPER_TYPE_SHOW) {
                     ScraperImage image = new ScraperImage(Type.SHOW_BACKDROP, sName);
@@ -1537,14 +1537,14 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
                     ContentValues cv = image.toContentValues(id);
                     long imageId = db.insert(ScraperTables.SHOW_BACKDROPS_TABLE_NAME,
                             BaseColumns._ID, cv);
-                    log.debug("convertBackdrops - " + image.toString() + " imageId:"  + imageId);
+                    log.debug("convertBackdrops - {} imageId:{}", image.toString(), imageId);
                     if (imageId > 0) {
                         ContentValues update = new ContentValues();
                         update.put(ScraperStore.Show.BACKDROP_ID, Long.valueOf(imageId));
                         update.put(ScraperStore.Show.BACKDROP, image.getLargeFile());
                         String[] whereArgs = { String.valueOf(id) };
                         int upd = db.update(ScraperTables.SHOW_TABLE_NAME, update, SELECTION_ID, whereArgs);
-                        log.debug("convertBackdrops - update table result:"  + upd);
+                        log.debug("convertBackdrops - update table result:{}", upd);
                     }
                 }
             }
@@ -1572,7 +1572,7 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
                 Integer storage_id = 1;
                 if (m.matches()) {
                     storage_id = m.group(1).hashCode();
-                    log.trace("processStorageIdInDB: path=" + path + " -> " + m.group(1) + " storage_id=" + storage_id);
+                    log.trace("processStorageIdInDB: path={} -> {} storage_id={}", path, m.group(1), storage_id);
                 }
                 ContentValues update = new ContentValues();
                 update.put("storage_id", Long.valueOf(storage_id));

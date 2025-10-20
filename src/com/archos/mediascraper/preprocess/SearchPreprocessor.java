@@ -62,21 +62,23 @@ public class SearchPreprocessor {
     public SearchInfo parseFileBased(Uri uri, Uri simplifiedUri) {
         String candidate = FileUtils.getFileNameWithoutExtension(uri);
         for (InputMatcher matcher : PARSERS) {
-            log.debug("parseFileBased: trying parser " + matcher.getMatcherName() + " for " + candidate +
-                    " derived from uri " + ((uri != null) ? uri.getPath() : null) +
-                    " and simplifiedUri " + ((simplifiedUri != null) ? simplifiedUri.getPath() : null));
+            log.debug("parseFileBased: trying parser {} for {} derived from uri {} and simplifiedUri {}",
+                    matcher.getMatcherName(), candidate,
+                    (uri != null) ? uri.getPath() : null,
+                    (simplifiedUri != null) ? simplifiedUri.getPath() : null);
             if (matcher.matchesFileInput(uri, simplifiedUri)) {
                 SearchInfo result = matcher.getFileInputMatch(uri, simplifiedUri);
                 if (result == null) {
                     throw new AssertionError("Matcher:" + matcher.getMatcherName() +
                             " returned null file:" + ((uri != null) ? uri.toString() : null));
                 }
-                log.debug("parseFileBased: result from " + matcher.getMatcherName() + " for " + candidate + " -> " + result.getSearchSuggestion());
+                log.debug("parseFileBased: result from {} for {} -> {}",
+                        matcher.getMatcherName(), candidate, result.getSearchSuggestion());
                 return reParseInfo(result);
             }
         }
         // default to something - should not happen
-        log.error("parseFileBased: parse error, no matcher for " + candidate);
+        log.error("parseFileBased: parse error, no matcher for {}", candidate);
         return new MovieSearchInfo(uri, candidate, null);
     }
 
@@ -101,7 +103,7 @@ public class SearchPreprocessor {
                     if (result == null) {
                         throw new AssertionError("Matcher:" + matcher + " returned null userinput:" + userInput);
                     }
-                    log.debug("re-parse result from" + matcher.getMatcherName());
+                    log.debug("re-parse result from {}", matcher.getMatcherName());
                     return reParseInfo(result);
                 }
             }
