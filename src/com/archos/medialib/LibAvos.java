@@ -320,6 +320,11 @@ public class LibAvos {
         nativeSetDownmix(downmix);
     }
 
+    public static void setDynamicAudioDelay(boolean enable) {
+        Log.d(TAG, "setDynamicAudioDelay " + enable);
+        nativeSetDynamicAudioDelay(enable);
+    }
+
     public static void setAudioTransformer(AudioTransformer transformer) {
         nativeSetAudioTransformer(transformer);
     }
@@ -359,6 +364,8 @@ public class LibAvos {
     private static native void nativeSetStreamMaxIframeSize(int size);
 
     private static native void nativeSetDownmix(int downmix);
+
+    private static native void nativeSetDynamicAudioDelay(boolean enable);
 
     private static native void nativeSetAudioTransformer(AudioTransformer transformer);
 
