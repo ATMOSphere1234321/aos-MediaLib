@@ -64,6 +64,7 @@ public class UpnpServiceManager {
 
     private boolean mHasStarted;
     private boolean mStopLock;
+    private boolean mServiceConnected = false;
 
     private NetworkState networkState = null;
     private PropertyChangeListener propertyChangeListener = null;
@@ -155,7 +156,11 @@ public class UpnpServiceManager {
                                     log.debug("MulticastLock released before restart");
                                 }
                                 try {
-                                    mContext.unbindService(mServiceConnection);
+                                    // Only unbind if service was actually connected to prevent crashes in AndroidUpnpServiceImpl
+                                    if (mServiceConnected) {
+                                        mContext.unbindService(mServiceConnection);
+                                        mServiceConnected = false;
+                                    }
                                 } catch (java.lang.IllegalArgumentException e) {
                                     //this is bad, but I haven't found any other way to avoid "java.lang.IllegalArgumentException: Service not registered"
                                 }
@@ -254,8 +259,11 @@ public class UpnpServiceManager {
             try {
                 removeNetworkListener();
                 mDevices.clear();
-                if (mAndroidUpnpService != null)
+                // Only unbind if service was actually connected to prevent crashes in AndroidUpnpServiceImpl
+                if (mServiceConnected && mAndroidUpnpService != null) {
                     mContext.unbindService(mServiceConnection);
+                    mServiceConnected = false;
+                }
             } catch (java.lang.IllegalArgumentException e) {
                 //this is bad, but I haven't found any other way to avoid "java.lang.IllegalArgumentException: Service not registered"
             }
@@ -287,6 +295,7 @@ public class UpnpServiceManager {
         public void onServiceConnected(ComponentName className, IBinder service) {
             log.debug("onServiceConnected");
             mAndroidUpnpService = (AndroidUpnpService) service;
+            mServiceConnected = true;
             mState = State.RUNNING;
             log.debug("State RUNNING");
 
@@ -321,6 +330,7 @@ public class UpnpServiceManager {
 
             // no more service
             mAndroidUpnpService = null;
+            mServiceConnected = false;
             mState = State.NOT_RUNNING;
             log.debug("State NOT_RUNNING");
         }
