@@ -244,8 +244,14 @@ public class AutoScrapeService extends Service {
                 .setContentTitle(getString(R.string.scraping_in_progress))
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0);
+        try {
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0);
+        } catch (Exception e) {
+            // Handle ForegroundServiceStartNotAllowedException on Android 12+ when permission is not available
+            // The service will still run but without the foreground notification
+            log.warn("onCreate: Unable to start foreground service ({}), service will continue without foreground priority", e.getClass().getSimpleName());
+        }
         mBinder = new AutoScraperBinder();
     }
 
@@ -274,8 +280,13 @@ public class AutoScrapeService extends Service {
 
         // Call startForeground to satisfy the requirement of startForegroundService()
         if (nb != null && nm != null) {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
-                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0);
+            try {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, nb.build(),
+                        (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0);
+            } catch (Exception e) {
+                // Handle ForegroundServiceStartNotAllowedException on Android 12+ when permission is not available
+                log.warn("onStartCommand: Unable to start foreground service ({}), service will continue without foreground priority", e.getClass().getSimpleName());
+            }
         } else {
             log.warn("onStartCommand: Unable to start foreground - notification resources not available");
             // If we can't start foreground, stop the service immediately to avoid crash
