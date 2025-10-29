@@ -142,7 +142,21 @@ public class AutoScrapeService extends Service {
         mContext = context.getApplicationContext();
         Intent intent = new Intent(context, AutoScrapeService.class);
         intent.putExtra("FORCE_AFTER_NETWORK_SCAN", true);
-        ContextCompat.startForegroundService(context, intent);
+        try {
+            // Try to start as foreground service
+            // This is called from BroadcastReceiver (NetworkAutoRefresh) which may not have permission
+            // in certain conditions (app in background, Android 12+)
+            ContextCompat.startForegroundService(context, intent);
+        } catch (Exception e) {
+            // If startForegroundService fails (ForegroundServiceStartNotAllowedException or similar),
+            // fall back to regular startService which is allowed from BroadcastReceiver
+            log.warn("startServiceAfterNetworkScan: Unable to start foreground service ({}), falling back to regular service", e.getClass().getSimpleName());
+            try {
+                context.startService(intent);
+            } catch (Exception fallbackError) {
+                log.error("startServiceAfterNetworkScan: Both startForegroundService and startService failed", fallbackError);
+            }
+        }
     }
 
     public static void resetNetworkScanCount() {
