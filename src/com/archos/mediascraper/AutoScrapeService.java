@@ -134,7 +134,16 @@ public class AutoScrapeService extends Service {
     public static void startService(Context context) {
         log.debug("startService in foreground");
         mContext = context.getApplicationContext();
-        ContextCompat.startForegroundService(context, new Intent(context, AutoScrapeService.class));
+        Intent intent = new Intent(context, AutoScrapeService.class);
+        try {
+            // Try to start as foreground service, but fall back if not allowed
+            // This can fail when the app is in the background on Android 12+
+            ContextCompat.startForegroundService(context, intent);
+        } catch (IllegalStateException e) {
+            log.warn("startService: Unable to start foreground service, falling back to regular service", e);
+            // Fall back to regular startService which is allowed when app is in background
+            context.startService(intent);
+        }
     }
 
     public static void startServiceAfterNetworkScan(Context context) {
