@@ -73,15 +73,15 @@ public class MediaRetrieverServiceClient {
      * Auto-binds to service
      */
     public MediaRetrieverServiceClient(Context context) {
+        mBindContext = context;
         if (!context.bindService(new Intent(context, MediaRetrieverService.class), mConnection, Context.BIND_AUTO_CREATE)) {
-            // should only ever happen when binding causes a RemoteException, so there is probably something
-            // wrong in our service onBind method or so.
-            Log.e(TAG, "MediaRetrieverServiceClient failed to connect to it's service");
-            throw new IllegalStateException("Failed to bind to MediaRetrieverService");
+            // Binding can fail for various reasons (service disabled, permission issues, etc)
+            // Log the error but don't crash - we'll handle the unavailable service gracefully
+            // when getMetadata() is called (will throw ServiceManagementException)
+            Log.e(TAG, "MediaRetrieverServiceClient failed to bind to service, will retry on demand");
         } else {
             if (DBG) Log.d(TAG, "MediaRetrieverServiceClient<CTOR> connecting to service..");
         }
-        mBindContext = context;
     }
 
     /**
