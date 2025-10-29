@@ -341,6 +341,12 @@ public class AvosMediaPlayer implements IMediaPlayer {
     private native void nativeStart() throws IllegalStateException;
     public void start() throws IllegalStateException {
         stayAwake(true);
+        // WARNING: nativeStart() can block waiting on native synchronization primitives
+        // This method must NOT be called from the main/UI thread or it will cause ANR
+        // Callers are responsible for ensuring this runs on a worker thread
+        if (Looper.getMainLooper() == Looper.myLooper()) {
+            log.warn("start() called from main thread - this may cause ANR. Move to background thread.");
+        }
         nativeStart();
     }
 
