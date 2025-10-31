@@ -29,13 +29,11 @@ import com.archos.mediacenter.utils.trakt.TraktAPI.ShowWatchingParam;
 import com.archos.mediacenter.utils.videodb.VideoDbInfo;
 import com.archos.medialib.R;
 import com.archos.mediaprovider.video.VideoStore;
-import com.archos.mediascraper.AutoScrapeService;
 import com.uwetrottmann.trakt5.TraktV2;
 import com.uwetrottmann.trakt5.entities.AccessToken;
 import com.uwetrottmann.trakt5.entities.BaseMovie;
 import com.uwetrottmann.trakt5.entities.BaseShow;
 import com.uwetrottmann.trakt5.entities.EpisodeIds;
-import com.uwetrottmann.trakt5.entities.HistoryEntry;
 import com.uwetrottmann.trakt5.entities.LastActivities;
 import com.uwetrottmann.trakt5.entities.ListEntry;
 import com.uwetrottmann.trakt5.entities.MovieIds;
@@ -63,7 +61,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -571,126 +568,18 @@ public class Trakt {
         }
     }
 
-    // get playback status from trakt: this covers only videos with progress/resume not watched!
     public Result getPlaybackStatus(int trial){
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        long lastSyncUtcSeconds = prefs.getLong(TraktService.PREFERENCE_TRAKT_LAST_TIME_SYNC_TO_DB_PROGRESS, 1);
-
-        // Enhancement 1: Skip sync if no resume point activity since last sync (use paused_at timestamps)
-        long lastActivityMoviePausedUtc = prefs.getLong(TraktService.PREFERENCE_TRAKT_LAST_ACTIVITY_MOVIE_PAUSED, 0);
-        long lastActivityEpisodePausedUtc = prefs.getLong(TraktService.PREFERENCE_TRAKT_LAST_ACTIVITY_EPISODE_PAUSED, 0);
-        long lastActivityPausedUtc = Math.max(lastActivityMoviePausedUtc, lastActivityEpisodePausedUtc);
-
-        if (lastActivityPausedUtc > 0 && lastActivityPausedUtc <= lastSyncUtcSeconds) {
-            log.debug("getPlaybackStatus: no resume point activity since last sync (lastActivityPaused={}, lastSync={}), skipping playback sync",
-                    lastActivityPausedUtc, lastSyncUtcSeconds);
-            return handleRet(null, null, new ArrayList<>(), ObjectType.MOVIES);
-        }
-
-        // Enhancement 2: Check if NEW CONTENT was indexed since last Trakt sync
-        // If yes, must do FULL sync because:
-        // - New movies exist locally that didn't exist when last sync happened
-        // - Other device may have already reported playback for those new movies
-        // - Incremental sync would miss them
-        long lastIndexedUtcSeconds = prefs.getLong(AutoScrapeService.PREFERENCE_LAST_TIME_VIDEO_SCRAPED_UTC, 0);
-        if (lastIndexedUtcSeconds > lastSyncUtcSeconds) {
-            log.debug("getPlaybackStatus: new content indexed since last sync (lastIndexed={}, lastSync={}), forcing FULL sync to catch new movie activity",
-                    lastIndexedUtcSeconds, lastSyncUtcSeconds);
-            List<PlaybackResponse> list = exec(mTraktV2.sync().getPlayback(PLAYBACK_HISTORY_SIZE));
-            if (list == null) {
-                log.debug("getPlaybackStatus: no playback history");
-                return handleRet(null, new Exception(), null, ObjectType.NULL);
-            } else {
-                log.debug("getPlaybackStatus: playback history size is {}", list.size());
-                return handleRet(null, null, list, ObjectType.MOVIES);
-            }
-        }
-
-        // Enhancement 3: Use incremental sync - no new content, safe to delta sync
-        OffsetDateTime lastSync = OffsetDateTime.ofInstant(Instant.ofEpochSecond(lastSyncUtcSeconds), ZoneOffset.UTC);
-        log.debug("getPlaybackStatus: no new content since last sync - using incremental sync since {} UTC", lastSync);
-
-        List<PlaybackResponse> list;
-        try {
-            // Try incremental sync first (if your fork supports it)
-            list = exec(mTraktV2.sync().getPlaybackSince(lastSync));
-        } catch (Exception e) {
-            log.debug("getPlaybackStatus: incremental sync not available, falling back to full history");
-            list = exec(mTraktV2.sync().getPlayback(PLAYBACK_HISTORY_SIZE));
-        }
-
-        if(list == null) {
-            log.debug("getPlaybackStatus: no playback history");
+        // for the moment trakt-java API does not support getting history between two dates
+        //Long epochUtcSeconds = System.currentTimeMillis() / 1000L;
+        //Long lastTraktSyncUtcEpochSeconds = PreferenceManager.getDefaultSharedPreferences(mContext).getLong("trakt_last_sync", 1);
+        List<PlaybackResponse> list = exec(mTraktV2.sync().getPlayback(PLAYBACK_HISTORY_SIZE));
+        if(list == null)
             return handleRet(null, new Exception(), null, ObjectType.NULL);
-        } else {
-            log.debug("getPlaybackStatus: playback history size is {}", list.size());
-            return handleRet(null, null, list, ObjectType.MOVIES);
-        }
-    }
-
-    // get playback status from trakt: this covers only fully watched videos!
-    public Result getWatchedStatus(int trial){
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        long lastSyncUtcSeconds = prefs.getLong(TraktService.PREFERENCE_TRAKT_LAST_TIME_SYNC_TO_DB_WATCHED, 1);
-
-        // Enhancement 1: Skip sync if no watched activity since last sync (use watched_at timestamps)
-        long lastActivityMovieWatchedUtc = prefs.getLong(TraktService.PREFERENCE_TRAKT_LAST_ACTIVITY_MOVIE_WATCHED, 0);
-        long lastActivityEpisodeWatchedUtc = prefs.getLong(TraktService.PREFERENCE_TRAKT_LAST_ACTIVITY_EPISODE_WATCHED, 0);
-        long lastActivityWatchedUtc = Math.max(lastActivityMovieWatchedUtc, lastActivityEpisodeWatchedUtc);
-
-        if (lastActivityWatchedUtc > 0 && lastActivityWatchedUtc <= lastSyncUtcSeconds) {
-            log.debug("getWatchedStatus: no watched activity since last sync (lastActivityWatched={}, lastSync={}), skipping watched status sync",
-                    lastActivityWatchedUtc, lastSyncUtcSeconds);
-            return handleRet(null, null, new ArrayList<>(), ObjectType.MOVIES);
-        }
-
-        // Enhancement 2: Check if NEW CONTENT was indexed since last Trakt sync
-        // If yes, must do FULL sync because:
-        // - New movies exist locally that didn't exist when last sync happened
-        // - Other device may have already reported watched status for those new movies
-        // - Incremental sync would miss them
-        long lastIndexedUtcSeconds = prefs.getLong(AutoScrapeService.PREFERENCE_LAST_TIME_VIDEO_SCRAPED_UTC, 0);
-        if (lastIndexedUtcSeconds > lastSyncUtcSeconds) {
-            log.debug("getWatchedStatus: new content indexed since last sync (lastIndexed={}, lastSync={}), forcing FULL sync to catch new movie activity",
-                    lastIndexedUtcSeconds, lastSyncUtcSeconds);
-            List<HistoryEntry> list = exec(mTraktV2.sync().getWatchedHistory(PLAYBACK_HISTORY_SIZE));
-            if (list == null) {
-                log.debug("getWatchedStatus: no watched history");
-                return handleRet(null, new Exception(), null, ObjectType.NULL);
-            } else {
-                log.debug("getWatchedStatus: watched history size is {}", list.size());
-                return handleRet(null, null, list, ObjectType.MOVIES);
-            }
-        }
-
-        // Enhancement 3: Use incremental sync - no new content, safe to delta sync
-        OffsetDateTime lastSync = OffsetDateTime.ofInstant(Instant.ofEpochSecond(lastSyncUtcSeconds), ZoneOffset.UTC);
-        log.debug("getWatchedStatus: no new content since last sync - using incremental sync since {} UTC", lastSync);
-
-        List<HistoryEntry> list;
-        try {
-            // Try incremental sync first (if your fork supports it)
-            list = exec(mTraktV2.sync().getWatchedHistorySince(lastSync));
-        } catch (Exception e) {
-            log.debug("getWatchedStatus: incremental sync not available, falling back to full history");
-            list = exec(mTraktV2.sync().getWatchedHistory(PLAYBACK_HISTORY_SIZE));
-        }
-
-        if(list == null) {
-            log.debug("getWatchedStatus: no watched history");
-            return handleRet(null, new Exception(), null, ObjectType.NULL);
-        } else {
-            log.debug("getWatchedStatus: watched history size is {}", list.size());
-            return handleRet(null, null, list, ObjectType.MOVIES);
-        }
+        return handleRet(null, null, list, ObjectType.MOVIES);
     }
 
     public Result getPlaybackStatus() {
         return getPlaybackStatus(0);
-    }
-
-    public Result getWatchedStatus() {
-        return getWatchedStatus(0);
     }
 
     public Result getAllMovies(String library, boolean sync) {
