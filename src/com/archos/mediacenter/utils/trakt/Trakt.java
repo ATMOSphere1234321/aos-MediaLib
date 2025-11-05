@@ -107,6 +107,7 @@ public class Trakt {
     private static final String KEY_TRAKT_LAST_TIME_SHOW_WATCHED = "trakt_last_time_show_watched";
     private static final String KEY_TRAKT_LAST_TIME_MOVIE_WATCHED = "trakt_last_time_movie_watched";
     private static final String KEY_TRAKT_SYNC_COLLECTION = "trakt_sync_collection";
+    private static final String KEY_TRAKT_ACCOUNT_LOCKED = "trakt_account_locked";
 
     public static final int TRAKT_DB_MARKED = 1;
     public static final int TRAKT_DB_UNMARK = 2;
@@ -234,6 +235,7 @@ public class Trakt {
         ERROR,
         ERROR_NETWORK,
         ERROR_AUTH,
+        ERROR_ACCOUNT_LOCKED,
         ASYNC,
     }
 
@@ -298,6 +300,8 @@ public class Trakt {
             status = Status.ERROR;
             if (error instanceof AuthentificationError)
                 status = Status.ERROR_AUTH;
+            if (error instanceof AccountLockedError)
+                status = Status.ERROR_ACCOUNT_LOCKED;
             if (error instanceof IOException)
                 status = Status.ERROR_NETWORK;
             result = new Result(status, error, objectType);
@@ -722,6 +726,7 @@ public class Trakt {
     }
 
     public static class AuthentificationError extends Exception{};
+    public static class AccountLockedError extends Exception{};
 
     public <T> T exec(retrofit2.Call<T> call) {
         return exec(call, MAX_TRIAL);
@@ -744,6 +749,9 @@ public class Trakt {
                 } else if (res.code() == 404) {
                     log.error("exec request error: resource not found (404)");
                     return null; // Handle 404 error specifically
+                } else if (res.code() == 423) {
+                    log.error("exec request error: account locked (423) - no retry");
+                    throw new AccountLockedError(); // Trakt account is locked
                 } else {
                     throw new Exception(res.errorBody().toString());
                 }
@@ -930,6 +938,32 @@ public class Trakt {
 
     public static boolean getSyncPlaybackPreference(SharedPreferences preferences) {
         return preferences.getBoolean(KEY_TRAKT_SYNC_RESUME, false);
+    }
+
+    public static boolean isAccountLocked(SharedPreferences preferences) {
+        return preferences.getBoolean(KEY_TRAKT_ACCOUNT_LOCKED, false);
+    }
+
+    public static void setAccountLocked(SharedPreferences preferences, boolean locked) {
+        Editor editor = preferences.edit();
+        editor.putBoolean(KEY_TRAKT_ACCOUNT_LOCKED, locked);
+        editor.commit();
+    }
+
+    /**
+     * Disables Trakt by clearing all authentication tokens and marking account as locked.
+     * User must re-authenticate to enable Trakt again.
+     */
+    public static void disableTraktOnAccountLock(Context context, SharedPreferences preferences) {
+        log.warn("disableTraktOnAccountLock: Disabling Trakt due to account lock (423)");
+        Editor editor = preferences.edit();
+        // Clear authentication tokens
+        editor.remove(KEY_TRAKT_ACCESS_TOKEN);
+        editor.remove(KEY_TRAKT_REFRESH_TOKEN);
+        // Mark as locked so user knows why it was disabled
+        editor.putBoolean(KEY_TRAKT_ACCOUNT_LOCKED, true);
+        editor.commit();
+        log.info("disableTraktOnAccountLock: Trakt disabled - user must re-authenticate to enable");
     }
 
     public static void setFlagSyncPreference(SharedPreferences preferences, int flag) {

@@ -45,6 +45,7 @@
 
     <!-- trakt.tv -->
     <string name="trakt_toast_syncing_error">Impossible to sync with trakt</string>
+    <string name="trakt_toast_account_locked">Trakt account locked. Sync disabled. Please re-authenticate in settings to re-enable.</string>
 
     <!-- Title of screen when no sd card is present -->
     <string name="sdcard_missing_title">No SD card</string>
