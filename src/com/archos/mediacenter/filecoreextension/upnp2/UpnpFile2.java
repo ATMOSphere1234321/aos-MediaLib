@@ -235,6 +235,8 @@ public class UpnpFile2 extends MetaFile2 {
                 Log.e(TAG, "fromUri: caught SftpException ", e);
             } catch (JSchException e) {
                 Log.e(TAG, "fromUri: caught JSchException ", e);
+            } catch (NullPointerException e) {
+                Log.e(TAG, "fromUri: caught NullPointerException ", e);
             }
             return null;
         }
