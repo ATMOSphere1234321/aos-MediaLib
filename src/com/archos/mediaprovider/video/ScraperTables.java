@@ -1371,5 +1371,17 @@ public final class ScraperTables {
             db.execSQL(CREATE_EPISODE_WATCHED_ORDERING_IDX);
             db.execSQL(CREATE_MOVIE_WATCHED_ORDERING_IDX);
         }
+        if (toVersion == 48) {
+            log.debug("upgradeTo: {} - no scraper changes (handled in VideoOpenHelper)", toVersion);
+            // Version 48 changes are handled in VideoOpenHelper, not in ScraperTables
+        }
+        if (toVersion == 49) {
+            log.debug("upgradeTo: {} - adding movie release_date column and populating from year", toVersion);
+            db.execSQL("ALTER TABLE " + MOVIE_TABLE_NAME + " ADD COLUMN " + ScraperStore.Movie.RELEASE_DATE + " TEXT");
+            // Infer release_date from year_movie: format as YYYY-01-01 (January 1st of release year)
+            db.execSQL("UPDATE " + MOVIE_TABLE_NAME + " SET " + ScraperStore.Movie.RELEASE_DATE + " = " +
+                    "printf('%04d-01-01', " + ScraperStore.Movie.YEAR + ") WHERE " + ScraperStore.Movie.YEAR + " > 0");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_movie_release_date ON " + MOVIE_TABLE_NAME + "(" + ScraperStore.Movie.RELEASE_DATE + ")");
+        }
     }
 }

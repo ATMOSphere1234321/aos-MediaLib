@@ -33,6 +33,7 @@ public final class ScraperStore {
         public static final String VIDEO_ID = "video_id";
         public static final String NAME = "name_movie";
         public static final String YEAR = "year_movie";
+        public static final String RELEASE_DATE = "release_date_movie";
         public static final String RATING = "rating_movie";
         public static final String COVER = "cover_movie";
         public static final String PLOT = "plot_movie";

@@ -1186,6 +1186,11 @@ public final class VideoStore {
              */
             public static final String SCRAPER_M_YEAR = "m_year";
             /**
+             * MediaScraper: Movie release date
+             * <P>TYPE: <code>String</code>(YYYY-MM-DD format) or <code>null</code> if not a movie
+             */
+            public static final String SCRAPER_M_RELEASE_DATE = "m_release_date";
+            /**
              * MediaScraper: Movie or Episode rating
              * <P>TYPE: <code>float</code>(0.0 - 10.0) or <code>null</code> if not scraped
              */

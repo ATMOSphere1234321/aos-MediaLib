@@ -78,6 +78,12 @@ public class MovieIdParser2 {
             Calendar cal = Calendar.getInstance();
             cal.setTime(movie.release_date);
             result.setYear(cal.get(Calendar.YEAR));
+            // Format release_date as YYYY-MM-DD string
+            String dateStr = String.format("%04d-%02d-%02d",
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH) + 1,
+                    cal.get(Calendar.DAY_OF_MONTH));
+            result.setReleaseDate(dateStr);
         }
         if (movie.belongs_to_collection != null) {
             log.debug("getResult collection id: {}, for {}", movie.belongs_to_collection.id, movie.belongs_to_collection.name);

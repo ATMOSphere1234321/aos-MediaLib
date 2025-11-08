@@ -45,6 +45,7 @@ public class MovieTags extends VideoTags {
     private static final Logger log = LoggerFactory.getLogger(MovieTags.class);
 
     protected int mYear;
+    protected String mReleaseDate;
 
     @SuppressWarnings("hiding") // this has to be defined for every parcelable this way
     public static final Parcelable.Creator<MovieTags> CREATOR = new Parcelable.Creator<MovieTags>() { 
@@ -68,6 +69,9 @@ public class MovieTags extends VideoTags {
     }
 
     public int getYear() { return mYear; }
+
+    public void setReleaseDate(String releaseDate) { mReleaseDate = releaseDate; }
+    public String getReleaseDate() { return mReleaseDate; }
 
     protected int mCollectionId = -1;
     public void setCollectionId(int collectionId) { mCollectionId = collectionId; }
@@ -135,6 +139,7 @@ public class MovieTags extends VideoTags {
         values.put(ScraperStore.Movie.VIDEO_ID, Long.valueOf(videoId));
         values.put(ScraperStore.Movie.NAME, mTitle);
         values.put(ScraperStore.Movie.YEAR, Integer.valueOf(mYear));
+        values.put(ScraperStore.Movie.RELEASE_DATE, mReleaseDate);
         values.put(ScraperStore.Movie.RATING, Float.valueOf(mRating));
         values.put(ScraperStore.Movie.COLLECTION_ID, Integer.valueOf(mCollectionId));
 
@@ -384,12 +389,14 @@ public class MovieTags extends VideoTags {
 
     private void readFromParcel(Parcel in) {
         mYear = in.readInt();
+        mReleaseDate = in.readString();
     }
 
     @Override
     public void writeToParcel(Parcel out, int flags) {
         super.writeToParcel(out, flags);
         out.writeInt(mYear);
+        out.writeString(mReleaseDate);
     }
 
     /** Add this (local) image as the default poster */

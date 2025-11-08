@@ -104,6 +104,7 @@ public class TagsFactory {
             ratingME = getCol(c, VideoColumns.SCRAPER_RATING);
             ratingS = getCol(c, VideoColumns.SCRAPER_S_RATING);
             yearM = getCol(c, VideoColumns.SCRAPER_M_YEAR);
+            releaseDateM = getCol(c, VideoColumns.SCRAPER_M_RELEASE_DATE);
             airedE = getCol(c, VideoColumns.SCRAPER_E_AIRED);
             premieredS = getCol(c, VideoColumns.SCRAPER_S_PREMIERED);
             onlineIdMS = getCol(c, VideoColumns.SCRAPER_ONLINE_ID);
@@ -180,6 +181,7 @@ public class TagsFactory {
         public final int imdbIdMS;
         public final int imdbIdE;
         public final int yearM;
+        public final int releaseDateM;
         public final int airedE;
         public final int premieredS;
         public final int plotME;
@@ -236,6 +238,7 @@ public class TagsFactory {
         VideoColumns.SCRAPER_RATING,
         VideoColumns.SCRAPER_S_RATING,
         VideoColumns.SCRAPER_M_YEAR,
+        VideoColumns.SCRAPER_M_RELEASE_DATE,
         VideoColumns.SCRAPER_E_AIRED,
         VideoColumns.SCRAPER_S_PREMIERED,
         VideoColumns.SCRAPER_ONLINE_ID,
@@ -410,6 +413,9 @@ public class TagsFactory {
                 int year = getIntCol(cur, cols.yearM);
                 if(year >= 0)
                     tag.setYear(year);
+                String releaseDate = getStringCol(cur, cols.releaseDateM);
+                if(releaseDate != null)
+                    tag.setReleaseDate(releaseDate);
                 tag.setPlot(plotME);
                 tag.setActorsFormatted(actorsMS);
                 tag.setDirectorsFormatted(directorsME);
