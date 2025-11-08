@@ -264,6 +264,14 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         // intents are delivered here.
         log.debug("onStartCommand:{} flags:{} startId:{} getAction {}", intent, flags, startId, ((intent != null) ? intent.getAction() : "null"));
 
+        // Safety check: ensure handler is initialized before proceeding
+        if (mHandler == null) {
+            log.warn("onStartCommand: mHandler is null, initialization not complete yet, deferring service start");
+            ArchosUtils.addBreadcrumb(SentryLevel.WARNING, "VideoStoreImportService.onStartCommand", "mHandler is null, deferring start");
+            // Return START_STICKY so the service will be restarted when onCreate completes
+            return Service.START_STICKY;
+        }
+
         try {
             ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
                     (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0);
@@ -719,6 +727,10 @@ public class VideoStoreImportService extends Service implements Handler.Callback
     /** removes all messages from handler */
     protected static void removeAllMessages(Handler handler) {
         log.debug("removeAllMessages");
+        if (handler == null) {
+            log.warn("removeAllMessages: handler is null, skipping");
+            return;
+        }
         handler.removeMessages(MESSAGE_KILL);
         handler.removeMessages(MESSAGE_IMPORT_FULL);
         handler.removeMessages(MESSAGE_IMPORT_INCR);
