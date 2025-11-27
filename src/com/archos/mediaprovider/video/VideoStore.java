@@ -939,6 +939,13 @@ public final class VideoStore {
             public static final String ARCHOS_PLAYER_SUBTITLE_RATIO = "Archos_playerSubtitleRatio";
 
             /**
+             * Private archos flag to store the selected subtitle language (2-letter code)
+             * Used for validating subtitle track selection when re-enumerating files.
+             * <P>Type: TEXT</P>
+             */
+            public static final String ARCHOS_SUBTITLE_LANGUAGE = "Archos_subtitleLanguage";
+
+            /**
              * Private archos flag to store the associated scraper id
              * <P>Type: INTEGER</P>
              */

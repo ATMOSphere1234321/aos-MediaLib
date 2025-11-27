@@ -147,6 +147,12 @@ public class XmlDb implements Callback {
             } else if (localName.equals("subtitle_ratio")) {
                 mCurrentEntry.subtitleRatio = getInt();
                 log.debug("endElement: subtitle_ratio={}", mCurrentEntry.subtitleRatio);
+            } else if (localName.equals("subtitle_language")) {
+                String lang = getString();
+                if (!lang.isEmpty()) {
+                    mCurrentEntry.subtitleLanguage = lang;
+                    log.debug("endElement: subtitle_language={}", mCurrentEntry.subtitleLanguage);
+                }
             } else if (localName.equals("last_time_played")) {
                 mCurrentEntry.lastTimePlayed = Long.decode(getString());
                 log.debug("endElement: last_time_played={}", mCurrentEntry.lastTimePlayed);
@@ -566,6 +572,8 @@ public class XmlDb implements Callback {
             writeXmlEntryElement(writer, "subtitle_delay", Integer.toString(entry.subtitleDelay));
         if (entry.subtitleRatio != 0)
             writeXmlEntryElement(writer, "subtitle_ratio", Integer.toString(entry.subtitleRatio));
+        if (entry.subtitleLanguage != null && !entry.subtitleLanguage.isEmpty())
+            writeXmlEntryElement(writer, "subtitle_language", entry.subtitleLanguage);
         if (entry.lastTimePlayed >= 0)
             writeXmlEntryElement(writer, "last_time_played", Long.toString(entry.lastTimePlayed));
     }

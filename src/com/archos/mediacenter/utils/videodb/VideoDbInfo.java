@@ -67,6 +67,7 @@ public class VideoDbInfo implements Parcelable {
     public int subtitleTrack = -1;
     public int subtitleDelay = 0;
     public int subtitleRatio = 0;
+    public String subtitleLanguage = null;
     public long lastTimePlayed = -1;
     public int nbSubtitles = 0;
     public boolean isScraped = false;
@@ -108,18 +109,19 @@ public class VideoDbInfo implements Parcelable {
             VideoStore.Video.VideoColumns.ARCHOS_TRAKT_RESUME,            //	13
             VideoStore.Video.VideoColumns.ARCHOS_VIDEO_STEREO,          //  14
             VideoStore.Video.VideoColumns.ARCHOS_VIDEO_DEFINITION,      //  15
+            VideoStore.Video.VideoColumns.ARCHOS_SUBTITLE_LANGUAGE,     //  16
             // scraper infos
-            VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE,    // 16
-            VideoStore.Video.VideoColumns.SCRAPER_TITLE,                // 17
-            VideoStore.Video.VideoColumns.SCRAPER_COVER,                // 18
-            VideoStore.Video.VideoColumns.SCRAPER_E_EPISODE,            // 19
-            VideoStore.Video.VideoColumns.SCRAPER_E_SEASON,             // 20
-            VideoStore.Video.VideoColumns.SCRAPER_E_NAME,               // 21
-            VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID,          // 22
-            VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID,          // 23
-            VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID,          // 24
-            VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID,      // 25
-            VideoStore.Video.VideoColumns.SCRAPER_C_ID,                 // 26
+            VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE,    // 17
+            VideoStore.Video.VideoColumns.SCRAPER_TITLE,                // 18
+            VideoStore.Video.VideoColumns.SCRAPER_COVER,                // 19
+            VideoStore.Video.VideoColumns.SCRAPER_E_EPISODE,            // 20
+            VideoStore.Video.VideoColumns.SCRAPER_E_SEASON,             // 21
+            VideoStore.Video.VideoColumns.SCRAPER_E_NAME,               // 22
+            VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID,          // 23
+            VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID,          // 24
+            VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID,          // 25
+            VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID,      // 26
+            VideoStore.Video.VideoColumns.SCRAPER_C_ID,                 // 27
     };
 
     public static final int IDX_ID =                     0;
@@ -138,17 +140,18 @@ public class VideoDbInfo implements Parcelable {
     public static final int IDX_TRAKT_RESUME =			13;
     public static final int IDX_VIDEO_STEREO =          14;
     public static final int IDX_VIDEO_DEFINITION =      15;
-    public static final int IDX_SCRAPER_TYPE =          16;
-    public static final int IDX_SCRAPER_TITLE =         17;
-    public static final int IDX_SCRAPER_COVER =         18;
-    public static final int IDX_SCRAPER_EPISODE_NR =    19;
-    public static final int IDX_SCRAPER_SEASON_NR =     20;
-    public static final int IDX_SCRAPER_EPISODE_NAME =  21;
-    public static final int IDX_SCRAPER_M_ONLINE_ID =   22;
-    public static final int IDX_SCRAPER_S_ONLINE_ID =   23;
-    public static final int IDX_SCRAPER_E_ONLINE_ID =   24;
-    public static final int IDX_SCRAPER_ID =            25;
-    public static final int IDX_SCRAPER_M_COLLECTION_ID = 26;
+    public static final int IDX_SUBTITLE_LANGUAGE =     16;
+    public static final int IDX_SCRAPER_TYPE =          17;
+    public static final int IDX_SCRAPER_TITLE =         18;
+    public static final int IDX_SCRAPER_COVER =         19;
+    public static final int IDX_SCRAPER_EPISODE_NR =    20;
+    public static final int IDX_SCRAPER_SEASON_NR =     21;
+    public static final int IDX_SCRAPER_EPISODE_NAME =  22;
+    public static final int IDX_SCRAPER_M_ONLINE_ID =   23;
+    public static final int IDX_SCRAPER_S_ONLINE_ID =   24;
+    public static final int IDX_SCRAPER_E_ONLINE_ID =   25;
+    public static final int IDX_SCRAPER_ID =            26;
+    public static final int IDX_SCRAPER_M_COLLECTION_ID = 27;
     public static VideoDbInfo fromId(ContentResolver cr, long id) {
         if (id >= 0) {
             String[] selectionArgs = { String.valueOf(id) };
@@ -214,6 +217,7 @@ public class VideoDbInfo implements Parcelable {
             log.debug("fromCursor: result.lastTimePlayed={}, playerParams={}, paramsToSubtitleTrack={}, subtitleTrack={}", result.lastTimePlayed, playerParams, VideoStore.paramsToSubtitleTrack(playerParams), result.subtitleTrack);
             result.subtitleDelay = c.getInt(IDX_SUBTITLE_DELAY);
             result.subtitleRatio = c.getInt(IDX_SUBTITLE_RATIO);
+            result.subtitleLanguage = c.getString(IDX_SUBTITLE_LANGUAGE);
             result.nbSubtitles = c.getInt(IDX_NB_SUBTITLES);
             result.traktSeen = c.getInt(IDX_TRAKT_SEEN);
             result.traktLibrary = c.getInt(IDX_TRAKT_LIBRARY);
@@ -293,6 +297,12 @@ public class VideoDbInfo implements Parcelable {
         if (subtitleRatio >= 0)
             values.put(VideoStore.Video.VideoColumns.ARCHOS_PLAYER_SUBTITLE_RATIO, subtitleRatio);
 
+        // Always write subtitleLanguage, even if null, to keep DB in sync with in-memory state
+        if (subtitleLanguage != null && !subtitleLanguage.isEmpty())
+            values.put(VideoStore.Video.VideoColumns.ARCHOS_SUBTITLE_LANGUAGE, subtitleLanguage);
+        else
+            values.putNull(VideoStore.Video.VideoColumns.ARCHOS_SUBTITLE_LANGUAGE);
+
         if (nbSubtitles > 0)
             values.put(VideoStore.Video.VideoColumns.ARCHOS_NUMBER_OF_SUBTITLE_TRACKS, nbSubtitles);
         if (traktSeen != -1)
@@ -322,6 +332,7 @@ public class VideoDbInfo implements Parcelable {
         subtitleTrack = another.subtitleTrack;
         subtitleDelay = another.subtitleDelay;
         subtitleRatio = another.subtitleRatio;
+        subtitleLanguage = another.subtitleLanguage;
         lastTimePlayed = another.lastTimePlayed;
         nbSubtitles = another.nbSubtitles;
         isScraped = another.isScraped;
@@ -354,6 +365,7 @@ public class VideoDbInfo implements Parcelable {
         subtitleTrack = in.readInt();
         subtitleDelay = in.readInt();
         subtitleRatio = in.readInt();
+        subtitleLanguage = in.readString();
         lastTimePlayed = in.readLong();
         nbSubtitles = in.readInt();
         isScraped = in.readByte() != 0;
@@ -393,6 +405,7 @@ public class VideoDbInfo implements Parcelable {
         dest.writeInt(subtitleTrack);
         dest.writeInt(subtitleDelay);
         dest.writeInt(subtitleRatio);
+        dest.writeString(subtitleLanguage);
         dest.writeLong(lastTimePlayed);
         dest.writeInt(nbSubtitles);
         dest.writeByte((byte)(isScraped ? 1 : 0));
