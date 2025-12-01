@@ -695,21 +695,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                     cv.put(VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID, String.valueOf(-1));
                                     cv.put(VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE, String.valueOf(-1));
                                     getContentResolver().update(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, cv, BaseColumns._ID + "=?", new String[]{Long.toString(ID)});
-                                    
-                                    // Since scraping failed, create thumbnail now if deferred thumbnails are enabled
-                                    if (VideoProvider.DEFER_THUMBNAILS_FOR_SCRAPING) {
-                                        log.trace("startScraping: creating deferred thumbnail for failed scrape: {}", fileUri);
-                                        try {
-                                            String filePath = fileUri.toString();
-                                            VideoProvider.MediaThumbRequest.createVideoThumbnail(AutoScrapeService.this, filePath, VideoStore.Video.Thumbnails.MINI_KIND);
-                                            log.trace("startScraping: deferred thumbnail created successfully for {}", fileUri);
-                                            
-                                            // Notify content resolver to refresh UI cursors
-                                            getContentResolver().notifyChange(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, null);
-                                        } catch (Exception e) {
-                                            log.warn("startScraping: failed to create thumbnail for {}", fileUri, e);
-                                        }
-                                    }
                                 } else if (!noScrapeError) { // condition is scrapedOrError
                                     log.trace("startScraping: file {} scraped but with error -> increase mNetworkOrScrapErrors", fileUri);
                                     mNetworkOrScrapErrors++;
