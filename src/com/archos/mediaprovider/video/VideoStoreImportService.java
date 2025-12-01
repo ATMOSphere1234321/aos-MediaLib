@@ -350,7 +350,7 @@ public class VideoStoreImportService extends Service implements Handler.Callback
         mContext = context;
         Intent intent = new Intent(context, VideoStoreImportService.class);
         ArchosUtils.addBreadcrumb(SentryLevel.INFO, "VideoStoreImportService.startService", "app in foreground calling startService");
-        log.debug("startService: app in foreground, calling ContextCompat.startForegroundService()");
+        log.debug("startService: app in foreground, starting service");
         context.startService(intent); // triggers an initial video import on local storage because files might have been created meanwhile
     }
 
