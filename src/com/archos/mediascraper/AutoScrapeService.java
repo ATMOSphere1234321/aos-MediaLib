@@ -592,7 +592,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         log.trace("startScraping: NFO found, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
                                     }
                                 }
-                                if (notScraped && noScrapeError) { //look for online details
+                                if ((notScraped && noScrapeError) || shouldRescrapAll) { //look for online details
                                     log.trace("startScraping: NFO NOT found");
                                     ScrapeDetailResult result = null;
                                     boolean searchOnline = !shouldRescrapAll;
