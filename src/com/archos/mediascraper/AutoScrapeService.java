@@ -584,9 +584,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         notScraped = false;
                                         sNumberOfFilesScraped++;
                                         noScrapeError = true;
-                                        if (tags.getPosters() != null)
-                                            log.trace("startScraping: posters : {}", tags.getPosters().size());
-                                        else if (tags.getPosters() == null && tags.getDefaultPoster() == null &&
+                                        if (tags.getPosters() == null && tags.getDefaultPoster() == null &&
                                                 (!(tags instanceof EpisodeTags) || ((EpisodeTags) tags).getShowTags().getPosters() == null)) {//special case for episodes : check show
                                             if (tags.getTitle() != null && !tags.getTitle().isEmpty()) { //if a title is specified in nfo, use it to scrap file
                                                 scrapUri = Uri.parse("/" + tags.getTitle() + ".mp4");
@@ -603,7 +601,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                 if ((notScraped && noScrapeError) || shouldRescrapAll) { //look for online details
                                     log.trace("startScraping: NFO NOT found");
                                     ScrapeDetailResult result = null;
-                                    boolean searchOnline = !shouldRescrapAll;
+                                    boolean searchOnline = true;
                                     if (shouldRescrapAll) {
                                         log.trace("startScraping: rescraping all");
                                         long videoID = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_VIDEO_ONLINE_ID));
