@@ -46,7 +46,7 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
     // that is what onCreate creates
     private static final int DATABASE_CREATE_VERSION = 36; // initial version for v1.0 of nova (archos was 10)
     // that is the current version
-    private static final int DATABASE_VERSION = 51;
+    private static final int DATABASE_VERSION = 52;
     private static final String DATABASE_NAME = "media.db";
 
     // (Integer.MAX_VALUE / 2) rounded to human readable form
@@ -1883,6 +1883,60 @@ public class VideoOpenHelper extends DeleteOnDowngradeSQLiteOpenHelper {
         if (oldVersion < 51) { // add UNIQUE constraints to movie poster/backdrop tables
             log.debug("onUpgrade: {} - adding UNIQUE constraints to movie poster/backdrop tables to prevent duplicates", 51);
             ScraperTables.upgradeTo(db, 51);
+        }
+        if (oldVersion < 52) { // migrate UPNP/HTTP unique_id to new hash format
+            log.debug("onUpgrade: {} - migrating UPNP/HTTP unique_id to new hash format", 52);
+            migrateUniqueIdHashFormat(db);
+        }
+    }
+
+    /**
+     * Migrates UPNP/HTTP unique_id hash format from old algorithm to new algorithm.
+     * Old format: String.format("%016x", getUri().getHost().hashCode()+length() +getName().hashCode())
+     * New format: "H" + String.format("%018x", Math.abs(getUri().hashCode()) + length() * Math.abs(getName().hashCode()))
+     * This ensures existing files don't need to be rescanned.
+     */
+    private void migrateUniqueIdHashFormat(SQLiteDatabase db) {
+        Cursor cursor = null;
+        try {
+            cursor = db.query(FILES_TABLE_NAME,
+                new String[] {BaseColumns._ID, MediaColumns.DATA, MediaColumns.SIZE},
+                MediaColumns.DATA + " LIKE 'upnp://%' OR " +
+                MediaColumns.DATA + " LIKE 'http://%' OR " +
+                MediaColumns.DATA + " LIKE 'https://%'",
+                null, null, null, null);
+
+            int count = 0;
+            while (cursor.moveToNext()) {
+                long id = cursor.getLong(0);
+                String uriString = cursor.getString(1);
+                long length = cursor.getLong(2);
+
+                // Extract name from URI path
+                String name = "";
+                int lastSlash = uriString.lastIndexOf('/');
+                if (lastSlash >= 0 && lastSlash < uriString.length() - 1) {
+                    name = uriString.substring(lastSlash + 1);
+                }
+
+                // Compute new hash using the new algorithm
+                // New format: "H" + String.format("%018x", Math.abs(uri.hashCode()) + length * Math.abs(name.hashCode()))
+                long hashValue = Math.abs((long)uriString.hashCode()) + length * Math.abs((long)name.hashCode());
+                String newHash = "H" + String.format("%018x", hashValue);
+
+                ContentValues cv = new ContentValues();
+                cv.put(VideoColumns.ARCHOS_UNIQUE_ID, newHash);
+                db.update(FILES_TABLE_NAME, cv, BaseColumns._ID + "=?",
+                    new String[] {String.valueOf(id)});
+                count++;
+            }
+            log.debug("migrateUniqueIdHashFormat: migrated {} UPNP/HTTP files to new hash format", count);
+        } catch (Exception e) {
+            log.error("migrateUniqueIdHashFormat: error migrating unique_id hash format", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
     }
 
