@@ -185,7 +185,7 @@ public class MovieIdParser2 {
             }
             for(Pair<Image, String> backdrop : tempBackdrops) {
                 log.debug("getResult: generating ScraperImage for backdrop for {}, large={}{}", movie.title, ScraperImage.TMPL, backdrop.first.file_path);
-                posters.add(genBackdrop(movie.title, backdrop.first.file_path, backdrop.second, mContext));
+                backdrops.add(genBackdrop(movie.title, backdrop.first.file_path, backdrop.second, mContext));
             }
             log.debug("getResult: setting posters and backdrops");
             result.setPosters(posters);
