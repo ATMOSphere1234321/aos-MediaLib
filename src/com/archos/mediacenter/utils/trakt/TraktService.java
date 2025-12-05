@@ -703,6 +703,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                                         log.debug("syncPlaybackStatus: trakt->db trakt {}{} has been completed on trakt, mark it viewed", i.scraperTitle, i.isShow ? "-s" + i.scraperSeasonNr + "e" + i.scraperEpisodeNr : "");
                                         values.put(VideoStore.Video.VideoColumns.ARCHOS_TRAKT_RESUME, 99); // resume%
                                         values.put(VideoStore.Video.VideoColumns.BOOKMARK, -2); // file end
+                                        values.put(VideoStore.Video.VideoColumns.ARCHOS_TRAKT_SEEN, 1); // align watched state immediately
                                     }
                                 }
                                 if (toConsider) {
