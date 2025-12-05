@@ -506,6 +506,22 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         return values;
     }
 
+    /**
+     * When linking trakt for the first time, skip pushing the whole local history to trakt and
+     * instead mark already-watched items as "synced" so future runs only send fresh events.
+     */
+    private int seedLocalWatchedAsSynced() {
+        final ContentResolver cr = getContentResolver();
+        final ContentValues values = new ContentValues(1);
+        values.put(VideoStore.Video.VideoColumns.ARCHOS_TRAKT_SEEN, 1);
+        final String watchedMovies = getVideoToMarkSelection(Trakt.LIBRARY_WATCHED, BaseTags.MOVIE, true);
+        final String watchedShows = getVideoToMarkSelection(Trakt.LIBRARY_WATCHED, BaseTags.TV_SHOW, true);
+        final String selection = watchedMovies + " OR " + watchedShows;
+        final int updated = cr.update(VideoStore.Video.Media.EXTERNAL_CONTENT_URI, values, selection, null);
+        log.debug("seedLocalWatchedAsSynced: seeded {} watched videos as already synced", updated);
+        return updated;
+    }
+
     private Trakt.Status syncFlushEpisodeList(String library, TraktAPI.EpisodeListParam param,
                                               ArrayList<TraktAPI.Episode> episodeList, ContentResolver cr, String selection, boolean mark) {
         if (!episodeList.isEmpty()) {
@@ -1504,9 +1520,13 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
         log.debug("sync: last sync time is movieTime={}, showTime={}", movieTime, showTime);
 
-        if (showTime == 0 && movieTime == 0) {
+        final boolean isFirstSync = showTime == 0 && movieTime == 0;
+        if (isFirstSync) {
             log.debug("sync: first time syncing: full sync");
             flag |= FLAG_SYNC_FULL;
+            // Avoid spamming trakt with legacy watched history on first login
+            flag &= ~FLAG_SYNC_TO_TRAKT_WATCHED;
+            seedLocalWatchedAsSynced();
         }
 
         if ((flag & FLAG_SYNC_LAST_ACTIVITY_VETO) == 0 && (flag & FLAG_SYNC_TO_DB_WATCHED) == 0) {
