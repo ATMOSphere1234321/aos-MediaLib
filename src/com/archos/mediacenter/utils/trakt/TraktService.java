@@ -1250,13 +1250,14 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
     private Trakt.Status syncMoviesToTrakt(String library, boolean toMark) {
         final ContentResolver cr = getContentResolver();
         final String action = Trakt.getAction(library, toMark);
+        Trakt.resetLastPushedWatchedTime();
 
         Cursor c = cr.query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI,
                 MOVIE_ONLINE_ID_PROJECTION,
                 getVideoToMarkSelection(library, com.archos.mediascraper.BaseTags.MOVIE, toMark)
-                        + " AND " + VideoStore.Video.VideoColumns.ARCHOS_LAST_TIME_PLAYED + " > 0",
+                        + " AND " + VideoStore.Video.VideoColumns.ARCHOS_LAST_TIME_PLAYED + " > ?",
                 null,
-                null);
+                new String[]{String.valueOf(Trakt.getLastTimeWatchedSync(mPreferences) + 1)});
         if (c != null) {
             if (c.getCount() > 0) {
                 final int mOnlineIdIdx = c.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID);
@@ -1278,6 +1279,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                         movie.last_played = Trakt.getDateFormat(lastTimePlayed);
                         movieList.add(movie);
                         inBuilder.addParam(id);
+                        Trakt.updateLastPushedWatchedTime(lastTimePlayed);
                     }
                 }
                 if (!movieList.isEmpty()) {
@@ -1319,13 +1321,15 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
 
     private Trakt.Status syncShowsToTrakt(String library, boolean toMark) {
         final ContentResolver cr = getContentResolver();
+        Trakt.resetLastPushedWatchedTime();
 
         Cursor c = cr.query(VideoStore.Video.Media.EXTERNAL_CONTENT_URI,
                 SHOW_ONLINE_ID_PROJECTION,
                 getVideoToMarkSelection(library, com.archos.mediascraper.BaseTags.TV_SHOW, toMark)
-                        + " AND " + VideoStore.Video.VideoColumns.ARCHOS_LAST_TIME_PLAYED + " > 0",
+                        + " AND " + VideoStore.Video.VideoColumns.ARCHOS_LAST_TIME_PLAYED + " > ?",
                 null,
-                VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID);
+                VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID,
+                new String[]{String.valueOf(Trakt.getLastTimeWatchedSync(mPreferences) + 1)});
         if (c != null) {
             if (c.getCount() > 0) {
                 final int sOnlineIdIdx = c.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_S_ONLINE_ID);
@@ -1369,6 +1373,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                         episode.last_played = Trakt.getDateFormat(lastTimePlayed);
                         episodeList.add(episode);
                         inBuilder.addParam(id);
+                        Trakt.updateLastPushedWatchedTime(lastTimePlayed);
                     }
                 }
                 Trakt.Status status = syncFlushEpisodeList(library, param, episodeList, cr, inBuilder != null ? inBuilder.get() : null, toMark);
@@ -1570,14 +1575,20 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     continue;
                 // for markAs and unMarkAs
                 for (boolean toMark : new boolean[]{ true, false } ) {
+                    long maxPushedTime = -1;
                     log.debug("syncing movies({}) {} from DB to trakt.tv", toMark, library);
                     Trakt.Status status = syncMoviesToTrakt(library, toMark);
                     if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
                         return handleSyncStatus(status, flag, "syncMoviesToTrakt");
+                    maxPushedTime = Math.max(maxPushedTime, Trakt.getLastPushedWatchedTime());
                     log.debug("syncing shows({}) {} from DB to trakt.tv", toMark, library);
                     status = syncShowsToTrakt(library, toMark);
                     if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
                         return handleSyncStatus(status, flag, "syncShowsToTrakt");
+                    maxPushedTime = Math.max(maxPushedTime, Trakt.getLastPushedWatchedTime());
+                    if (maxPushedTime > 0 && toMark && library.equals(Trakt.LIBRARY_WATCHED)) {
+                        Trakt.setLastTimeWatchedSync(mPreferences, maxPushedTime);
+                    }
                 }
             }
         }
