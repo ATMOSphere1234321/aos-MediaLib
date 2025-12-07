@@ -118,7 +118,7 @@ public class ShowIdEpisodes {
                 episodeTags.setPlot(tvEpisode.overview);
                 episodeTags.setRating(Math.round(tvEpisode.vote_average.floatValue() * 10)/10.0f); // round up first decimal
                 episodeTags.setTitle(tvEpisode.name);
-                episodeTags.setImdbId(showTags.getImdbId());
+                if (tvEpisode.external_ids != null) episodeTags.setImdbId(tvEpisode.external_ids.imdb_id);
                 log.trace("getEpisodes: showId={} episode has onlineId={}", showId, tvEpisode.id);
                 episodeTags.setOnlineId(tvEpisode.id);
                 episodeTags.setAired(tvEpisode.air_date);
