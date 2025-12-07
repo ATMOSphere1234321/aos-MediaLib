@@ -125,8 +125,9 @@ public class MovieScraper3 extends BaseScraper2 {
         // make sure we have a valid title.
         log.debug("movie search:{} year:{} language:{}", searchInfo.getName(), searchInfo.getYear(), language);
         String[] candidates = {
-                searchInfo.getSearchSuggestion(),
-                searchInfo.getName()
+                // prefer the cleaned name (without year) over the display suggestion (which may append year)
+                searchInfo.getName(),
+                searchInfo.getSearchSuggestion()
         };
 
         //Check Search Suggestion, Name and fallback to filename.
