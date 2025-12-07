@@ -168,14 +168,6 @@ public class MovieScraper3 extends BaseScraper2 {
         MovieTags tag = search.tag;
         tag.setFile(searchFile);
 
-        // TODO MARC remove?
-        /*
-        ScraperImage defaultPoster = tag.getDefaultPoster();
-        if (defaultPoster != null) {
-            tag.setCover(defaultPoster.getLargeFileF());
-        }
-         */
-
         // MovieCollection poster/backdrops and information are handled in the MovieTag because it is easier
         if (tag.getCollectionId() != -1 && ! isCollectionAlreadyKnown(tag.getCollectionId(), mContext)) { // in presence of a movie collection/saga
             CollectionResult collectionResult = MovieCollection.getInfo(tag.getCollectionId(), language, getCollectionService());
@@ -200,7 +192,6 @@ public class MovieScraper3 extends BaseScraper2 {
             MovieIdDescription2.addDescription(movieId, tag, getMoviesService());
         }
         tag.downloadPoster(mContext);
-        // TODO MARC ?
         tag.downloadBackdrop(mContext);
         return new ScrapeDetailResult(tag, true, null, ScrapeStatus.OKAY, null);
     }
