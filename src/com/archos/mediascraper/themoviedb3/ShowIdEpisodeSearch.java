@@ -48,7 +48,7 @@ public class ShowIdEpisodeSearch {
             put("include_adult", String.valueOf(adultScrape));
         }};
 
-        log.debug("getEpisodeShowResponse: quering tmdb for showId {} season {} episode {} in {} with image languages: {}", showId, season, episode, language, imageLanguages);
+        if (log.isDebugEnabled()) log.debug("getEpisodeShowResponse: quering tmdb for showId {} season {} episode {} in {} with image languages: {}", showId, season, episode, language, imageLanguages);
 
         String showKey = showId + "|" + language;
         ShowIdEpisodeSearchResult myResult = sShowCache.get(showKey);
@@ -62,7 +62,7 @@ public class ShowIdEpisodeSearch {
                 Response<TvEpisode> seriesResponse = tmdb.tvEpisodesService().episode(showId, season, episode, language, new AppendToResponse(AppendToResponseItem.EXTERNAL_IDS, AppendToResponseItem.IMAGES, AppendToResponseItem.CREDITS, AppendToResponseItem.CONTENT_RATINGS), options).execute();
                 switch (seriesResponse.code()) {
                     case 401: // auth issue
-                        log.debug("search: auth error");
+                        if (log.isDebugEnabled()) log.debug("search: auth error");
                         myResult.status = ScrapeStatus.AUTH_ERROR;
                         ShowScraper4.reauth();
                         return myResult;
@@ -70,10 +70,10 @@ public class ShowIdEpisodeSearch {
                         myResult.status = ScrapeStatus.NOT_FOUND;
                         // fallback to english if no result
                         if (!language.equals("en")) {
-                            log.debug("getEpisodeShowResponse: retrying search for showId {} in en", showId);
+                            if (log.isDebugEnabled()) log.debug("getEpisodeShowResponse: retrying search for showId {} in en", showId);
                             return getEpisodeShowResponse(showId, season, episode,"en", adultScrape, tmdb);
                         }
-                        log.debug("getEpisodeShowResponse: showId {} not found", showId);
+                        if (log.isDebugEnabled()) log.debug("getEpisodeShowResponse: showId {} not found", showId);
                         // record valid answer
                         sShowCache.put(showKey, myResult);
                         break;
@@ -84,7 +84,7 @@ public class ShowIdEpisodeSearch {
                                 myResult.status = ScrapeStatus.OKAY;
                             } else {
                                 if (!language.equals("en")) {
-                                    log.debug("getEpisodeShowResponse: retrying search for showId {} in en", showId);
+                                    if (log.isDebugEnabled()) log.debug("getEpisodeShowResponse: retrying search for showId {} in en", showId);
                                     return getEpisodeShowResponse(showId, season, episode,"en", adultScrape, tmdb);
                                 }
                                 myResult.status = ScrapeStatus.NOT_FOUND;
@@ -92,7 +92,7 @@ public class ShowIdEpisodeSearch {
                             // record valid answer
                             sShowCache.put(showKey, myResult);
                         } else { // an error at this point is PARSER related
-                            log.debug("getEpisodeShowResponse: error {}", seriesResponse.code());
+                            if (log.isDebugEnabled()) log.debug("getEpisodeShowResponse: error {}", seriesResponse.code());
                             myResult.status = ScrapeStatus.ERROR_PARSER;
                         }
                         break;
@@ -107,10 +107,10 @@ public class ShowIdEpisodeSearch {
     }
 
     public static void debugLruCache(LruCache<String, ShowIdEpisodeSearchResult> lruCache) {
-        log.debug("debugLruCache: size={}", lruCache.size());
-        log.debug("debugLruCache: putCount={}", lruCache.putCount());
-        log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
-        log.debug("debugLruCache: missCount={}", lruCache.missCount());
-        log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: size={}", lruCache.size());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: putCount={}", lruCache.putCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: missCount={}", lruCache.missCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
     }
 }

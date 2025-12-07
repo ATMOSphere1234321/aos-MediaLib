@@ -49,14 +49,14 @@ public class ShowIdSeasonSearch {
             put("include_adult", String.valueOf(adultScrape));
         }};
 
-        log.debug("getSeasonShowResponse: quering tmdb for showId {} season {} in {} with image languages: {}", showId, season, language, imageLanguages);
+        if (log.isDebugEnabled()) log.debug("getSeasonShowResponse: quering tmdb for showId {} season {} in {} with image languages: {}", showId, season, language, imageLanguages);
 
         String showKey = showId + "|" + "s" + season + "|" + language;
         ShowIdSeasonSearchResult myResult = sShowCache.get(showKey);
         if (log.isTraceEnabled()) debugLruCache(sShowCache);
 
         if (myResult == null) {
-            log.debug("getSeasonShowResponse: not in cache fetching s{} for showId {}", season, showId);
+            if (log.isDebugEnabled()) log.debug("getSeasonShowResponse: not in cache fetching s{} for showId {}", season, showId);
             myResult = new ShowIdSeasonSearchResult();
             try {
                 // use appendToResponse to get imdbId
@@ -64,7 +64,7 @@ public class ShowIdSeasonSearch {
                 Response<TvSeason> seriesResponse = tmdb.tvSeasonsService().season(showId, season, language, new AppendToResponse(AppendToResponseItem.EXTERNAL_IDS, AppendToResponseItem.IMAGES, AppendToResponseItem.CREDITS, AppendToResponseItem.CONTENT_RATINGS), options).execute();
                 switch (seriesResponse.code()) {
                     case 401: // auth issue
-                        log.debug("search: auth error");
+                        if (log.isDebugEnabled()) log.debug("search: auth error");
                         myResult.status = ScrapeStatus.AUTH_ERROR;
                         ShowScraper4.reauth();
                         return myResult;
@@ -72,10 +72,10 @@ public class ShowIdSeasonSearch {
                         myResult.status = ScrapeStatus.NOT_FOUND;
                         // fallback to english if no result
                         if (!language.equals("en")) {
-                            log.debug("getSeasonShowResponse: retrying search for showId {} in en", showId);
+                            if (log.isDebugEnabled()) log.debug("getSeasonShowResponse: retrying search for showId {} in en", showId);
                             return getSeasonShowResponse(showId, season,"en", adultScrape, tmdb);
                         }
-                        log.debug("getSeasonShowResponse: showId {} not found", showId);
+                        if (log.isDebugEnabled()) log.debug("getSeasonShowResponse: showId {} not found", showId);
                         // record valid answer
                         sShowCache.put(showKey, myResult);
                         break;
@@ -86,7 +86,7 @@ public class ShowIdSeasonSearch {
                                 myResult.status = ScrapeStatus.OKAY;
                             } else {
                                 if (!language.equals("en")) {
-                                    log.debug("getSeasonShowResponse: retrying search for showId {} in en", showId);
+                                    if (log.isDebugEnabled()) log.debug("getSeasonShowResponse: retrying search for showId {} in en", showId);
                                     return getSeasonShowResponse(showId, season,"en", adultScrape, tmdb);
                                 }
                                 myResult.status = ScrapeStatus.NOT_FOUND;
@@ -94,7 +94,7 @@ public class ShowIdSeasonSearch {
                             // record valid answer
                             sShowCache.put(showKey, myResult);
                         } else { // an error at this point is PARSER related
-                            log.debug("getSeasonShowResponse: error {}", seriesResponse.code());
+                            if (log.isDebugEnabled()) log.debug("getSeasonShowResponse: error {}", seriesResponse.code());
                             myResult.status = ScrapeStatus.ERROR_PARSER;
                         }
                         break;
@@ -109,10 +109,10 @@ public class ShowIdSeasonSearch {
     }
 
     public static void debugLruCache(LruCache<String, ShowIdSeasonSearchResult> lruCache) {
-        log.debug("debugLruCache: size={}", lruCache.size());
-        log.debug("debugLruCache: putCount={}", lruCache.putCount());
-        log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
-        log.debug("debugLruCache: missCount={}", lruCache.missCount());
-        log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: size={}", lruCache.size());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: putCount={}", lruCache.putCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: missCount={}", lruCache.missCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
     }
 }

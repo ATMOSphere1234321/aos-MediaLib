@@ -125,7 +125,7 @@ public class CollectionTags implements Parcelable {
         if (image != null)
             image.download(context);
         else
-            log.debug("downloadPoster: image is null for {}, url {}", mTitle, image.getLargeUrl());
+            if (log.isDebugEnabled()) log.debug("downloadPoster: image is null for {}, url {}", mTitle, image.getLargeUrl());
     }
 
     public void downloadBackdrop(Context context) {
@@ -133,7 +133,7 @@ public class CollectionTags implements Parcelable {
         if (image != null)
             image.download(context);
         else
-            log.debug("downloadBackdrop: image is null for {}, url {}", mTitle, image.getLargeUrl());
+            if (log.isDebugEnabled()) log.debug("downloadBackdrop: image is null for {}, url {}", mTitle, image.getLargeUrl());
     }
 
     public final void downloadAllImages(Context context) {
@@ -152,7 +152,7 @@ public class CollectionTags implements Parcelable {
      */
     public final long save(Context context, boolean forceUpdate) {
 
-        log.debug("save: collection {}, title {}, forceUpdate {}", mId, mTitle, forceUpdate);
+        if (log.isDebugEnabled()) log.debug("save: collection {}, title {}, forceUpdate {}", mId, mTitle, forceUpdate);
 
         ContentResolver cr = context.getContentResolver();
         ContentProviderOperation.Builder cop = null;
@@ -230,7 +230,7 @@ public class CollectionTags implements Parcelable {
                                                String nameSeed, Context context) {
         if (getId() != -1) {
             String path = getPosterPath();
-            log.debug("downloadCollectionImage: treating collection poster {}", path);
+            if (log.isDebugEnabled()) log.debug("downloadCollectionImage: treating collection poster {}", path);
             String fullUrl, thumbUrl;
             ScraperImage image;
             if (path != null) {
@@ -248,7 +248,7 @@ public class CollectionTags implements Parcelable {
             }
 
             path = getBackdropPath();
-            log.debug("downloadCollectionImage: treating collection backdrop {}", path);
+            if (log.isDebugEnabled()) log.debug("downloadCollectionImage: treating collection backdrop {}", path);
             if (path != null) {
                 fullUrl = ImageConfiguration.getUrl(path, backdropFullSize);
                 thumbUrl = ImageConfiguration.getUrl(path, backdropThumbSize);

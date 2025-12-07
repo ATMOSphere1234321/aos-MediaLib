@@ -64,7 +64,7 @@ public abstract class BaseScraper2 {
             log.error("Exception", e);
             throw new RuntimeException(e);
         } catch (SAXException e) {
-            log.debug("Exception", e);
+            if (log.isDebugEnabled()) log.debug("Exception", e);
             throw new RuntimeException(e);
         }
         mName = internalGetPreferenceName();
@@ -97,7 +97,7 @@ public abstract class BaseScraper2 {
         ScrapeSearchResult searchResult = getMatches2(info, 1);
         if (searchResult.isOkay()) {
             if (info.isTvShow()) {
-                log.debug("search: tv show");
+                if (log.isDebugEnabled()) log.debug("search: tv show");
                 // here info is a TvSearchInfo
                 Bundle bundle = new Bundle();
                 TvShowSearchInfo tvSearchInfo = (TvShowSearchInfo) info;
@@ -106,7 +106,7 @@ public abstract class BaseScraper2 {
                 //bundle.putInt(Scraper.ITEM_REQUEST_EPISODE, tvSearchInfo.getEpisode());
                 result = getDetails(searchResult.results.get(0), bundle);
             } else {
-                log.debug("search: not tv show");
+                if (log.isDebugEnabled()) log.debug("search: not tv show");
                 result = getDetails(searchResult.results.get(0), null);
             }
         } else {

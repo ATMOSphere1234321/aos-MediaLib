@@ -48,7 +48,7 @@ public class SearchShow {
         boolean serviceError = false;
         String showKey = null;
         String name;
-        log.debug("search: quering tmdb for {} year {} in {}, resultLimit={}", searchInfo.getShowName(), searchInfo.getFirstAiredYear(), language, resultLimit);
+        if (log.isDebugEnabled()) log.debug("search: quering tmdb for {} year {} in {}, resultLimit={}", searchInfo.getShowName(), searchInfo.getFirstAiredYear(), language, resultLimit);
         try {
             Integer year = null;
             if (searchInfo.getFirstAiredYear() != null) {
@@ -61,11 +61,11 @@ public class SearchShow {
 
             String searchQueryString = searchInfo.getShowName();
             showKey = searchQueryString + ((year != null) ? "|" + year : "") + "|" + language;
-            log.debug("SearchShowResult: cache showKey {}", showKey);
+            if (log.isDebugEnabled()) log.debug("SearchShowResult: cache showKey {}", showKey);
             response = showCache.get(showKey);
             //if (log.isTraceEnabled()) debugLruCache(showCache);
             if (response == null) {
-                log.debug("SearchShowResult: no boost for {} year {}", searchInfo.getShowName(), year);
+                if (log.isDebugEnabled()) log.debug("SearchShowResult: no boost for {} year {}", searchInfo.getShowName(), year);
                 // adult search false by default
                 response = tmdb.searchService().tv(searchQueryString, 1, language, year, false).execute();
                 if (response.code() != 404) notFoundIssue = false; // this is an AND
@@ -80,12 +80,12 @@ public class SearchShow {
                     isResponseEmpty = true;
                 else {
                     if (response.body().total_results == 0) notFoundIssue = true;
-                    log.debug("search: response body has {} results", response.body().total_results);
+                    if (log.isDebugEnabled()) log.debug("search: response body has {} results", response.body().total_results);
                     if (notFoundIssue && searchInfo.getFirstAiredYear() == null) {
                         // reprocess name with year_extractor without parenthesis since we need to match The.Flash.2014.sXXeYY but not first to cope with Paris.Police.1900
                         name = searchInfo.getShowName();
                         Pair<String, String> nameYear = yearExtractor(name);
-                        log.debug("search: not found trying to extract year name={}, year={}", nameYear.first, nameYear.second);
+                        if (log.isDebugEnabled()) log.debug("search: not found trying to extract year name={}, year={}", nameYear.first, nameYear.second);
                         if (nameYear.second != null) { // avoid infinite loop
                             // remember that it is a reboot show with date year to add to name to discriminate
                             myResult.year = nameYear.second;
@@ -95,30 +95,30 @@ public class SearchShow {
                     }
                 }
                 if (isResponseOk || isResponseEmpty) {
-                    log.debug("search: inserting in showCache {} and response ", showKey);
+                    if (log.isDebugEnabled()) log.debug("search: inserting in showCache {} and response ", showKey);
                     showCache.put(showKey, response);
                 }
             } else {
-                log.debug("search: boost using cached searched show for {}", searchInfo.getShowName());
+                if (log.isDebugEnabled()) log.debug("search: boost using cached searched show for {}", searchInfo.getShowName());
                 isResponseOk = true;
                 notFoundIssue = false;
                 if (response.body() == null) isResponseEmpty = true;
             }
             if (authIssue) {
-                log.debug("search: auth error");
+                if (log.isDebugEnabled()) log.debug("search: auth error");
                 myResult.status = ScrapeStatus.AUTH_ERROR;
                 myResult.result = SearchShowResult.EMPTY_LIST;
                 ShowScraper4.reauth();
                 return myResult;
             }
             if (notFoundIssue || serviceError) {
-                log.debug("search: not found");
+                if (log.isDebugEnabled()) log.debug("search: not found");
                 myResult.result = SearchShowResult.EMPTY_LIST;
                 if (serviceError) myResult.status = ScrapeStatus.ERROR;
                 else myResult.status = ScrapeStatus.NOT_FOUND;
             } else {
                 if (isResponseEmpty) {
-                    log.debug("search: error");
+                    if (log.isDebugEnabled()) log.debug("search: error");
                     myResult.result = SearchShowResult.EMPTY_LIST;
                     myResult.status = ScrapeStatus.ERROR_PARSER;
                 } else {
@@ -141,11 +141,11 @@ public class SearchShow {
     }
 
     public static void debugLruCache(LruCache<String, Response<TvShowResultsPage>> lruCache) {
-        log.debug("debugLruCache: size={}", lruCache.size());
-        log.debug("debugLruCache: putCount={}", lruCache.putCount());
-        log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
-        log.debug("debugLruCache: missCount={}", lruCache.missCount());
-        log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: size={}", lruCache.size());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: putCount={}", lruCache.putCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: hitCount={}", lruCache.hitCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: missCount={}", lruCache.missCount());
+        if (log.isDebugEnabled()) log.debug("debugLruCache: evictionCount={}", lruCache.evictionCount());
     }
 
 }

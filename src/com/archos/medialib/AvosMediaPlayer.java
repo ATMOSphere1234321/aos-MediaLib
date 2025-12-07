@@ -134,7 +134,7 @@ public class AvosMediaPlayer implements IMediaPlayer {
             }
         }
 
-        log.debug("Couldn't open file on client side, trying server side");
+        if (log.isDebugEnabled()) log.debug("Couldn't open file on client side, trying server side");
         setDataSource2(uri.toString(), headers);
     }
 
@@ -476,35 +476,35 @@ public class AvosMediaPlayer implements IMediaPlayer {
             }
             switch(msg.what) {
             case MEDIA_PREPARED:
-                log.debug("handleMessage: MEDIA_PREPARED");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_PREPARED");
                 if (mOnPreparedListener != null)
                     mOnPreparedListener.onPrepared(mMediaPlayer);
                 return;
 
             case MEDIA_PLAYBACK_COMPLETE:
-                log.debug("handleMessage: MEDIA_PLAYBACK_COMPLETE");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_PLAYBACK_COMPLETE");
                 if (mOnCompletionListener != null)
                     mOnCompletionListener.onCompletion(mMediaPlayer);
                 stayAwake(false);
                 return;
             case MEDIA_NEXT_TRACK:
-                log.debug("handleMessage: MEDIA_NEXT_TRACK");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_NEXT_TRACK");
                 if (mOnNextTrackListener != null)
                     mOnNextTrackListener.onNextTrack(mMediaPlayer);
                 return;
             case MEDIA_BUFFERING_UPDATE:
-                log.debug("handleMessage: MEDIA_BUFFERING_UPDATE");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_BUFFERING_UPDATE");
                 if (mOnBufferingUpdateListener != null)
                     mOnBufferingUpdateListener.onBufferingUpdate(mMediaPlayer, msg.arg1);
                 return;
 
             case MEDIA_RELATIVE_POSITION_UPDATE:
-                log.debug("handleMessage: MEDIA_RELATIVE_POSITION_UPDATE");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_RELATIVE_POSITION_UPDATE");
                 if (mOnRelativePositionUpdateListener != null)
                     mOnRelativePositionUpdateListener.onRelativePositionUpdate(mMediaPlayer, msg.arg1);
                 return;
             case MEDIA_SEEK_COMPLETE:
-                log.debug("handleMessage: MEDIA_SEEK_COMPLETE");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_SEEK_COMPLETE");
                 if (mOnSeekCompleteListener != null) {
                   mOnSeekCompleteListener.onSeekComplete(mMediaPlayer);
                   if (msg.arg1 == 0)
@@ -513,13 +513,13 @@ public class AvosMediaPlayer implements IMediaPlayer {
               return;
 
             case MEDIA_SET_VIDEO_SIZE:
-                log.debug("handleMessage: MEDIA_SET_VIDEO_SIZE");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_SET_VIDEO_SIZE");
                 if (mOnVideoSizeChangedListener != null)
                   mOnVideoSizeChangedListener.onVideoSizeChanged(mMediaPlayer, msg.arg1, msg.arg2);
               return;
 
             case MEDIA_SET_VIDEO_ASPECT:
-                log.debug("handleMessage: MEDIA_SET_VIDEO_ASPECT");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_SET_VIDEO_ASPECT");
                 if (mOnVideoSizeChangedListener != null)
                     mOnVideoSizeChangedListener.onVideoAspectChanged(mMediaPlayer, (double)msg.arg1 / (double) msg.arg2);
                 return;
@@ -540,37 +540,37 @@ public class AvosMediaPlayer implements IMediaPlayer {
                 return;
 
             case MEDIA_INFO:
-                log.debug("handleMessage: MEDIA_INFO");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_INFO");
                 if (msg.arg1 != MEDIA_INFO_VIDEO_TRACK_LAGGING) {
                     log.info("handleMessage: MEDIA_INFO (" + msg.arg1 + "," + msg.arg2 + ")");
                 }
                 if (mOnInfoListener != null) {
-                    log.debug("handleMessage: MEDIA_INFO call onInfo");
+                    if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_INFO call onInfo");
                     mOnInfoListener.onInfo(mMediaPlayer, msg.arg1, msg.arg2);
                 } else {
-                    log.debug("handleMessage: MEDIA_INFO, no onInfoListener, not calling onInfo");
+                    if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_INFO, no onInfoListener, not calling onInfo");
                 }
                 // No real default action so far.
                 return;
             case MEDIA_SUBTITLE:
-                log.debug("handleMessage: MEDIA_SUBTITLE");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_SUBTITLE");
                 if (mOnSubtitleListener != null) {
                     if (msg.obj == null) {
                         log.error("MEDIA_SUBTITLE with null object");
                         return;
                     }
                     if (msg.obj instanceof Subtitle) {
-                        log.debug("handleMessage: MEDIA_SUBTITLE msg is a Subtitle call onSubtitle");
+                        if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_SUBTITLE msg is a Subtitle call onSubtitle");
                         mOnSubtitleListener.onSubtitle(mMediaPlayer, (Subtitle) msg.obj);
                     }
                     else
                         log.error("MEDIA_SUBTITLE with wrong object");
                 } else {
-                    log.debug("handleMessage: MEDIA_SUBTITLE, no onSubtitleListener, not calling onSubtitle");
+                    if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_SUBTITLE, no onSubtitleListener, not calling onSubtitle");
                 }
                 return;
             case MEDIA_NOP: // interface test message - ignore
-                log.debug("handleMessage: MEDIA_NOP");
+                if (log.isDebugEnabled()) log.debug("handleMessage: MEDIA_NOP");
                 break;
 
             default:
