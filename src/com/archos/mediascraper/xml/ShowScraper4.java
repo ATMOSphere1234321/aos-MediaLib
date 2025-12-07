@@ -63,11 +63,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import okhttp3.Cache;
 
@@ -182,22 +177,26 @@ public class ShowScraper4 extends BaseScraper2 {
         if (TextUtils.isEmpty(resultLanguage))
             resultLanguage = "en";
         int showId = result.getId();
-        String key = (getAllEpisodes ? "all" : (season != -1 ? "s" + season : "") + (episode != -1 ? "e" + episode : ""));
-        String showKey = showId + "|" + key + "|" + resultLanguage;
+        Bundle resultExtra = result.getExtra();
+        String requestedSeasonString = resultExtra != null ? resultExtra.getString(ShowUtils.SEASON, "0") : "0";
+        String requestedEpisodeString = resultExtra != null ? resultExtra.getString(ShowUtils.EPNUM, "0") : "0";
+        int requestedSeason = Integer.parseInt(requestedSeasonString);
+        int requestedEpisode = Integer.parseInt(requestedEpisodeString);
 
-        // Parse season and episode numbers once to avoid repeated Integer.parseInt() calls
-        int requestedSeason = Integer.parseInt(result.getExtra().getString(ShowUtils.SEASON, "0"));
-        int requestedEpisode = Integer.parseInt(result.getExtra().getString(ShowUtils.EPNUM, "0"));
+        int cacheSeason = season != -1 ? season : requestedSeason;
+        if (cacheSeason <= 0) cacheSeason = 1;
 
-        if (log.isDebugEnabled()) log.debug("getDetailsInternal: {}({}) {} in {} (basicShow={}/basicEpisode={})",
-                result.getTitle(), showId, key, resultLanguage, basicShow, basicEpisode);
+        String episodesCacheKey = showId + "|s" + cacheSeason + "|" + resultLanguage + (getAllEpisodes ? "|all" : "|partial");
+
+        if (log.isDebugEnabled()) log.debug("getDetailsInternal: {}({}) s{} in {} (basicShow={}/basicEpisode={}, allEpisodes={})",
+                result.getTitle(), showId, cacheSeason, resultLanguage, basicShow, basicEpisode, getAllEpisodes);
 
         Map<String, EpisodeTags> allEpisodes = null;
         ShowTags showTags = null;
         ShowIdImagesResult searchImages = null;
 
-        if (log.isDebugEnabled()) log.debug("getDetailsInternal: probing cache for showKey {}", showKey);
-        allEpisodes = sEpisodeCache.get(showKey);
+        if (log.isDebugEnabled()) log.debug("getDetailsInternal: probing cache for episodesKey {}", episodesCacheKey);
+        allEpisodes = sEpisodeCache.get(episodesCacheKey);
         if (log.isTraceEnabled()) debugLruCache(sEpisodeCache);
 
         if (allEpisodes == null) {
@@ -268,7 +267,7 @@ public class ShowScraper4 extends BaseScraper2 {
                         // only downloads main backdrop/poster and not the entire collection (x8 in size)
                         showTags.downloadPoster(mContext);
                         showTags.downloadBackdrop(mContext);
-                        //showTags.downloadPosters(mContext);
+                        showTags.downloadPosters(mContext);
                         //showTags.downloadBackdrops(mContext);
                     } else {
                         doRebuildShowTag = true;
@@ -295,7 +294,7 @@ public class ShowScraper4 extends BaseScraper2 {
                 if (showTags == null)
                     log.warn("getDetailsInternal: show {} tag is null but known!", showId);
                 else if (log.isDebugEnabled()) log.debug("getDetailsInternal: show {} {} in {} already known: {}, plot: {}",
-                        showId, key, resultLanguage, showTags.getTitle(), showTags.getPlot());
+                        showId, cacheSeason, resultLanguage, showTags.getTitle(), showTags.getPlot());
             }
 
             // retreive now the desired episodes
@@ -303,57 +302,16 @@ public class ShowScraper4 extends BaseScraper2 {
             Map<Integer, TvSeason> tvSeasons = new HashMap<Integer, TvSeason>();
 
             if (getAllEpisodes) {
-                // get all episodes: fetch seasons in parallel for better performance
-                // Use 2 threads to balance performance with database contention
-                if (log.isDebugEnabled()) log.debug("getDetailsInternal: fetching {} seasons in parallel for show {}", number_of_seasons, showId);
-                ExecutorService executor = Executors.newFixedThreadPool(Math.min(2, number_of_seasons));
-                List<Future<ShowIdSeasonSearchResult>> seasonFutures = new ArrayList<>();
-
-                // Make variables effectively final for use in Callable
-                final int finalShowId = showId;
-                final String finalLanguage = resultLanguage;
-                final boolean finalAdultScrape = adultScrape;
-                final MyTmdb finalTmdb = getTmdb();
-
-                // Submit all season fetch tasks
-                for (int s = 1; s <= number_of_seasons; s++) {
-                    final int seasonNum = s;
-                    seasonFutures.add(executor.submit(new Callable<ShowIdSeasonSearchResult>() {
-                        @Override
-                        public ShowIdSeasonSearchResult call() {
-                            if (log.isDebugEnabled()) log.debug("getDetailsInternal: parallel fetch for show {} s{}", finalShowId, seasonNum);
-                            return ShowIdSeasonSearch.getSeasonShowResponse(finalShowId, seasonNum, finalLanguage, finalAdultScrape, finalTmdb);
-                        }
-                    }));
+                int seasonToFetch = cacheSeason;
+                if (log.isDebugEnabled()) log.debug("getDetailsInternal: get episodes for show {} season {}", showId, seasonToFetch);
+                ShowIdSeasonSearchResult showIdSeason = ShowIdSeasonSearch.getSeasonShowResponse(showId, seasonToFetch, resultLanguage, adultScrape, getTmdb());
+                if (showIdSeason.status == ScrapeStatus.OKAY) {
+                    tvEpisodes.addAll(showIdSeason.tvSeason.episodes);
+                    tvSeasons.putIfAbsent(showIdSeason.tvSeason.season_number, showIdSeason.tvSeason);
+                } else {
+                    log.warn("getDetailsInternal: scrapeStatus for s{} is NOK!", seasonToFetch);
+                    return new ScrapeDetailResult(new EpisodeTags(), true, null, showIdSeason.status, showIdSeason.reason);
                 }
-
-                // Collect results in order
-                try {
-                    for (int i = 0; i < seasonFutures.size(); i++) {
-                        ShowIdSeasonSearchResult showIdSeason = seasonFutures.get(i).get();
-                        if (showIdSeason.status == ScrapeStatus.OKAY) {
-                            tvEpisodes.addAll(showIdSeason.tvSeason.episodes);
-                            tvSeasons.putIfAbsent(showIdSeason.tvSeason.season_number, showIdSeason.tvSeason);
-                        } else {
-                            log.warn("getDetailsInternal: scrapeStatus for s{} is NOK!", i + 1);
-                            return new ScrapeDetailResult(new EpisodeTags(), true, null, showIdSeason.status, showIdSeason.reason);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.error("getDetailsInternal: parallel season fetch failed", e);
-                    return new ScrapeDetailResult(new EpisodeTags(), true, null, ScrapeStatus.ERROR_PARSER, e);
-                } finally {
-                    executor.shutdown();
-                    try {
-                        if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
-                            executor.shutdownNow();
-                        }
-                    } catch (InterruptedException e) {
-                        executor.shutdownNow();
-                        Thread.currentThread().interrupt();
-                    }
-                }
-                if (log.isDebugEnabled()) log.debug("getDetailsInternal: parallel fetch completed for show {}, got {} episodes", showId, tvEpisodes.size());
             } else {
                 if (episode != -1) {
                     // get a single episode: should never get there since it means that we cannot infer poster/backdrop from single episode (need season)
@@ -403,8 +361,8 @@ public class ShowScraper4 extends BaseScraper2 {
             if (!searchEpisodes.isEmpty()) {
                 allEpisodes = searchEpisodes;
                 // put that result in cache.
-                if (log.isDebugEnabled()) log.debug("getDetailsInternal: sEpisodeCache put allEpisodes with key {}", showKey);
-                sEpisodeCache.put(showKey, allEpisodes);
+                if (log.isDebugEnabled()) log.debug("getDetailsInternal: sEpisodeCache put allEpisodes with key {}", episodesCacheKey);
+                sEpisodeCache.put(episodesCacheKey, allEpisodes);
             }
 
             // if we have episodes and posters map them to each other
@@ -423,9 +381,13 @@ public class ShowScraper4 extends BaseScraper2 {
                 }
                 if (seasonPosters != null)
                     mapPostersToEpisodes(allEpisodes, seasonPosters);
+
+                if (getAllEpisodes) {
+                    downloadEpisodeImages(allEpisodes);
+                }
             }
         } else {
-            if (log.isDebugEnabled()) log.debug("getDetailsInternal: cache boost for showId (all episodes)");
+            if (log.isDebugEnabled()) log.debug("getDetailsInternal: cache boost for showId (episodes)");
             // no need to parse, we have a cached result
             // get the showTags out of one random element, they all contain the same
             Iterator<EpisodeTags> iter = allEpisodes.values().iterator();
@@ -439,6 +401,13 @@ public class ShowScraper4 extends BaseScraper2 {
         if (log.isDebugEnabled()) log.debug("getDetailsInternal : ScrapeStatus.OKAY {} {} {}", returnValue.getShowTitle(), returnValue.getShowId(), returnValue.getTitle());
         Bundle extraOut = buildBundle(allEpisodes, options);
         return new ScrapeDetailResult(returnValue, false, extraOut, ScrapeStatus.OKAY, null);
+    }
+
+    private void downloadEpisodeImages(Map<String, EpisodeTags> allEpisodes) {
+        for (EpisodeTags episode : allEpisodes.values()) {
+            episode.downloadPicture(mContext);
+            episode.downloadPoster(mContext);
+        }
     }
 
     private static SparseArray<ScraperImage> buildSeasonPosterMap(List<ScraperImage> posters, String language) {

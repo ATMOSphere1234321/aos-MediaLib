@@ -101,9 +101,11 @@ public abstract class BaseScraper2 {
                 // here info is a TvSearchInfo
                 Bundle bundle = new Bundle();
                 TvShowSearchInfo tvSearchInfo = (TvShowSearchInfo) info;
+                bundle.putInt(Scraper.ITEM_REQUEST_BASIC_VIDEO, 1);
                 bundle.putInt(Scraper.ITEM_REQUEST_SEASON, tvSearchInfo.getSeason());
-                // keeping whole season boosts the perf since there is only one request for tmdb
-                //bundle.putInt(Scraper.ITEM_REQUEST_EPISODE, tvSearchInfo.getEpisode());
+                bundle.putInt(Scraper.ITEM_REQUEST_EPISODE, tvSearchInfo.getEpisode());
+                // request all episodes for this season so the season fetch can be cached
+                bundle.putInt(Scraper.ITEM_REQUEST_ALL_EPISODES, tvSearchInfo.getSeason());
                 result = getDetails(searchResult.results.get(0), bundle);
             } else {
                 if (log.isDebugEnabled()) log.debug("search: not tv show");

@@ -49,6 +49,7 @@ import com.archos.mediaprovider.video.LoaderUtils;
 import com.archos.mediaprovider.video.VideoStore;
 import com.archos.mediaprovider.video.VideoProvider;
 import com.archos.mediaprovider.video.WrapperChannelManager;
+import com.archos.mediascraper.ShowUtils;
 import com.archos.mediascraper.preprocess.SearchInfo;
 import com.archos.mediascraper.preprocess.SearchPreprocessor;
 import com.archos.mediascraper.xml.MovieScraper3;
@@ -613,14 +614,22 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             if (scraperType == BaseTags.TV_SHOW) {
                                                 // get the whole season
                                                 long season = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_E_SEASON));
+                                                int episodeNumber = cursor.getInt(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_E_EPISODE));
                                                 Bundle b = new Bundle();
                                                 b.putInt(Scraper.ITEM_REQUEST_SEASON, (int) season);
+                                                b.putInt(Scraper.ITEM_REQUEST_ALL_EPISODES, (int) season);
+                                                b.putInt(Scraper.ITEM_REQUEST_BASIC_VIDEO, 1);
+                                                b.putInt(Scraper.ITEM_REQUEST_EPISODE, episodeNumber);
 
                                                 if (log.isTraceEnabled()) log.trace("startScraping: rescraping episode for tvId {}, season {}", videoID, season);
                                                 SearchResult searchResult = new SearchResult(SearchResult.tvshow, title, (int) videoID);
                                                 searchResult.setFile(fileUri);
+                                                Bundle extra = new Bundle();
+                                                extra.putString(ShowUtils.SEASON, String.valueOf(season));
+                                                extra.putString(ShowUtils.EPNUM, String.valueOf(episodeNumber));
+                                                searchResult.setExtra(extra);
                                                 searchResult.setScraper(new ShowScraper4(AutoScrapeService.this));
-                                                result = ShowScraper4.getDetails(new SearchResult(SearchResult.tvshow, title, (int) videoID), b);
+                                                result = ShowScraper4.getDetails(searchResult, b);
                                             } else if (scraperType == BaseTags.MOVIE) {
                                                 if (log.isTraceEnabled()) log.trace("startScraping: rescraping movie {}", videoID);
                                                 SearchResult searchResult = new SearchResult(SearchResult.movie, title, (int) videoID);
