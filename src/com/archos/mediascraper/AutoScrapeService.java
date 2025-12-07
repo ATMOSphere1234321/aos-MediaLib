@@ -81,7 +81,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     // window size used to split queries to db
     private final static int WINDOW_SIZE = 2000;
 
-    private static volatile boolean sIsScraping = false;
     static int sNumberOfFilesRemainingToProcess = 0;
     static int sTotalNumberOfFilesRemainingToProcess = 0;
     static int sNumberOfFilesScraped = 0;
@@ -120,14 +119,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     private static int networkScanCount = 0;
     private static final Object networkScanLock = new Object();
     private static final String PREF_IS_SCRAPE_DIRTY = "is_scrape_dirty";
-
-    /**
-     * Ugly implementation based on a static variable, guessing that there is only one instance at a time (seems to be true...)
-     * @return true if AutoScrape service is running
-     */
-    public static boolean isScraping() {
-        return sIsScraping;
-    }
 
     /**
      * Ugly implementation based on a static variable, guessing that there is only one instance at a time (seems to be true...)
@@ -196,7 +187,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
         if (mThread != null && mThread.isAlive()) {
             saveDirtyState(true);
         }
-        sIsScraping = false;
         LoaderUtils.setScrapeInProgress(false);
         isForeground = false;
         // Note: isForceAfterNetworkScan is now managed by networkScanCount
@@ -223,7 +213,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
     public void onCreate() {
         super.onCreate();
         // Reset static scraping flags to ensure clean state on service creation
-        sIsScraping = false;
         LoaderUtils.setScrapeInProgress(false);
 
         // need to do that early to avoid ANR on Android 26+
@@ -317,7 +306,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             } catch (Exception e) {
                 log.error("onStartCommand: Exception in service operation", e);
                 // Save dirty state if operation was interrupted
-                if (sIsScraping) {
+                if (LoaderUtils.getScrapeInProgress()) {
                     saveDirtyState(true);
                 }
             }
@@ -327,7 +316,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
         } catch (Throwable t) {
             // Catch any unexpected exceptions in scraping operations to prevent service crash
             log.error("onStartCommand: Unexpected error during scraping operations", t);
-            if (sIsScraping) {
+            if (LoaderUtils.getScrapeInProgress()) {
                 saveDirtyState(true);
             }
             return START_STICKY;
@@ -395,7 +384,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                         index += window;
                         cursor.close();
                     } while (index < numberOfRows && (isForeground || isForceAfterNetworkScan) && !Thread.currentThread().isInterrupted());
-                    sIsScraping = false;
                     cursor.close();
                 }
             };
@@ -428,7 +416,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                 // Check if auto scraping is enabled and the app is in the foreground (or forced after network scan)
                 if (PreferenceManager.getDefaultSharedPreferences(appContext).getBoolean(KEY_ENABLE_AUTO_SCRAP, true) && (isForeground || isForceAfterNetworkScan)) {
                     // Check if a scraping operation is already in progress
-                    if (isScraping()) {
+                    if (LoaderUtils.getScrapeInProgress()) {
                         if (log.isTraceEnabled()) log.trace("registerObserver.onChange: already scraping, not launching service!");
                         return;
                     }
@@ -483,7 +471,6 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                     //Global Scrape in Progress, so the browser can skip thumbs in scrape and not waste space in storage
                     LoaderUtils.setScrapeInProgress(true);
 
-                    sIsScraping = true;
                     saveDirtyState(true);
                     try {
                         boolean shouldRescrapAll = rescrapAlreadySearched;
@@ -758,12 +745,11 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                         }
                         completed = true;
                     } finally {
-                        if (log.isDebugEnabled()) log.debug("THREAD FINALLY - BEFORE reset: sIsScraping={}, LoaderUtils.mScrapeInProgress={}", sIsScraping, LoaderUtils.getScrapeInProgress());
-                        sIsScraping = false;
+                        if (log.isDebugEnabled()) log.debug("THREAD FINALLY - BEFORE reset: LoaderUtils.mScrapeInProgress={}", LoaderUtils.getScrapeInProgress());
                         LoaderUtils.setScrapeInProgress(false);
                         saveDirtyState(!completed);
                         nm.cancel(NOTIFICATION_ID);
-                        if (log.isDebugEnabled()) log.debug("THREAD FINALLY - AFTER reset: sIsScraping={}, LoaderUtils.mScrapeInProgress={}", sIsScraping, LoaderUtils.getScrapeInProgress());
+                        if (log.isDebugEnabled()) log.debug("THREAD FINALLY - AFTER reset: LoaderUtils.mScrapeInProgress={}", LoaderUtils.getScrapeInProgress());
                     }
                 }
             };
