@@ -595,12 +595,12 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                                 // ugly but necessary to avoid poster delete when replacing tag
                                                 if (tags.getDefaultPoster() != null)
                                                     DeleteFileCallback.DO_NOT_DELETE.add(tags.getDefaultPoster().getLargeFile());
-                                                if (tags instanceof EpisodeTags) {
-                                                    if (((EpisodeTags) tags).getEpisodePicture() != null) {
-                                                        DeleteFileCallback.DO_NOT_DELETE.add(((EpisodeTags) tags).getEpisodePicture().getLargeFile());
+                                                if (tags instanceof EpisodeTags episodeTags) {
+                                                    if (episodeTags.getEpisodePicture() != null) {
+                                                        DeleteFileCallback.DO_NOT_DELETE.add(episodeTags.getEpisodePicture().getLargeFile());
                                                     }
-                                                    if (((EpisodeTags) tags).getShowTags() != null && ((EpisodeTags) tags).getShowTags().getDefaultPoster() != null) {
-                                                        DeleteFileCallback.DO_NOT_DELETE.add(((EpisodeTags) tags).getShowTags().getDefaultPoster().getLargeFile());
+                                                    if (episodeTags.getShowTags() != null && episodeTags.getShowTags().getDefaultPoster() != null) {
+                                                        DeleteFileCallback.DO_NOT_DELETE.add(episodeTags.getShowTags().getDefaultPoster().getLargeFile());
                                                     }
                                                 }
                                                 if (log.isTraceEnabled()) log.trace("startScraping: NFO tags.save ID={}", ID);
@@ -702,39 +702,29 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             if (result.tag.getDefaultPoster() != null) {
                                                 DeleteFileCallback.DO_NOT_DELETE.add(result.tag.getDefaultPoster().getLargeFile());
                                             }
-                                            if (result.tag instanceof EpisodeTags) {
-                                                if (((EpisodeTags) result.tag).getEpisodePicture() != null) {
-                                                    DeleteFileCallback.DO_NOT_DELETE.add(((EpisodeTags) result.tag).getEpisodePicture().getLargeFile());
+                                            if (result.tag instanceof EpisodeTags episodeTags) {
+                                                if (episodeTags.getEpisodePicture() != null) {
+                                                    DeleteFileCallback.DO_NOT_DELETE.add(episodeTags.getEpisodePicture().getLargeFile());
                                                 }
-                                                if (((EpisodeTags) result.tag).getShowTags() != null && ((EpisodeTags) result.tag).getShowTags().getDefaultPoster() != null) {
-                                                    DeleteFileCallback.DO_NOT_DELETE.add(((EpisodeTags) result.tag).getShowTags().getDefaultPoster().getLargeFile());
+                                                if (episodeTags.getShowTags() != null && episodeTags.getShowTags().getDefaultPoster() != null) {
+                                                    DeleteFileCallback.DO_NOT_DELETE.add(episodeTags.getShowTags().getDefaultPoster().getLargeFile());
                                                 }
+                                                //Set the Episode title here, we don't have to do an extra isMovie check.
+                                                if (episodeTags.getShowTags() != null && episodeTags.getShowTags().getTitle() != null && !episodeTags.getShowTags().getTitle().isEmpty()) {
+                                                    title = episodeTags.getShowTags().getTitle() + " - " + episodeTags.getTitle();
+                                                }
+                                            } else {
+                                                //Set the Movie title.
+                                                title = result.tag.getTitle();
                                             }
                                             if (log.isTraceEnabled()) log.trace("startScraping: online result.tag.save ID={}", ID);
 
                                             result.tag.save(AutoScrapeService.this, ID);
-                                            if (sTotalNumberOfFilesRemainingToProcess > 0) {
+                                            if (sTotalNumberOfFilesRemainingToProcess > 0 && title != null && !title.isEmpty()) {
                                                 StringBuilder notification = new StringBuilder(getString(R.string.remaining_videos_to_process))
                                                         .append(" ").append(sTotalNumberOfFilesRemainingToProcess);
-                                                String displayTitle = null;
-                                                if (result.tag instanceof EpisodeTags) {
-                                                    EpisodeTags episodeTags = (EpisodeTags) result.tag;
-                                                    ShowTags showTags = episodeTags.getShowTags();
-                                                    if (showTags != null && showTags.getTitle() != null && !showTags.getTitle().isEmpty()) {
-                                                        displayTitle = showTags.getTitle();
-                                                        int season = episodeTags.getSeason();
-                                                        int episode = episodeTags.getEpisode();
-                                                        if (season >= 0 && episode >= 0) {
-                                                            displayTitle += String.format(" - S%02dE%02d", season, episode);
-                                                        }
-                                                    }
-                                                } else if (result.tag instanceof MovieTags) {
-                                                    displayTitle = result.tag.getTitle();
-                                                }
-                                                if (displayTitle != null && !displayTitle.isEmpty()) {
-                                                    notification.append("\n").append("\u2705 ").append(displayTitle);
-                                                    nm.notify(NOTIFICATION_ID, nb.setContentText(notification.toString()).build());
-                                                }
+                                                notification.append("\n").append("\u2705 ").append(title);
+                                                nm.notify(NOTIFICATION_ID, nb.setContentText(notification.toString()).build());
                                             }
                                             DeleteFileCallback.DO_NOT_DELETE.clear();
                                             // result exists thus scraped and no error for now
@@ -769,8 +759,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                                     StringBuilder notification = new StringBuilder(getString(R.string.remaining_videos_to_process))
                                                             .append(" ").append(sTotalNumberOfFilesRemainingToProcess);
                                                     String failureTitle = null;
-                                                    if (result.tag instanceof EpisodeTags) {
-                                                        EpisodeTags episodeTags = (EpisodeTags) result.tag;
+                                                    if (result.tag instanceof EpisodeTags episodeTags) {
                                                         ShowTags showTags = episodeTags.getShowTags();
                                                         if (showTags != null && showTags.getTitle() != null && !showTags.getTitle().isEmpty()) {
                                                             failureTitle = showTags.getTitle();
