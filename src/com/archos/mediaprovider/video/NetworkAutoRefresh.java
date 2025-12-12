@@ -22,6 +22,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.DefaultLifecycleObserver;
@@ -135,6 +137,7 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                 AutoScrapeService.resetNetworkScanCount();
                 boolean triggeredScan = false;
                 int scanCount = 0;
+                Handler handler = new Handler(Looper.getMainLooper());
                 for (Uri uri : toUpdate) {
                     if (log.isDebugEnabled()) log.debug("onReceive: scanning {}", uri);
                     if (shouldSkipScanForInactiveServer(context, uri)) {
@@ -148,16 +151,20 @@ public class NetworkAutoRefresh extends BroadcastReceiver implements DefaultLife
                         Session.getInstance().removeFTPClient(uri);
                     if("sftp".equalsIgnoreCase(uri.getScheme()))
                         SFTPSession.getInstance().removeSession(uri);
-                    Intent refreshIntent = new Intent(ArchosMediaIntent.ACTION_VIDEO_SCANNER_SCAN_FILE, uri);
-                    refreshIntent.putExtra(NetworkScannerServiceVideo.RECORD_ON_FAIL_PREFERENCE, AUTO_RESCAN_ERROR);
-                    refreshIntent.putExtra(NetworkScannerServiceVideo.RECORD_END_OF_SCAN_PREFERENCE, AUTO_RESCAN_LAST_SCAN);
-                    refreshIntent.setPackage(ArchosUtils.getGlobalContext().getPackageName());
-                    context.sendBroadcast(refreshIntent);
+                    final Uri scanUri = uri;
+                    final long delayMs = 100L + (scanCount * 2000L);
+                    handler.postDelayed(() -> {
+                        Intent refreshIntent = new Intent(ArchosMediaIntent.ACTION_VIDEO_SCANNER_SCAN_FILE, scanUri);
+                        refreshIntent.putExtra(NetworkScannerServiceVideo.RECORD_ON_FAIL_PREFERENCE, AUTO_RESCAN_ERROR);
+                        refreshIntent.putExtra(NetworkScannerServiceVideo.RECORD_END_OF_SCAN_PREFERENCE, AUTO_RESCAN_LAST_SCAN);
+                        refreshIntent.setPackage(ArchosUtils.getGlobalContext().getPackageName());
+                        context.sendBroadcast(refreshIntent);
+                    }, delayMs);
                     triggeredScan = true;
                     scanCount++;
                     // Increment the network scan counter for each folder
                     AutoScrapeService.incrementNetworkScanCount();
-                    if (log.isDebugEnabled()) log.debug("onReceive: incremented network scan count for {}", uri);
+                    if (log.isDebugEnabled()) log.debug("onReceive: queued scan for {} with delay {}ms", uri, delayMs);
                 }
 
                 // Start AutoScrapeService after network scanning to scrape newly found videos
