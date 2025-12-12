@@ -74,6 +74,8 @@ public final class ShowUtils {
             // almost anything that has S 00 E 00 in it and recognize shows with year as season number
             // take 20xx or 19xx or xx as season number
             Pattern.compile("(.+?)" + SEP_MANDATORY + "(?:s|seas|season)" + SEP_OPTIONAL + "(20\\d{2}|19\\d{2}|\\d{1,2})" + SEP_OPTIONAL + "(?:e|ep|episode)" + SEP_OPTIONAL + "(1?\\d{1,3})(?!\\d).*", Pattern.CASE_INSENSITIVE),
+            // [S]x[E] bracket format like Show.[13x07]
+            Pattern.compile("(.+?)" + SEP_OPTIONAL + "(?:\\[)" + SEP_OPTIONAL + "(\\d{1,3})" + SEP_OPTIONAL + "(?:x)" + SEP_OPTIONAL + "(\\d{1,3})" + SEP_OPTIONAL + "(?:\\])" + SEP_OPTIONAL + ".*", Pattern.CASE_INSENSITIVE),
             // almost anything that has 00 x 00, note mandatory separator to fixe detection of movies 5.1x264 as Season 1 episode 264
             Pattern.compile("(.+?)" + SEP_MANDATORY + "(20\\d{2}|19\\d{2}|\\d{1,2})" + SEP_OPTIONAL + "x" + SEP_MANDATORY + "(1?\\d{1,3})(?!\\d).*", Pattern.CASE_INSENSITIVE),
             // special case to avoid x264 or x265
