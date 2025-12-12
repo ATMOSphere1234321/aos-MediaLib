@@ -555,7 +555,13 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         sNumberOfFilesRemainingToProcess = 0;
                                         if (log.isDebugEnabled()) log.debug("startScraping disconnected from network calling stopSelf");
                                         stopSelf();
-                                        return; // Finally block will handle flag reset
+
+                                        // Any place we return, we have to cancel the Notification.
+                                        nm.cancel(NOTIFICATION_ID);
+
+                                        // Global Scrape in Progress, so the browser can skip thumbs in scrape and not waste space in storage
+                                        LoaderUtils.setScrapeInProgress(false);
+                                        return;
                                     }
 
                                     String title = cursor.getString(cursor.getColumnIndex(VideoStore.MediaColumns.TITLE));
