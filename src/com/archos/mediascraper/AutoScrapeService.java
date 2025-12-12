@@ -352,12 +352,11 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
                         while (cursor.moveToNext() && (isForeground || isForceAfterNetworkScan) && !Thread.currentThread().isInterrupted()
                                 && PreferenceManager.getDefaultSharedPreferences(AutoScrapeService.this).getBoolean(AutoScrapeService.KEY_ENABLE_AUTO_SCRAP, true)) {
-                            if (sTotalNumberOfFilesRemainingToProcess > 0)
-                                nm.notify(NOTIFICATION_ID, nb.setContentText(getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess).build());
                             Uri fileUri = Uri.parse(cursor.getString(cursor.getColumnIndex(VideoStore.MediaColumns.DATA)));
                             long movieID = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_MOVIE_ID));
                             long episodeID = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_EPISODE_ID));
                             final int scraperType = cursor.getInt(cursor.getColumnIndex(VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE));
+                            String exportTitle = null;
                             BaseTags baseTags = null;
                             if (!fileUri.toString().startsWith("upnp://")) {
                                 if (log.isTraceEnabled()) log.trace("startExporting: {} fileUri {}", movieID, fileUri);
@@ -374,6 +373,27 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             if (baseTags == null)
                                 continue;
                             if (log.isTraceEnabled()) log.trace("startExporting: Base tag created, exporting {}", fileUri);
+                            // Extract title for notification
+                            if (baseTags instanceof EpisodeTags) {
+                                ShowTags showTags = ((EpisodeTags) baseTags).getShowTags();
+                                if (showTags != null && showTags.getTitle() != null && !showTags.getTitle().isEmpty()) {
+                                    exportTitle = showTags.getTitle();
+                                    if (baseTags.getTitle() != null && !baseTags.getTitle().isEmpty()) {
+                                        exportTitle += " - " + baseTags.getTitle();
+                                    }
+                                }
+                            } else if (baseTags instanceof MovieTags) {
+                                exportTitle = baseTags.getTitle();
+                            }
+                            // Show export notification with title
+                            if (sTotalNumberOfFilesRemainingToProcess > 0) {
+                                StringBuilder notification = new StringBuilder(getString(R.string.remaining_videos_to_process))
+                                        .append(" ").append(sTotalNumberOfFilesRemainingToProcess);
+                                if (exportTitle != null && !exportTitle.isEmpty()) {
+                                    notification.append("\n").append("\ud83d\udcc4 ").append(exportTitle);
+                                }
+                                nm.notify(NOTIFICATION_ID, nb.setContentText(notification.toString()).build());
+                            }
                             if (exportContext != null && fileUri != null)
                                 try {
                                     NfoWriter.export(fileUri, baseTags, exportContext);
@@ -547,8 +567,11 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                     notScraped = true;
                                     noScrapeError = true;
                                     if (log.isTraceEnabled()) log.trace("startScraping processing scrapUri {}, with ID {}, number of remaining files to be processed: {}", scrapUri, ID, sTotalNumberOfFilesRemainingToProcess);
-                                    if (sTotalNumberOfFilesRemainingToProcess > 0)
-                                        nm.notify(NOTIFICATION_ID, nb.setContentText(getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess).build());
+                                    if (sTotalNumberOfFilesRemainingToProcess > 0) {
+                                        nm.notify(NOTIFICATION_ID, nb.setContentText(
+                                                getString(R.string.remaining_videos_to_process) + " " + sTotalNumberOfFilesRemainingToProcess
+                                        ).build());
+                                    }
 
                                     if (NfoParser.isNetworkNfoParseEnabled(AutoScrapeService.this) && !fileUri.toString().toLowerCase().startsWith("upnp")) {
 
@@ -573,6 +596,30 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                                 if (log.isTraceEnabled()) log.trace("startScraping: NFO tags.save ID={}", ID);
                                                 tags.save(AutoScrapeService.this, ID);
                                                 DeleteFileCallback.DO_NOT_DELETE.clear();
+                                                // Show NFO success notification
+                                                if (sTotalNumberOfFilesRemainingToProcess > 0) {
+                                                    StringBuilder notification = new StringBuilder(getString(R.string.remaining_videos_to_process))
+                                                            .append(" ").append(sTotalNumberOfFilesRemainingToProcess);
+                                                    String displayTitle = null;
+                                                    if (tags instanceof EpisodeTags) {
+                                                        EpisodeTags episodeTags = (EpisodeTags) tags;
+                                                        ShowTags showTags = episodeTags.getShowTags();
+                                                        if (showTags != null && showTags.getTitle() != null && !showTags.getTitle().isEmpty()) {
+                                                            displayTitle = showTags.getTitle();
+                                                            int season = episodeTags.getSeason();
+                                                            int episode = episodeTags.getEpisode();
+                                                            if (season >= 0 && episode >= 0) {
+                                                                displayTitle += String.format(" - S%02dE%02d", season, episode);
+                                                            }
+                                                        }
+                                                    } else if (tags instanceof MovieTags) {
+                                                        displayTitle = tags.getTitle();
+                                                    }
+                                                    if (displayTitle != null && !displayTitle.isEmpty()) {
+                                                        notification.append("\n").append("\u2705 ").append(displayTitle);
+                                                        nm.notify(NOTIFICATION_ID, nb.setContentText(notification.toString()).build());
+                                                    }
+                                                }
                                             } else {
                                                 if (log.isTraceEnabled()) log.trace("startScraping: oh oh NFO ID = -1 ");
                                             }
@@ -655,6 +702,29 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             if (log.isTraceEnabled()) log.trace("startScraping: online result.tag.save ID={}", ID);
 
                                             result.tag.save(AutoScrapeService.this, ID);
+                                            if (sTotalNumberOfFilesRemainingToProcess > 0) {
+                                                StringBuilder notification = new StringBuilder(getString(R.string.remaining_videos_to_process))
+                                                        .append(" ").append(sTotalNumberOfFilesRemainingToProcess);
+                                                String displayTitle = null;
+                                                if (result.tag instanceof EpisodeTags) {
+                                                    EpisodeTags episodeTags = (EpisodeTags) result.tag;
+                                                    ShowTags showTags = episodeTags.getShowTags();
+                                                    if (showTags != null && showTags.getTitle() != null && !showTags.getTitle().isEmpty()) {
+                                                        displayTitle = showTags.getTitle();
+                                                        int season = episodeTags.getSeason();
+                                                        int episode = episodeTags.getEpisode();
+                                                        if (season >= 0 && episode >= 0) {
+                                                            displayTitle += String.format(" - S%02dE%02d", season, episode);
+                                                        }
+                                                    }
+                                                } else if (result.tag instanceof MovieTags) {
+                                                    displayTitle = result.tag.getTitle();
+                                                }
+                                                if (displayTitle != null && !displayTitle.isEmpty()) {
+                                                    notification.append("\n").append("\u2705 ").append(displayTitle);
+                                                    nm.notify(NOTIFICATION_ID, nb.setContentText(notification.toString()).build());
+                                                }
+                                            }
                                             DeleteFileCallback.DO_NOT_DELETE.clear();
                                             // result exists thus scraped and no error for now
                                             notScraped = false;
@@ -684,6 +754,31 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             noScrapeError = result.status != ScrapeStatus.ERROR && result.status != ScrapeStatus.ERROR_NETWORK && result.status != ScrapeStatus.ERROR_NO_NETWORK;
                                             if (!noScrapeError) {
                                                 if (log.isTraceEnabled()) log.trace("startScraping: file {} scrape error", fileUri);
+                                                if (sTotalNumberOfFilesRemainingToProcess > 0) {
+                                                    StringBuilder notification = new StringBuilder(getString(R.string.remaining_videos_to_process))
+                                                            .append(" ").append(sTotalNumberOfFilesRemainingToProcess);
+                                                    String failureTitle = null;
+                                                    if (result.tag instanceof EpisodeTags) {
+                                                        EpisodeTags episodeTags = (EpisodeTags) result.tag;
+                                                        ShowTags showTags = episodeTags.getShowTags();
+                                                        if (showTags != null && showTags.getTitle() != null && !showTags.getTitle().isEmpty()) {
+                                                            failureTitle = showTags.getTitle();
+                                                            int season = episodeTags.getSeason();
+                                                            int episode = episodeTags.getEpisode();
+                                                            if (season >= 0 && episode >= 0) {
+                                                                failureTitle += String.format(" - S%02dE%02d", season, episode);
+                                                            }
+                                                        }
+                                                    } else if (result.tag instanceof MovieTags) {
+                                                        failureTitle = result.tag.getTitle();
+                                                    }
+                                                    if (failureTitle != null && !failureTitle.isEmpty()) {
+                                                        notification.append("\n").append("\u274c ").append(failureTitle);
+                                                    } else {
+                                                        notification.append("\n").append("\u274c");
+                                                    }
+                                                    nm.notify(NOTIFICATION_ID, nb.setContentText(notification.toString()).build());
+                                                }
                                             } else {
                                                 sNumberOfFilesNotScraped++;
                                             }
