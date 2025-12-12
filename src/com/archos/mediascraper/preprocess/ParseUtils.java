@@ -141,8 +141,11 @@ public class ParseUtils {
         if (matcher.find()) {
             String year = matcher.group(1);
             String name = matcher.group(2);
-            if (log.isDebugEnabled()) log.debug("yearExtractorStartString found year: {}, name: {}", year, name);
-            return new Pair<>(name, year);
+            // Check that remaining string is larger than 2 chars to avoid false matches
+            if (name.length() > 2) {
+                if (log.isDebugEnabled()) log.debug("yearExtractorStartString found year: {}, name: {}", year, name);
+                return new Pair<>(name, year);
+            }
         }
         return new Pair<>(input, null);
     }
