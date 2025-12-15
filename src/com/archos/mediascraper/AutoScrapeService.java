@@ -632,7 +632,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
                                 //HAVE WE GOT A SCRAPE OR AN NFO TAG?
                                 //Don't get movies with the word (NULL), this means (NULL) movie wont scrape automatically by who cares?
-                                if (result != null && result.tag != null && ID != -1 && !result.tag.getTitle().equals("(NULL)")) {
+                                if (result != null && result.tag != null && ID != -1 && result.tag.getTitle() != null && !result.tag.getTitle().equals("(NULL)")) {
                                     //IF the title is null, but we scraped OK, use Guessed Title.
                                     if (result.tag.getTitle().isEmpty()) {
                                         result.tag.setTitle(title);
