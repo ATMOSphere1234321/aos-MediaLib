@@ -97,13 +97,13 @@ public class SearchPreprocessor {
         if (info.needsReParse()) {
             Uri file = info.getFile();
 
-            // We need to make sure there are no NULL problems here especially for UPNP.
+            //We need to make sure there are no NULL problems here especially for UPNP.
             String[] candidates = {
                     info.getUserInput(),
                     info.getSearchSuggestion()
             };
 
-            // Check Search Suggestion, Name and fallback to filename.
+            //Check Search Suggestion, Name and fallback to filename.
             String searchQuery = file.toString();
             for (String candidate : candidates) {
                 if (!(candidate == null || candidate.isBlank() || candidate.equalsIgnoreCase("null"))) {
