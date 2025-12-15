@@ -161,4 +161,6 @@
     <string name="remaining_videos_to_process">Remaining mediafiles to be processed:</string>
     <string name="video_store_import">Importing local mediafiles</string>
 
+    <string name="current_video_title">Current: </string>x
+
 </resources>
