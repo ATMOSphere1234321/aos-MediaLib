@@ -53,7 +53,9 @@ public class ParseUtils {
     private static final Pattern YEAR_PATTERN = Pattern.compile("(.*)[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)");
     private static final Pattern YEAR_PATTERN_END_STRING = Pattern.compile("(.*)[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)$");
     private static final Pattern YEAR_PATTERN_START_STRING = Pattern.compile("^((?:19|20)\\d{2})[\\s\\p{Punct}](.*)");
+    private static final Pattern YEAR_ANYWHERE_PATTERN = Pattern.compile("\\b(\\d{4})\\b");
     private static final Pattern PARENTHESIS_YEAR_PATTERN = Pattern.compile("(.*)[\\s\\p{Punct}]+\\(((?:19|20)\\d{2})\\)");
+    public static final int MIN_YEAR = 1900;
 
     // Strip out everything after empty parenthesis (after year pattern removal)
     // i.e. movieName (1969) garbage -> movieName () garbage -> movieName
@@ -148,6 +150,36 @@ public class ParseUtils {
             }
         }
         return new Pair<>(input, null);
+    }
+
+    public static Pair<String, String> extractYearAnywhere(String input, int currentYear) {
+        if (log.isDebugEnabled()) log.debug("extractYearAnywhere input: {}", input);
+        String reversed = new StringBuilder(input).reverse().toString();
+        Matcher matcher = YEAR_ANYWHERE_PATTERN.matcher(reversed);
+        while (matcher.find()) {
+            String candidateYear = new StringBuilder(matcher.group(1)).reverse().toString();
+            if (isPlausibleYear(candidateYear, input.substring(0, Math.max(0, input.length() - matcher.start() - 4)), currentYear)) {
+                int cutIndex = input.length() - matcher.start() - 4;
+                if (cutIndex >= 2) {
+                    String name = input.substring(0, cutIndex).trim();
+                    if (log.isDebugEnabled()) log.debug("extractYearAnywhere found year: {}, name: {}", candidateYear, name);
+                    return new Pair<>(name, candidateYear);
+                }
+                break;
+            }
+        }
+        return new Pair<>(input, null);
+    }
+
+    public static boolean isPlausibleYear(String year, String remainingName, int currentYear) {
+        if (year == null || year.isEmpty()) return false;
+        if (remainingName == null || remainingName.trim().length() < 2) return false;
+        try {
+            int parsedYear = Integer.parseInt(year);
+            return parsedYear >= MIN_YEAR && parsedYear <= currentYear;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     // matches "[space or punctuation/brackets etc](year)", year is group 1

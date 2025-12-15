@@ -30,7 +30,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.archos.mediascraper.preprocess.ParseUtils.BRACKETS;
+import static com.archos.mediascraper.preprocess.ParseUtils.isPlausibleYear;
 import static com.archos.mediascraper.preprocess.ParseUtils.removeAfterEmptyParenthesis;
+import static com.archos.mediascraper.preprocess.ParseUtils.extractYearAnywhere;
 import static com.archos.mediascraper.preprocess.ParseUtils.yearExtractor;
 import static com.archos.mediascraper.preprocess.ParseUtils.yearExtractorEndString;
 import static com.archos.mediascraper.preprocess.ParseUtils.yearExtractorStartString;
@@ -116,6 +118,15 @@ class MovieDefaultMatcher implements InputMatcher {
         // Handles edge cases like "2001.A.Space.Odyssey" where year is at start
         if (year == null || year.isEmpty()) {
             nameYear = yearExtractorStartString(name);
+            if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
+                name = nameYear.first;
+                year = nameYear.second;
+            }
+        }
+
+        // Final fallback: scan anywhere for a plausible 4-digit year, even if attached
+        if (year == null || year.isEmpty()) {
+            nameYear = extractYearAnywhere(name, currentYear);
             if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
                 name = nameYear.first;
                 year = nameYear.second;
@@ -235,18 +246,6 @@ class MovieDefaultMatcher implements InputMatcher {
 
         // return substring from input -> keep case
         return input.substring(0, firstGarbage);
-    }
-
-    private static final int MIN_YEAR = 1900;
-    private static boolean isPlausibleYear(String year, String remainingName, int currentYear) {
-        if (year == null || year.isEmpty()) return false;
-        if (remainingName == null || remainingName.trim().length() < 2) return false;
-        try {
-            int parsedYear = Integer.parseInt(year);
-            return parsedYear >= MIN_YEAR && parsedYear <= currentYear;
-        } catch (NumberFormatException e) {
-            return false;
-        }
     }
 
 }
