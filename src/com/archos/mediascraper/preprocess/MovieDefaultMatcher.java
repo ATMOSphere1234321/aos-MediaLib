@@ -24,6 +24,7 @@ import com.archos.mediascraper.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -89,20 +90,23 @@ class MovieDefaultMatcher implements InputMatcher {
 
     private static SearchInfo getMatch(String input, Uri file) {
         String name = input;
+        final int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
         // extract the last year from the string
         String year = null;
         // matches "[space or punctuation/brackets etc]year", year is group 1
         // "[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)"
         Pair<String, String> nameYear = yearExtractor(name);
-        name = nameYear.first;
-        year = nameYear.second;
+        if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
+            name = nameYear.first;
+            year = nameYear.second;
+        }
 
         // Fallback: if yearExtractor didn't find year, try yearExtractorEndString
         // Handles cases like "Movie.Title.2023" where year is at end
         if (year == null || year.isEmpty()) {
             nameYear = yearExtractorEndString(name);
-            if (nameYear.second != null && !nameYear.second.isEmpty()) {
+            if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
                 name = nameYear.first;
                 year = nameYear.second;
             }
@@ -112,7 +116,7 @@ class MovieDefaultMatcher implements InputMatcher {
         // Handles edge cases like "2001.A.Space.Odyssey" where year is at start
         if (year == null || year.isEmpty()) {
             nameYear = yearExtractorStartString(name);
-            if (nameYear.second != null && !nameYear.second.isEmpty()) {
+            if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
                 name = nameYear.first;
                 year = nameYear.second;
             }
@@ -231,6 +235,18 @@ class MovieDefaultMatcher implements InputMatcher {
 
         // return substring from input -> keep case
         return input.substring(0, firstGarbage);
+    }
+
+    private static final int MIN_YEAR = 1900;
+    private static boolean isPlausibleYear(String year, String remainingName, int currentYear) {
+        if (year == null || year.isEmpty()) return false;
+        if (remainingName == null || remainingName.trim().length() < 2) return false;
+        try {
+            int parsedYear = Integer.parseInt(year);
+            return parsedYear >= MIN_YEAR && parsedYear <= currentYear;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
 }
