@@ -1,0 +1,12 @@
+# URI|Type|ExpectedTitle|ExpectedId
+# Known failure due to parsing 2049 as year: Blade Runner 2049.mkv|Movie|Blade Runner 2049|335984
+The Flash S01E01.mkv|Show|The Flash|60735
+# Known failure due to parsing 2001 as year: 2001 A Space Odyssey.mkv|Movie|2001: A Space Odyssey|62
+# Known failure due to parsing 1999 as year: Class of 1999.mkv|Movie|Class of 1999|10929
+Scream 2022.mkv|Movie|Scream|646385
+The.Incredibles.DVDSCR.XviD.cd1.avi|Movie|The Incredibles|9806
+./series/Galactica/Season 1/galactica.ep3.avi|Show|Battlestar Galactica|1972
+# The Matrix (1999).mkv|Movie|The Matrix|603
+The Matrix.mkv|Movie|The Matrix|603
+upпp://1540402479/0/2/2%2415/2%2415%240/Scream.2022.1080p.BluRay.x264.AAC5.1-[YT.MX].mkv|Movie|Scream|646385
+Wadjda (2013) MULTI VFi 1080p Bluray EAC3 5.1 x265-k7.mkv|Movie|Wadjda|129112
