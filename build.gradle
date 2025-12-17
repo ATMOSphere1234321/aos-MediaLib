@@ -94,6 +94,12 @@ android {
         aidl = true
         renderScript = false
     }
+    lint {
+        abortOnError false // Set to false to only fail on fatal issues
+        disable 'all'
+        enable 'NewApi'
+        fatal 'NewApi'
+    }
     testOptions {
         unitTests.all {
             testLogging {
@@ -101,6 +107,12 @@ android {
                 outputs.upToDateWhen {false}
                 showStandardStreams = true
             }
+        }
+    }
+
+    libraryVariants.all { variant ->
+        variant.assembleProvider.configure { assemble ->
+            assemble.dependsOn("lint" + variant.name.capitalize())
         }
     }
 }
