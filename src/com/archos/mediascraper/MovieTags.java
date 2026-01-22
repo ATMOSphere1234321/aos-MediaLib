@@ -491,6 +491,7 @@ public class MovieTags extends VideoTags {
                 myResult.result = new LinkedList<>();
                 myResult.result.add(result);
                 myResult.status = ScrapeStatus.OKAY;
+                cursor.close();
                 return myResult;
             }
 
