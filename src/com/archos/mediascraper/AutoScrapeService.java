@@ -540,11 +540,11 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                             if (noScrapeError && NfoParser.isNetworkNfoParseEnabled(AutoScrapeService.this) && !fileUri.toString().toLowerCase().startsWith("upnp")) {
                                 BaseTags tags = NfoParser.getTagForFile(fileUri, AutoScrapeService.this);
                                 if (tags != null) {
-                                    //log.trace("startScraping: found NFO");
+                                    if (log.isTraceEnabled()) log.trace("startScraping: found NFO");
                                     // if poster url are in nfo or in folder, download is automatic
                                     // if no poster available, try to scrap with good title,
                                     if (ID != -1) {
-                                        //log.trace("startScraping: NFO ID != -1 {}", ID);
+                                        if (log.isTraceEnabled()) log.trace("startScraping: NFO ID != -1 {}", ID);
                                         // ugly but necessary to avoid poster delete when replacing tag
                                         if (tags.getDefaultPoster() != null)
                                             DeleteFileCallback.DO_NOT_DELETE.add(tags.getDefaultPoster().getLargeFile());
@@ -565,11 +565,11 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             title = ((MovieTags) tags).getTitle();
                                         }
 
-                                        //log.trace("startScraping: NFO tags.save ID={}", ID);
+                                        if (log.isTraceEnabled()) log.trace("startScraping: NFO tags.save ID={}", ID);
                                         tags.save(AutoScrapeService.this, ID);
                                         DeleteFileCallback.DO_NOT_DELETE.clear();
                                     } else {
-                                        //log.trace("startScraping: oh oh NFO ID = -1 ");
+                                        if (log.isTraceEnabled()) log.trace("startScraping: oh oh NFO ID = -1 ");
                                     }
                                     //found NFO thus still no error but scraped
                                     notScraped = false;
@@ -579,23 +579,23 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                             (!(tags instanceof EpisodeTags) || ((EpisodeTags) tags).getShowTags().getPosters() == null)) {//special case for episodes : check show
                                         if (tags.getTitle() != null && !tags.getTitle().isEmpty()) { //if a title is specified in nfo, use it to scrap file
                                             scrapUri = Uri.parse("/" + tags.getTitle() + ".mp4");
-                                            //log.trace("startScraping: no posters using title {}", tags.getTitle());
+                                            if (log.isTraceEnabled()) log.trace("startScraping: no posters using title {}", tags.getTitle());
                                         }
-                                        //log.trace("startScraping: no posters ");
+                                        if (log.isTraceEnabled()) log.trace("startScraping: no posters ");
                                         //poster not found thus not scraped and no error
                                         notScraped = true;
                                         noScrapeError = true;
                                     }
-                                    //log.trace("startScraping: NFO found, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
+                                    if (log.isTraceEnabled()) log.trace("startScraping: NFO found, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
                                 }
                             }
 
                             //No NFO Tags, we need to scrape.
                             if ((notScraped && noScrapeError) || (shouldRescrapAll & noScrapeError)) { //look for online details
-                                //log.trace("startScraping: NFO NOT found");
+                                if (log.isTraceEnabled()) log.trace("startScraping: NFO NOT found");
                                 ScrapeDetailResult result = null;
                                 boolean searchOnline = true;
-                                //log.trace("startScraping: rescraping all");
+                                if (log.isTraceEnabled()) log.trace("startScraping: rescraping all");
                                 long videoID = cursor.getLong(cursor.getColumnIndex(VideoStore.Video.VideoColumns.SCRAPER_VIDEO_ONLINE_ID));
                                 final int scraperType = cursor.getInt(cursor.getColumnIndex(VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE));
 
@@ -609,25 +609,25 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                     b.putInt(Scraper.ITEM_REQUEST_SEASON, (int) season);
                                     b.putInt(Scraper.ITEM_REQUEST_ALL_EPISODES, (int) season);
 
-                                    //log.trace("startScraping: rescraping episode for tvId {}, season {}", videoID, season);
+                                    if (log.isTraceEnabled()) log.trace("startScraping: rescraping episode for tvId {}, season {}", videoID, season);
                                     SearchResult searchResult = new SearchResult(SearchResult.tvshow, title, (int) videoID);
                                     searchResult.setFile(fileUri);
                                     searchResult.setScraper(new ShowScraper4(AutoScrapeService.this));
                                     result = ShowScraper4.getDetails(new SearchResult(SearchResult.tvshow, title, (int) videoID), b);
                                 } else if (scraperType == BaseTags.MOVIE) {
-                                    //log.trace("startScraping: rescraping movie {}", videoID);
+                                    if (log.isTraceEnabled()) log.trace("startScraping: rescraping movie {}", videoID);
                                     SearchResult searchResult = new SearchResult(SearchResult.movie, title, (int) videoID);
                                     searchResult.setFile(fileUri);
                                     searchResult.setScraper(new MovieScraper3(AutoScrapeService.this));
                                     result = MovieScraper3.getDetails(searchResult, null);
                                 } else {
-                                    //log.trace("startScraping: searching online " + title);
+                                    if (log.isTraceEnabled()) log.trace("startScraping: searching online " + title);
                                     SearchInfo searchInfo = SearchPreprocessor.instance().parseFileBased(fileUri, scrapUri);
                                     if (reparseInfo) searchInfo.setForceReParse(true);
                                     Scraper scraper = new Scraper(AutoScrapeService.this);
                                     searchInfo.aggressiveScan = onlyNotFound;
                                     result = scraper.getAutoDetails(searchInfo);                //SEARCH FOR MOVIE!
-                                    //log.trace("startScraping: {} {}", ((result.tag != null) ? result.tag.getTitle() : null), ((result.tag != null) ? result.tag.getOnlineId() : null));
+                                    if (log.isTraceEnabled()) log.trace("startScraping: {} {}", ((result.tag != null) ? result.tag.getTitle() : null), ((result.tag != null) ? result.tag.getOnlineId() : null));
                                 }
 
                                 //HAVE WE GOT A SCRAPE OR AN NFO TAG?
@@ -657,7 +657,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         //Set the Movie title.
                                         title = result.tag.getTitle();
                                     }
-                                    //log.trace("startScraping: online result.tag.save ID={}", ID);
+                                    if (log.isTraceEnabled()) log.trace("startScraping: online result.tag.save ID={}", ID);
 
                                     //Save the tags to the database.
                                     result.tag.save(AutoScrapeService.this, ID);
@@ -675,13 +675,13 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                         // also auto-export all the data
                                         if (fileUri != null) {
                                             try {
-                                                //log.trace("startScraping: exporting NFO");
+                                                if (log.isTraceEnabled()) log.trace("startScraping: exporting NFO");
                                                 NfoWriter.export(fileUri, result.tag, exportContext);
                                             } catch (IOException e) {
                                                 log.error("Caught IOException: ", e);
                                             }
                                         }
-                                        //log.trace("startScraping: online info, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
+                                        if (log.isTraceEnabled()) log.trace("startScraping: online info, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
                                     }
                                 } else if (result != null) {
                                     //not scraped, check for errors
@@ -692,7 +692,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                     if (noScrapeError) {
                                         sNumberOfFilesNotScraped++;
                                     }
-                                    //log.trace("startScraping: file {} not scraped among {}", fileUri, sNumberOfFilesNotScraped);
+                                    if (log.isTraceEnabled()) log.trace("startScraping: file {} not scraped among {}", fileUri, sNumberOfFilesNotScraped);
                                 }
                             }
 
@@ -708,7 +708,7 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
 
                                 // Failed => set the scraper fields to -1 so that we will be able
                                 // to skip this file when launching the automated process again
-                                //log.trace("startScraping: file {} not scraped without error -> mark it as not to be scraped again", fileUri);
+                                if (log.isTraceEnabled()) log.trace("startScraping: file {} not scraped without error -> mark it as not to be scraped again", fileUri);
                                 ContentValues cv = new ContentValues(2);
                                 cv.put(VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_ID, String.valueOf(-1));
                                 cv.put(VideoStore.Video.VideoColumns.ARCHOS_MEDIA_SCRAPER_TYPE, String.valueOf(-1));
