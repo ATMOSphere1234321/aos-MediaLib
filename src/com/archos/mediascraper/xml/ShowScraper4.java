@@ -285,7 +285,9 @@ public class ShowScraper4 extends BaseScraper2 {
                         // only downloads main backdrop/poster and not the entire collection (x8 in size)
                         showTags.downloadPoster(mContext);
                         showTags.downloadBackdrop(mContext);
-                        showTags.downloadPosters(mContext);
+                        // Skip downloading all posters/backdrops here to avoid performance bottleneck during auto-scrape.
+                        // They will be lazy-loaded by the UI when displayed.
+                        //showTags.downloadPosters(mContext);
                         //showTags.downloadBackdrops(mContext);
                     } else {
                         doRebuildShowTag = true;
@@ -394,9 +396,13 @@ public class ShowScraper4 extends BaseScraper2 {
                 if (seasonPosters != null)
                     mapPostersToEpisodes(allEpisodes, seasonPosters);
 
+                // Skip downloading all episode images here to avoid primary performance bottleneck during auto-scrape.
+                // The specific episode being scraped is handled in buildTag() and the UI lazy-loads others on-demand.
+                /*
                 if (getAllEpisodes) {
                     downloadEpisodeImages(allEpisodes);
                 }
+                 */
             }
         } else {
             if (log.isDebugEnabled()) log.debug("getDetailsInternal: cache boost for showId (episodes)");
