@@ -657,8 +657,12 @@ public class ShowTags extends VideoTags {
         if (cursor != null) {
             if (cursor.moveToFirst()) {
                 //Get the columns, so we can grab the data.
-                int idxVideoId = cursor.getColumnIndexOrThrow(ScraperStore.EpisodeShowCombined.SCRAPER_ID);
-                int idxName = cursor.getColumnIndexOrThrow(ScraperStore.EpisodeShowCombined.EPISODE_NAME);
+                int idxVideoId = cursor.getColumnIndex(ScraperStore.EpisodeShowCombined.SCRAPER_ID);
+                if (idxVideoId < 0)
+                    idxVideoId = cursor.getColumnIndexOrThrow(ScraperStore.Episode.ID);
+                int idxName = cursor.getColumnIndex(ScraperStore.EpisodeShowCombined.EPISODE_NAME);
+                if (idxName < 0)
+                    idxName = cursor.getColumnIndexOrThrow(ScraperStore.Episode.NAME);
 
                 //Create a Search Result and populate it.
                 SearchShowResult myResult = new SearchShowResult();
