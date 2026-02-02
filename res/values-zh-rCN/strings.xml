@@ -27,10 +27,10 @@
     <string name="nfo_export_exporting_all">所有内容</string>
     <string name="nfo_export_in_progress">正在导出 NFO</string>
     <string name="rescrap_in_progress">重新刮削整个媒体库</string>
-    <string name="rescraping_collection">正在重置合集</string>
-    <string name="rescraping_collections">正在重置合集</string>
-    <string name="rescraping_noimage_collections">正在重置没有图像的合集</string>
-    <string name="rescrap_all_title">重新刮削所有</string>
+    <string name="rescraping_collection">正在刮削合集</string>
+    <string name="rescraping_collections">正在刮削合集</string>
+    <string name="rescraping_noimage_collections">正在刮削没有图像的合集</string>
+    <string name="rescrap_all_title">重新刮削所有文件</string>
     <!-- trakt.tv -->
     <string name="trakt_toast_syncing_error">无法与 trakt 同步</string>
     <!-- Title of screen when no sd card is present -->
