@@ -664,28 +664,34 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
                                     if (log.isTraceEnabled()) log.trace("startScraping: online result.tag.save ID={}", ID);
 
                                     //Save the tags to the database.
-                                    result.tag.save(AutoScrapeService.this, ID);
-                                    DeleteFileCallback.DO_NOT_DELETE.clear();
-                                    // result exists thus scraped and no error for now
-                                    notScraped = false;
-                                    sNumberOfFilesScraped++;
-                                    totalNumberOfFilesScraped++;
-                                    noScrapeError = true;
-                                    //if (result.tag.getTitle() != null)
-                                    //    log.trace("startScraping: info {}", result.tag.getTitle());
+                                    long savedId = result.tag.save(AutoScrapeService.this, ID);
+                                    if (savedId != -1) {
+                                        DeleteFileCallback.DO_NOT_DELETE.clear();
+                                        // result exists thus scraped and no error for now
+                                        notScraped = false;
+                                        sNumberOfFilesScraped++;
+                                        totalNumberOfFilesScraped++;
+                                        noScrapeError = true;
+                                        if (log.isTraceEnabled() && result.tag.getTitle() != null)
+                                            log.trace("startScraping: info {}", result.tag.getTitle());
 
-                                    //Export the NFO tag if set in prefs (unless we got this from NFO!)
-                                    if (exportContext != null) {
-                                        // also auto-export all the data
-                                        if (fileUri != null) {
-                                            try {
-                                                if (log.isTraceEnabled()) log.trace("startScraping: exporting NFO");
-                                                NfoWriter.export(fileUri, result.tag, exportContext);
-                                            } catch (IOException e) {
-                                                log.error("Caught IOException: ", e);
+                                        //Export the NFO tag if set in prefs (unless we got this from NFO!)
+                                        if (exportContext != null) {
+                                            // also auto-export all the data
+                                            if (fileUri != null) {
+                                                try {
+                                                    if (log.isTraceEnabled()) log.trace("startScraping: exporting NFO");
+                                                    NfoWriter.export(fileUri, result.tag, exportContext);
+                                                } catch (IOException e) {
+                                                    log.error("Caught IOException: ", e);
+                                                }
                                             }
+                                            if (log.isTraceEnabled()) log.trace("startScraping: online info, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
                                         }
-                                        if (log.isTraceEnabled()) log.trace("startScraping: online info, notScaped {}, noScrapeError {} for {}", notScraped, noScrapeError, fileUri);
+                                    } else {
+                                        log.warn("startScraping: save failed for ID {}", ID);
+                                        notScraped = true;
+                                        noScrapeError = false;
                                     }
                                 } else if (result != null) {
                                     //not scraped, check for errors
