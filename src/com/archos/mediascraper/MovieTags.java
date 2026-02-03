@@ -428,10 +428,13 @@ public class MovieTags extends VideoTags {
         String nameSelection = ScraperStore.MovieCollections.ID + "=?";
         Cursor cursor = contentResolver.query(ScraperStore.MovieCollections.URI.BASE, baseProjection,
                 nameSelection, selectionArgs, null);
-        Boolean isKnown = false;
+        boolean isKnown = false;
         if (cursor != null) {
-            isKnown = cursor.moveToFirst();
-            cursor.close();
+            try {
+                isKnown = cursor.moveToFirst();
+            } finally {
+                cursor.close();
+            }
         }
         return isKnown;
     }
@@ -471,31 +474,32 @@ public class MovieTags extends VideoTags {
 
         //Check cursor count and return if positive.
         if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                //Get the columns, so we can grab the data.
-                int idxVideoId = cursor.getColumnIndexOrThrow(ScraperStore.Movie.ID);
-                int idxName = cursor.getColumnIndexOrThrow(ScraperStore.Movie.NAME);
+            try {
+                if (cursor.moveToFirst()) {
+                    //Get the columns, so we can grab the data.
+                    int idxVideoId = cursor.getColumnIndexOrThrow(ScraperStore.Movie.ID);
+                    int idxName = cursor.getColumnIndexOrThrow(ScraperStore.Movie.NAME);
 
-                //Create a Search Result and populate it.
-                SearchMovieResult myResult = new SearchMovieResult();
-                SearchResult result = new SearchResult();
-                result.setMovie();
-                result.setFile(fileUri);
-                result.setId((int) cursor.getLong(idxVideoId));
-                result.setOriginalTitle( cursor.getString(idxName));
-                result.setTitle(cursor.getString(idxName));
-                result.setYear(year);
-                result.fromDB = true;
+                    //Create a Search Result and populate it.
+                    SearchMovieResult myResult = new SearchMovieResult();
+                    SearchResult result = new SearchResult();
+                    result.setMovie();
+                    result.setFile(fileUri);
+                    result.setId((int) cursor.getLong(idxVideoId));
+                    result.setOriginalTitle( cursor.getString(idxName));
+                    result.setTitle(cursor.getString(idxName));
+                    result.setYear(year);
+                    result.fromDB = true;
 
-                //Add the resut to a list, to pass back.
-                myResult.result = new LinkedList<>();
-                myResult.result.add(result);
-                myResult.status = ScrapeStatus.OKAY;
+                    //Add the resut to a list, to pass back.
+                    myResult.result = new LinkedList<>();
+                    myResult.result.add(result);
+                    myResult.status = ScrapeStatus.OKAY;
+                    return myResult;
+                }
+            } finally {
                 cursor.close();
-                return myResult;
             }
-
-            cursor.close();
         }
         return null;
     }

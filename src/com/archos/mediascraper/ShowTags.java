@@ -655,36 +655,37 @@ public class ShowTags extends VideoTags {
 
         //Check cursor count and return if positive.
         if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                //Get the columns, so we can grab the data.
-                int idxVideoId = cursor.getColumnIndex(ScraperStore.EpisodeShowCombined.SCRAPER_ID);
-                if (idxVideoId < 0)
-                    idxVideoId = cursor.getColumnIndexOrThrow(ScraperStore.Episode.ID);
-                int idxName = cursor.getColumnIndex(ScraperStore.EpisodeShowCombined.EPISODE_NAME);
-                if (idxName < 0)
-                    idxName = cursor.getColumnIndexOrThrow(ScraperStore.Episode.NAME);
+            try {
+                if (cursor.moveToFirst()) {
+                    //Get the columns, so we can grab the data.
+                    int idxVideoId = cursor.getColumnIndex(ScraperStore.EpisodeShowCombined.SCRAPER_ID);
+                    if (idxVideoId < 0)
+                        idxVideoId = cursor.getColumnIndexOrThrow(ScraperStore.Episode.ID);
+                    int idxName = cursor.getColumnIndex(ScraperStore.EpisodeShowCombined.EPISODE_NAME);
+                    if (idxName < 0)
+                        idxName = cursor.getColumnIndexOrThrow(ScraperStore.Episode.NAME);
 
-                //Create a Search Result and populate it.
-                SearchShowResult myResult = new SearchShowResult();
-                SearchResult result = new SearchResult();
-                result.setTvShow();
-                result.setFile(fileUri);
-                result.setId((int) cursor.getLong(idxVideoId));
-                result.setOriginalTitle( cursor.getString(idxName));
-                result.setTitle(cursor.getString(idxName));
-                result.setOriginSearchEpisode(Integer.parseInt(episode));
-                result.setOriginSearchSeason(Integer.parseInt(season));
-                result.fromDB = true;
+                    //Create a Search Result and populate it.
+                    SearchShowResult myResult = new SearchShowResult();
+                    SearchResult result = new SearchResult();
+                    result.setTvShow();
+                    result.setFile(fileUri);
+                    result.setId((int) cursor.getLong(idxVideoId));
+                    result.setOriginalTitle( cursor.getString(idxName));
+                    result.setTitle(cursor.getString(idxName));
+                    result.setOriginSearchEpisode(Integer.parseInt(episode));
+                    result.setOriginSearchSeason(Integer.parseInt(season));
+                    result.fromDB = true;
 
-                //Add the resut to a list, to pass back.
-                myResult.result = new LinkedList<>();
-                myResult.result.add(result);
-                myResult.status = ScrapeStatus.OKAY;
+                    //Add the resut to a list, to pass back.
+                    myResult.result = new LinkedList<>();
+                    myResult.result.add(result);
+                    myResult.status = ScrapeStatus.OKAY;
+                    return myResult;
+                }
+            } finally {
                 cursor.close();
-                return myResult;
             }
-
-            cursor.close();
         }
         return null;
     }

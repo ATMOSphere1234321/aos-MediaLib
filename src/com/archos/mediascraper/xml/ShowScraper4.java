@@ -522,9 +522,14 @@ public class ShowScraper4 extends BaseScraper2 {
         Cursor cursor = contentResolver.query(
                 ContentUris.withAppendedId(ScraperStore.Show.URI.ONLINE_ID, showId),
                 baseProjection, null, null, null);
-        Boolean isKnown = false;
-        if (cursor != null) isKnown = cursor.moveToFirst();
-        cursor.close();
+        boolean isKnown = false;
+        if (cursor != null) {
+            try {
+                isKnown = cursor.moveToFirst();
+            } finally {
+                cursor.close();
+            }
+        }
         if (log.isDebugEnabled()) log.debug("isShowAlreadyKnown: {} {}", showId, isKnown);
         return isKnown;
     }
