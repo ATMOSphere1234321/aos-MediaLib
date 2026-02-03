@@ -231,7 +231,7 @@ public class MovieScraper3 extends BaseScraper2 {
         }
 
         // if there was no movie description in the native language get it from default
-        if (tag.getPlot() == null || tag.getPlot().isEmpty()) {
+        if (tag.getPlot() == null || tag.getPlot().trim().isEmpty()) {
             if (log.isDebugEnabled()) log.debug("ScrapeDetailResult: getting description in en because plot non existent in {}", language);
             MovieIdDescription2.addDescription(movieId, tag, getMoviesService());
         }

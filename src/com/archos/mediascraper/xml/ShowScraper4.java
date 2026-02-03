@@ -255,7 +255,7 @@ public class ShowScraper4 extends BaseScraper2 {
                     if (log.isDebugEnabled()) log.debug("getDetailsInternal: downloaded showTags {} {}", showTags.getOnlineId(), showTags.getTitle());
 
                     // if there is no title or description research in en
-                    if (showTags.getPlot() == null || showTags.getTitle() == null || showTags.getPlot().length() == 0 || showTags.getTitle().length() == 0) {
+                    if (showTags.getPlot() == null || showTags.getTitle() == null || showTags.getPlot().trim().length() == 0 || showTags.getTitle().trim().length() == 0) {
                         showIdTvSearchResult = ShowIdTvSearch.getTvShowResponse(showKey, showId, "en", adultScrape, getTmdb());
                         if (showIdTvSearchResult.status != ScrapeStatus.OKAY)
                             return new ScrapeDetailResult(showTags, true, null, showIdTvSearchResult.status, showIdTvSearchResult.reason);
