@@ -290,6 +290,10 @@ public class LibAvos {
         nativeSetMaxPcmChannels(maxChannels);
     }
 
+    public static void setPcmChannelMasks(int[] channelMasks) {
+        nativeSetPcmChannelMasks(channelMasks);
+    }
+
     public static void setAudioSpeed(float audioSpeed) {
         Log.d(TAG, "setAudioSpeed " + audioSpeed);
         nativeSetAudioSpeed(audioSpeed);
@@ -360,6 +364,7 @@ public class LibAvos {
 
     private static native void nativeSetHdmiSupportedAudioCodecs(long hdmiAudioCodecsFlag);
     private static native void nativeSetMaxPcmChannels(int maxChannels);
+    private static native void nativeSetPcmChannelMasks(int[] channelMasks);
 
     private static native void nativeSetAudioSpeed(float audioSpeed);
 
