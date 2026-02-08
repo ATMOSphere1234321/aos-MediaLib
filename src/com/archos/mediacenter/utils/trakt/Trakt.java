@@ -701,7 +701,7 @@ public class Trakt {
         if (lastIndexedUtcSeconds > lastSyncUtcSeconds) {
             if (log.isDebugEnabled()) log.debug("getPlaybackStatus: new content indexed since last sync (lastIndexed={}, lastSync={}), forcing FULL sync to catch new movie activity",
                     lastIndexedUtcSeconds, lastSyncUtcSeconds);
-            List<PlaybackResponse> list = exec(mTraktV2.sync().getPlayback(PLAYBACK_HISTORY_SIZE));
+            List<PlaybackResponse> list = exec(mTraktV2.sync().playback(null, null, null, PLAYBACK_HISTORY_SIZE));
             if (list == null) {
                 if (log.isDebugEnabled()) log.debug("getPlaybackStatus: no playback history");
                 return handleRet(null, new Exception(), null, ObjectType.NULL);
@@ -717,11 +717,11 @@ public class Trakt {
 
         List<PlaybackResponse> list;
         try {
-            // Try incremental sync first (if your fork supports it)
-            list = exec(mTraktV2.sync().getPlaybackSince(lastSync));
+            // Use upstream playback API with start_at parameter (end_at=null means "until now")
+            list = exec(mTraktV2.sync().playback(lastSync, null, null, PLAYBACK_HISTORY_SIZE));
         } catch (Exception e) {
-            if (log.isDebugEnabled()) log.debug("getPlaybackStatus: incremental sync not available, falling back to full history");
-            list = exec(mTraktV2.sync().getPlayback(PLAYBACK_HISTORY_SIZE));
+            if (log.isDebugEnabled()) log.debug("getPlaybackStatus: incremental sync failed, falling back to full history");
+            list = exec(mTraktV2.sync().playback(null, null, null, PLAYBACK_HISTORY_SIZE));
         }
 
         if(list == null) {
@@ -770,7 +770,7 @@ public class Trakt {
         if (lastIndexedUtcSeconds > lastSyncUtcSeconds) {
             if (log.isDebugEnabled()) log.debug("getWatchedStatus: new content indexed since last sync (lastIndexed={}, lastSync={}), forcing FULL sync to catch new movie activity",
                     lastIndexedUtcSeconds, lastSyncUtcSeconds);
-            List<HistoryEntry> list = exec(mTraktV2.sync().getWatchedHistory(PLAYBACK_HISTORY_SIZE));
+            List<HistoryEntry> list = exec(mTraktV2.sync().history(null, PLAYBACK_HISTORY_SIZE, null, null, null));
             if (list == null) {
                 if (log.isDebugEnabled()) log.debug("getWatchedStatus: no watched history");
                 return handleRet(null, new Exception(), null, ObjectType.NULL);
@@ -786,11 +786,11 @@ public class Trakt {
 
         List<HistoryEntry> list;
         try {
-            // Try incremental sync first (if your fork supports it)
-            list = exec(mTraktV2.sync().getWatchedHistorySince(lastSync));
+            // Use upstream history API with start_at parameter (end_at=null means "until now")
+            list = exec(mTraktV2.sync().history(null, PLAYBACK_HISTORY_SIZE, null, lastSync, null));
         } catch (Exception e) {
-            if (log.isDebugEnabled()) log.debug("getWatchedStatus: incremental sync not available, falling back to full history");
-            list = exec(mTraktV2.sync().getWatchedHistory(PLAYBACK_HISTORY_SIZE));
+            if (log.isDebugEnabled()) log.debug("getWatchedStatus: incremental sync failed, falling back to full history");
+            list = exec(mTraktV2.sync().history(null, PLAYBACK_HISTORY_SIZE, null, null, null));
         }
 
         if(list == null) {
@@ -812,7 +812,7 @@ public class Trakt {
      */
     public Result getPlaybackStatusFullHistory() {
         if (log.isDebugEnabled()) log.debug("getPlaybackStatusFullHistory: fetching full playback history (single wide request)");
-        List<PlaybackResponse> list = exec(mTraktV2.sync().getPlayback(1000)); // Trakt hard cap
+        List<PlaybackResponse> list = exec(mTraktV2.sync().playback(null, null, null, 1000)); // Trakt hard cap
         if (list == null || list.isEmpty()) {
             if (log.isDebugEnabled()) log.debug("getPlaybackStatusFullHistory: no playback history");
             return handleRet(null, new Exception(), null, ObjectType.NULL);
@@ -828,7 +828,7 @@ public class Trakt {
     public Result getWatchedStatusFullHistory() {
         if (log.isDebugEnabled()) log.debug("getWatchedStatusFullHistory: fetching full watched history (single wide requests)");
         List<HistoryEntry> all = new ArrayList<>();
-        List<HistoryEntry> shows = exec(mTraktV2.sync().getWatchedHistory(1000));
+        List<HistoryEntry> shows = exec(mTraktV2.sync().history(null, 1000, null, null, null));
         if (shows != null) all.addAll(shows);
         // If needed, add movies separately; API returns combined history so above is usually enough
         if (all.isEmpty()) {
