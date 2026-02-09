@@ -500,6 +500,24 @@ public class ShowScraper4 extends BaseScraper2 {
             }
             if (episodeTag.getDefaultPoster() == null) {
                 log.warn("buildTag: {} has no defaultPoster! Should add default show one.", episodeTag.getTitle());
+                // Add poster fallback for single-episode fetches: try season poster first, then show poster
+                List<ScraperImage> posters = showTags.getPosters();
+                ScraperImage seasonPoster = null;
+                if (posters != null) {
+                    for (ScraperImage image : posters) {
+                        if (image.getSeason() == episodeTag.getSeason()) {
+                            seasonPoster = image;
+                            if (log.isDebugEnabled()) log.debug("buildTag: found season poster for s{}", episodeTag.getSeason());
+                            break;
+                        }
+                    }
+                }
+                if (seasonPoster != null) {
+                    episodeTag.addDefaultPoster(seasonPoster);
+                } else if (showTags.getDefaultPoster() != null) {
+                    if (log.isDebugEnabled()) log.debug("buildTag: using show poster as fallback");
+                    episodeTag.addDefaultPoster(showTags.getDefaultPoster());
+                }
             }
             if (episodeTag.getShowTags() == null) {
                 log.warn("buildTag: {} has empty showTags!", episodeTag.getTitle());
