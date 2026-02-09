@@ -192,16 +192,22 @@ public class ShowScraper4 extends BaseScraper2 {
             return new ScrapeDetailResult(tag, false, null, ScrapeStatus.OKAY, null);
         }
 
-        //Build the Show and Episode keys.
-        String cleanShowName = ShowUtils.cleanUpName(result.getOriginalTitle().toLowerCase());
-        String showKey = cleanShowName + "|" + resultLanguage;
-        String seasonKey =  cleanShowName + "|" + (season != -1 ? season : "")  + "|all|" + resultLanguage;
-        String episodeKey = showId + "|"  + (season != -1 ? season : "") + "|" +  (episode != -1 ? episode : "") + "|" + resultLanguage;
-
         // Parse season and episode numbers once to avoid repeated Integer.parseInt() calls
         // Post refactor, this info may be the exact same as above, just took a longer path to get it!
         int requestedSeason = Integer.parseInt(result.getExtra().getString(ShowUtils.SEASON, "0"));
         int requestedEpisode = Integer.parseInt(result.getExtra().getString(ShowUtils.EPNUM, "0"));
+
+        // Use OPTIONS values if available (for re-scraping), otherwise use SearchResult extras (for manual scraping)
+        // Manual scraping doesn't set season/episode in OPTIONS but has them in SearchResult.extras
+        // Re-scraping sets season in OPTIONS but may not have SearchResult.extras populated
+        int keySeasonValue = (season != -1) ? season : requestedSeason;
+        int keyEpisodeValue = (episode != -1) ? episode : requestedEpisode;
+
+        //Build the Show and Episode keys.
+        String cleanShowName = ShowUtils.cleanUpName(result.getOriginalTitle().toLowerCase());
+        String showKey = cleanShowName + "|" + resultLanguage;
+        String seasonKey =  cleanShowName + "|" + keySeasonValue  + "|all|" + resultLanguage;
+        String episodeKey = showId + "|" + keySeasonValue + "|" + keyEpisodeValue + "|" + resultLanguage;
 
         if (log.isDebugEnabled()) log.debug("getDetailsInternal: {}({}) {} in {} (basicShow={}/basicEpisode={})",
                 result.getTitle(), showId, episodeKey, resultLanguage, basicShow, basicEpisode);
