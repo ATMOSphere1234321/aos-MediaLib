@@ -35,8 +35,11 @@
     <color name="leanback_background_transparent">#AA013a67</color>
 
     <color name="leanback_background">#ff013a67</color>
+    <color name="leanback_background_black">#ff000000</color>
     <color name="leanback_side">@color/lightblue900</color>
+    <color name="leanback_side_black">@color/lightgrey</color>
     <color name="leanback_details_background">@color/lightblue800</color>
+    <color name="leanback_details_background_black">#ff363636</color>
 
     <color name="error_text_over_blue_background">#ff5533</color>
 
@@ -82,5 +85,67 @@
     <color name="help_overlay_button_pressed">#ffabc8db</color>
 
     <color name="transparent_grey">#AA37474F</color>
+    <color name="lightgrey">#363636</color>
+
+    <!-- Theme-aware colors (use these instead of hard-coded values) -->
+    <color name="theme_primary_blue">@color/lightblue500</color>
+    <color name="theme_primary_black">@color/lightgrey</color>
+    <color name="theme_primary_blue_alpha50">@color/lightblue900_alpha50</color>
+    <color name="theme_primary_black_alpha50">#80363636</color>
+    <color name="theme_accent_blue">@color/lightblue400</color>
+    <color name="theme_accent_black">#ff909090</color>
+    
+    <color name="theme_background_blue">@color/leanback_background</color>
+    <color name="theme_background_black">#ff000000</color>
+    
+    <color name="theme_toolbar_blue">@color/leanback_background</color>
+    <color name="theme_toolbar_black">@color/lightgrey</color>
+    
+    <color name="theme_header_blue">@color/lightblue900</color>
+    <color name="theme_header_black">@color/lightgrey</color>
+    
+    <color name="theme_details_primary_blue">@color/lightblue900</color>
+    <color name="theme_details_primary_black">#ff424242</color>
+    
+    <color name="theme_details_secondary_blue">@color/lightblue700</color>
+    <color name="theme_details_secondary_black">#ff616161</color>
+    
+    <color name="theme_grid_item_blue">#ff012643</color>
+    <color name="theme_grid_item_black">#ff000000</color>
+    
+    <color name="theme_category_selector_blue">@color/lightblue800</color>
+    <color name="theme_category_selector_black">@color/lightgrey</color>
+    
+    <color name="theme_list_pressed_blue">#ff33b5e5</color>
+    <color name="theme_list_pressed_black">@color/lightgrey</color>
+    
+    <color name="theme_list_focused_blue">#ff0070a0</color>
+    <color name="theme_list_focused_black">@color/lightgrey</color>
+    
+    <color name="theme_rescan_blue">#ff2e7d32</color>
+    <color name="theme_rescan_black">#ff1b5e20</color>
+    
+    <!-- Private mode colors - themed for blue and black themes -->
+    <color name="theme_private_mode_blue">#ff001b30</color>      <!-- Dark navy blue for blue theme -->
+    <color name="theme_private_mode_black">#ff1a1a1a</color>     <!-- Dark charcoal for black theme -->
+    
+    <color name="theme_gradient_start_blue">#ff002643</color>
+    <color name="theme_gradient_start_black">#ff000000</color>
+    <color name="theme_gradient_end_blue">#ff013a67</color>
+    <color name="theme_gradient_end_black">#ff363636</color>
+    
+    <color name="theme_search_affordance_blue">@color/lightblueA200</color>
+    <color name="theme_search_affordance_black">@color/lightblueA200</color>
+    
+    <!-- Centralized UI accent colors - change these to theme the entire app (e.g., yellow theme) -->
+    <!-- These are currently blue but can be changed to any accent color for future theming -->
+    <color name="ui_accent_primary">@color/lightblue500</color>      <!-- Main accent (primary buttons, highlights) -->
+    <color name="ui_accent_secondary">@color/lightblue400</color>    <!-- Secondary accent (progress bars, sliders) -->
+    <color name="ui_accent_dark">@color/lightblue900</color>         <!-- Dark accent (backgrounds, headers) -->
+    <color name="ui_accent_medium">@color/lightblue700</color>       <!-- Medium accent (resume bars, indicators) -->
+    <color name="ui_accent_light">@color/lightblue200</color>        <!-- Light accent (subtle highlights) -->
+    <color name="ui_accent_alpha50">@color/lightblue900_alpha50</color> <!-- Semi-transparent accent -->
+    <color name="ui_selector">@color/lightblue800</color>            <!-- Selector/focus highlight -->
+    <color name="ui_text_accent">@color/lightblue500</color>         <!-- Accent text color -->
 </resources>
 

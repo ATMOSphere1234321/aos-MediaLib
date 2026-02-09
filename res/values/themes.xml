@@ -16,7 +16,7 @@
     </style>
 
     <style name="ArchosThemeBlueNoActionBar" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@color/lightblue800</item>
+        <item name="android:windowBackground">@android:color/black</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="actionBarStyle">@style/Widget.Holo.ActionBar.Archos</item>
         <item name="colorPrimary">@color/lightblue500</item>
@@ -47,10 +47,46 @@
         <item name="android:windowBackground">@drawable/background_2014</item>
     </style>
 
+    <style name="ArchosThemeBlack" parent="ArchosTheme">
+        <item name="android:windowBackground">@drawable/background_2014_dark</item>
+        <item name="colorPrimary">@color/theme_primary_black</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="colorAccent">@color/theme_accent_black</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="alertDialogTheme">@style/Theme.AlertDialog.Black</item>
+    </style>
+
+    <style name="ArchosThemeBlackNoActionBar" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/background_2014_dark</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="actionBarStyle">@style/Widget.Holo.ActionBar.Archos</item>
+        <item name="colorPrimary">@color/theme_primary_black</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="colorAccent">@color/theme_accent_black</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="drawerArrowStyle">@style/DrawerArrowStyle</item>
+        <item name="actionOverflowButtonStyle">@style/OverflowButtonStyle</item>
+        <item name="colorControlNormal">@android:color/white</item>
+        <item name="android:navigationBarColor">#000000</item>
+    </style>
+
+    <!-- Launcher theme - neutral black background to avoid blue flash -->
+    <style name="ArchosThemeLauncher" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
     <style name="Theme.AlertDialog" parent="Theme.AppCompat.Dialog.Alert">
         <item name="colorPrimary">@color/lightblue500</item>
         <item name="colorPrimaryDark">#002642</item>
         <item name="colorAccent">@color/lightblue400</item>
+    </style>
+
+    <style name="Theme.AlertDialog.Black" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="colorPrimary">@color/theme_primary_black</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="colorAccent">@color/theme_accent_black</item>
     </style>
 
     <style name="ArchosThemeBlueOverlay" parent="ArchosThemeBlue">
