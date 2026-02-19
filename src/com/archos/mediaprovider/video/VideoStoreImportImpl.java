@@ -62,7 +62,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.archos.filecorelibrary.FileUtils.isNetworkShare;
-import static com.archos.filecorelibrary.FileUtils.isSlowRemote;
+
 
 /**
  * The media db import logic
@@ -1345,12 +1345,6 @@ public class VideoStoreImportImpl {
 
         // return true if file or any parent directory has name starting with a dot
         if (path.indexOf("/.") >= 0) return true;
-
-        // perhaps better to avoid this recursive check on slowRemotes or even samba (isNetworkShare)
-        if (isSlowRemote(uri)) {
-            log.warn("isNoMediaPath not fully checking {}", path);
-            return false;
-        }
 
         // now check to see if any parent directories have a ".nomedia" file
         // start from 1 so we don't bother checking in the root directory
