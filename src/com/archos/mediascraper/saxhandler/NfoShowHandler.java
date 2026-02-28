@@ -53,6 +53,8 @@ public class NfoShowHandler extends BasicHandler {
     private static final int THUMB = 13;
     private static final int FANART = 14;
     private static final int IMDBID = 15;
+    private static final int DIRECTOR = 16;
+    private static final int WRITER = 17;
 
     static {
         STRINGS.addKey("tvshow", ROOT);
@@ -71,6 +73,8 @@ public class NfoShowHandler extends BasicHandler {
         STRINGS.addKey("thumb", THUMB);
         STRINGS.addKey("fanart", FANART);
         STRINGS.addKey("imdbid", IMDBID);
+        STRINGS.addKey("director", DIRECTOR);
+        STRINGS.addKey("writer", WRITER);
     }
 
     private ShowTags mResult;
@@ -138,6 +142,8 @@ public class NfoShowHandler extends BasicHandler {
                     case ID:
                     case GENRE:
                     case IMDBID:
+                    case DIRECTOR:
+                    case WRITER:
                         return true;
                     case THUMB:
                         mPosterSeason = parseInt(attributes.getValue("", "season"));
@@ -205,6 +211,12 @@ public class NfoShowHandler extends BasicHandler {
                         break;
                     case IMDBID:
                         mResult.setImdbId(getString());
+                        break;
+                    case DIRECTOR:
+                        mResult.addDirectorIfAbsent(getString(), NfoParser.STRING_SPLITTERS);
+                        break;
+                    case WRITER:
+                        mResult.addWriterIfAbsent(getString(), NfoParser.STRING_SPLITTERS);
                         break;
                     case ACTOR:
                         mInActor = false;

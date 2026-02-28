@@ -443,6 +443,10 @@ public class MovieTags extends VideoTags {
         this.trailers = trailers;
     }
 
+    public List<ScraperTrailer> getTrailers() {
+        return trailers;
+    }
+
     /** Add this url as the default show poster */
     public void addDefaultPosterTMDB(Context context, String path) {
         if (log.isDebugEnabled()) log.debug("addDefaultPosterTMDB: poster {}{}", ScraperImage.TMPL, path);
