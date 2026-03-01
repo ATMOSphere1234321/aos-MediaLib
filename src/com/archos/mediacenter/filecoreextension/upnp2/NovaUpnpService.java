@@ -43,7 +43,9 @@ public class NovaUpnpService extends AndroidUpnpServiceImpl {
                                 ServerClientTokens tokens = new ServerClientTokens(majorVersion, minorVersion);
                                 tokens.setOsName("Android");
                                 tokens.setOsVersion(Build.VERSION.RELEASE);
-                                return tokens.toString() + " NovaVideoPlayer/" + version;
+                                tokens.setProductName("NovaVideoPlayer");
+                                tokens.setProductVersion(version);
+                                return tokens.toString();
                             }
                         });
             }
