@@ -207,8 +207,10 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel nc = new NotificationChannel(notifChannelId, notifChannelName,
-                    nm.IMPORTANCE_LOW);
+                    NotificationManager.IMPORTANCE_DEFAULT);
             nc.setDescription(notifChannelDescr);
+            nc.setSound(null, null);
+            nc.enableVibration(false);
             if (nm != null)
                 nm.createNotificationChannel(nc);
         }
@@ -216,7 +218,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
                 .setContentTitle(getString(R.string.scraping_in_progress))
                 .setContentText("")
-                .setPriority(Notification.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
         n = nb.build();
 

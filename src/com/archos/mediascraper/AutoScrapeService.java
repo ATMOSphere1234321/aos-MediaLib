@@ -221,15 +221,17 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel nc = new NotificationChannel(notifChannelId, notifChannelName,
-                    nm.IMPORTANCE_LOW);
+                    NotificationManager.IMPORTANCE_DEFAULT);
             nc.setDescription(notifChannelDescr);
+            nc.setSound(null, null);
+            nc.enableVibration(false);
             if (nm != null)
                 nm.createNotificationChannel(nc);
         }
         nb = new NotificationCompat.Builder(this, notifChannelId)
                 .setSmallIcon(R.drawable.stat_notify_scraper)
                 .setContentTitle(getString(R.string.scraping_in_progress))
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
 
         if (log.isDebugEnabled()) log.debug("onCreate: register lifecycle observer");
@@ -250,14 +252,16 @@ public class AutoScrapeService extends Service implements DefaultLifecycleObserv
             if (nb == null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
                     NotificationChannel nc = new NotificationChannel(notifChannelId, notifChannelName,
-                            nm.IMPORTANCE_LOW);
+                            NotificationManager.IMPORTANCE_DEFAULT);
                     nc.setDescription(notifChannelDescr);
+                    nc.setSound(null, null);
+                    nc.enableVibration(false);
                     nm.createNotificationChannel(nc);
                 }
                 nb = new NotificationCompat.Builder(this, notifChannelId)
                         .setSmallIcon(R.drawable.stat_notify_scraper)
                         .setContentTitle(getString(R.string.scraping_in_progress))
-                        .setPriority(NotificationCompat.PRIORITY_LOW)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                         .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
             }
 
