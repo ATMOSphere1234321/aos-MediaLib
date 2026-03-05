@@ -80,7 +80,14 @@ public class SearchShow {
                 if (response.body() == null)
                     isResponseEmpty = true;
                 else {
-                    if (response.body().total_results == 0) notFoundIssue = true;
+                    if (response.body().total_results == 0 && !language.equals("en")) {
+                        // Retry in English when native language search returns no results
+                        // since TMDB may only index the English title
+                        if (log.isDebugEnabled()) log.debug("search: no results in {}, retrying in en for {}", language, searchQueryString);
+                        response = tmdb.searchService().tv(searchQueryString, 1, "en", year, false).execute();
+                        if (response.isSuccessful()) isResponseOk = true;
+                    }
+                    if (response.body() == null || response.body().total_results == 0) notFoundIssue = true;
 
                     //We have a show, put it in cache before returning.
                     if (isResponseOk) {
