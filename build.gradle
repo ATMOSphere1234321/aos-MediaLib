@@ -158,7 +158,7 @@ dependencies {
     implementation 'org.json:json:20251224'
     // see https://github.com/UweTrottmann/trakt-java?tab=readme-ov-file for threetenabp instead of threetenbp
     //implementation ('com.github.nova-video-player:trakt-java:0.0.1') {
-    implementation ('com.uwetrottmann.trakt5:trakt-java:6.17.0') {
+    implementation ('com.uwetrottmann.trakt5:trakt-java:6.18.0') {
         exclude group: 'org.threeten', module: 'threetenbp'
     }
     implementation 'com.jakewharton.threetenabp:threetenabp:1.4.9'
@@ -185,10 +185,10 @@ dependencies {
     implementation ('org.eclipse.jetty:jetty-client:9.2.30.v20200428') {
         exclude group: 'org.eclipse.jetty.orbit', module: 'javax.servlet'
     }
-    implementation 'io.sentry:sentry:8.31.0'
+    implementation 'io.sentry:sentry:8.34.1'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.21.0'
-    testImplementation 'ch.qos.logback:logback-classic:1.5.28'
+    testImplementation 'org.mockito:mockito-core:5.22.0'
+    testImplementation 'ch.qos.logback:logback-classic:1.5.32'
     testImplementation 'org.slf4j:slf4j-api:2.0.17'
     testImplementation 'org.robolectric:robolectric:4.16.1'
     testImplementation 'androidx.test:core:1.7.0'
