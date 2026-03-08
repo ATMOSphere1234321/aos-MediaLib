@@ -90,20 +90,53 @@ class MovieDefaultMatcher implements InputMatcher {
         String name = input;
         final int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
+        // Strip out starting numbering for collections "1. ", "1) ", "1 - ", "1.-.", "1._"... but not "1.Foo" or "1-Foo"
+        name = ParseUtils.removeNumbering(name);
+        // Strip out starting numbering for collections "1-"
+        name = ParseUtils.removeNumberingDash(name);
+
+        // Strip out everything else in brackets <[{( .. )})>, most of the time teams names, etc
+        name = StringUtils.replaceAll(name, "", BRACKETS);
+
+        String originalName = name; // Capture after basic cleanup but before year stripping
+
         // extract the last year from the string
         String year = null;
-        // matches "[space or punctuation/brackets etc]year", year is group 1
-        // "[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)"
-        Pair<String, String> nameYear = yearExtractor(name);
+        boolean yearConfident = false;
+
+        // Step 1: try parenthesisYearExtractor - if matches, it's a confident release year
+        Pair<String, String> nameYear = ParseUtils.parenthesisYearExtractor(name);
         if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
             name = nameYear.first;
             year = nameYear.second;
+            yearConfident = true;
+        }
+
+        // Step 2: fallback to non-parentheses extractors (not confident)
+        if (year == null || year.isEmpty()) {
+            // matches "[space or punctuation/brackets etc]year", year is group 1
+            // "[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)"
+            nameYear = yearExtractor(name);
+            if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
+                name = nameYear.first;
+                year = nameYear.second;
+            }
         }
 
         // Fallback: if yearExtractor didn't find year, try yearExtractorEndString
         // Handles cases like "Movie.Title.2023" where year is at end
         if (year == null || year.isEmpty()) {
             nameYear = yearExtractorEndString(name);
+            if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
+                name = nameYear.first;
+                year = nameYear.second;
+            }
+        }
+
+        // Fallback: if no year found at end, try at the beginning
+        // Handles cases like "2001 A Space Odyssey"
+        if (year == null || year.isEmpty()) {
+            nameYear = ParseUtils.extractYearStartString(name, currentYear);
             if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
                 name = nameYear.first;
                 year = nameYear.second;
@@ -123,14 +156,6 @@ class MovieDefaultMatcher implements InputMatcher {
         // applies to movieName (1928) junk -> movieName () junk -> movieName
         name = removeAfterEmptyParenthesis(name);
 
-        // Strip out starting numbering for collections "1. ", "1) ", "1 - ", "1.-.", "1._"... but not "1.Foo" or "1-Foo"
-        name = ParseUtils.removeNumbering(name);
-        // Strip out starting numbering for collections "1-"
-        name = ParseUtils.removeNumberingDash(name);
-
-        // Strip out everything else in brackets <[{( .. )})>, most of the time teams names, etc
-        name = StringUtils.replaceAll(name, "", BRACKETS);
-
         // strip away known case sensitive garbage
         name = ParseUtils.cutOffBeforeFirstMatch(name, ParseUtils.GARBAGE_CASESENSITIVE_PATTERNS);
 
@@ -146,7 +171,8 @@ class MovieDefaultMatcher implements InputMatcher {
         name = ParseUtils.cutOffBeforeFirstMatch(name, ParseUtils.GARBAGE_LOWERCASE);
 
         name = name.trim();
-        return new MovieSearchInfo(file, name, year);
+        originalName = ParseUtils.removeInnerAndOutterSeparatorJunk(originalName).trim();
+        return new MovieSearchInfo(file, name, year, originalName, yearConfident);
     }
 
     @Override

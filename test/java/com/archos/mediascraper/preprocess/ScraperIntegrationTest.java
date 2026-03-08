@@ -186,6 +186,7 @@ public class ScraperIntegrationTest {
             for (String error : errors) {
                 sb.append(" - ").append(error).append("\n");
             }
+            System.err.println(sb.toString());
             fail(sb.toString());
         }
     }

@@ -22,6 +22,7 @@ import com.archos.mediascraper.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,7 +58,7 @@ public class ParseUtils {
     private static final Pattern YEAR_PATTERN_END_STRING = Pattern.compile("(.*)[\\s\\p{Punct}]((?:19|20)\\d{2})(?!\\d)$");
     private static final Pattern YEAR_ANYWHERE_PATTERN = Pattern.compile("\\b(\\d{4})\\b");
     private static final Pattern PARENTHESIS_YEAR_PATTERN = Pattern.compile("(.*)[\\s\\p{Punct}]+\\(((?:19|20)\\d{2})\\)");
-    public static final int MIN_YEAR = 1900;
+    public static final int MIN_YEAR = 1906;
 
     // Strip out everything after empty parenthesis (after year pattern removal)
     // i.e. movieName (1969) garbage -> movieName () garbage -> movieName
@@ -233,6 +234,25 @@ public class ParseUtils {
         return twoPatternExtractor2(input, YEAR_PATTERN_END_STRING);
     }
 
+    private static final Pattern YEAR_PATTERN_START_STRING = Pattern.compile("^((?:19|20)\\d{2})[\\s\\p{Punct}](.*)");
+
+    public static Pair<String, String> extractYearStartString(String input, int currentYear) {
+        if (log.isDebugEnabled()) log.debug("extractYearStartString input: {}", input);
+        Matcher matcher = YEAR_PATTERN_START_STRING.matcher(input);
+        if (matcher.find()) {
+            String candidateYear = matcher.group(1);
+            String possibleName = matcher.group(2);
+            if (isValidYear(candidateYear, currentYear)) {
+                if (possibleName.trim().length() >= 2) {
+                    String name = possibleName.trim();
+                    if (log.isDebugEnabled()) log.debug("extractYearStartString found year: {}, name: {}", candidateYear, name);
+                    return new Pair<>(name, candidateYear);
+                }
+            }
+        }
+        return new Pair<>(input, null);
+    }
+
     public static Pair<String, String> extractYearAnywhere(String input, int currentYear) {
         if (log.isDebugEnabled()) log.debug("extractYearAnywhere input: {}", input);
         String reversed = new StringBuilder(input).reverse().toString();
@@ -264,9 +284,17 @@ public class ParseUtils {
         }
     }
 
+    public static boolean isValidYear(String year) {
+        return isValidYear(year, Calendar.getInstance().get(Calendar.YEAR));
+    }
+
     public static boolean isPlausibleYear(String year, String remainingName, int currentYear) {
         if (remainingName == null || remainingName.trim().length() < 2) return false;
         return isValidYear(year, currentYear);
+    }
+
+    public static boolean isPlausibleYear(String year, String remainingName) {
+        return isPlausibleYear(year, remainingName, Calendar.getInstance().get(Calendar.YEAR));
     }
 
     // matches "[space or punctuation/brackets etc](year)", year is group 1

@@ -27,12 +27,20 @@ import java.text.Normalizer;
 public class MovieSearchInfo extends SearchInfo {
     private final String mName;
     private final String mYear;
+    private final String mOriginalName;
+    private final boolean mYearConfident;
 
     /** package private, use {@link SearchPreprocessor} */
     MovieSearchInfo(Uri uri, String name, String year) {
+        this(uri, name, year, null, false);
+    }
+
+    MovieSearchInfo(Uri uri, String name, String year, String originalName, boolean yearConfident) {
         super(uri);
         mName = Normalizer.normalize(name, Normalizer.Form.NFC);
         mYear = TextUtils.isEmpty(year) ? null : year;
+        mOriginalName = (originalName != null) ? Normalizer.normalize(originalName, Normalizer.Form.NFC) : null;
+        mYearConfident = yearConfident;
     }
 
     public String getName() {
@@ -41,6 +49,14 @@ public class MovieSearchInfo extends SearchInfo {
 
     public String getYear() {
         return mYear;
+    }
+
+    public String getOriginalName() {
+        return mOriginalName;
+    }
+
+    public boolean isYearConfident() {
+        return mYearConfident;
     }
 
     @Override

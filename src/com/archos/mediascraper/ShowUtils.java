@@ -127,17 +127,20 @@ public final class ShowUtils {
             try {
                 if(matcher.find()) {
                     nameYear = parenthesisYearExtractor(matcher.group(1));
+                    String year = nameYear.second;
+                    if (! ParseUtils.isValidYear(year)) year = null;
                     // remove junk behind () that was containing year
                     // applies to movieName (1928) junk -> movieName () junk -> movieName
                     name = removeAfterEmptyParenthesis(nameYear.first);
                     name = cleanUpName(name);
                     nameCountry = getCountryOfOrigin(name);
-                    String year = nameYear.second;
                     if (year == null || year.isEmpty()) { // if year empty perhaps this is Eric.2024-s01e01, find year in the end of the string
                         nameYear = yearExtractorEndString(nameCountry.first);
                         if (nameYear.first != null && ! nameYear.first.isEmpty()) { // do it only if the remaining name is not empty
-                            name = nameYear.first;
-                            year = nameYear.second;
+                            if (ParseUtils.isValidYear(nameYear.second)) {
+                                name = nameYear.first;
+                                year = nameYear.second;
+                            }
                         }
                     }
                     if (log.isDebugEnabled()) log.debug("getMatch: patternsShowFirst {} season {} episode {} year {} country {}", name, matcher.group(2), matcher.group(3), year, nameCountry.second);
@@ -157,20 +160,30 @@ public final class ShowUtils {
                 try {
                     if(matcher.find()) {
                         nameYear = parenthesisYearExtractor(matcher.group(3));
+                        String year = nameYear.second;
+                        if (! ParseUtils.isValidYear(year)) year = null;
                         // remove junk behind () that was containing year
                         // applies to movieName (1928) junk -> movieName () junk -> movieName
                         name = removeAfterEmptyParenthesis(nameYear.first);
                         name = cleanUpName(name);
                         nameCountry = getCountryOfOrigin(name);
-                        if (log.isDebugEnabled()) log.debug("getMatch: patternsEpisodeFirst {} season {} episode {} year {}", nameCountry.first, matcher.group(1), matcher.group(2), nameYear.second);
+                        if (year == null || year.isEmpty()) { // if year empty perhaps this is Eric.2024-s01e01, find year in the end of the string
+                            nameYear = yearExtractorEndString(nameCountry.first);
+                            if (nameYear.first != null && ! nameYear.first.isEmpty()) { // do it only if the remaining name is not empty
+                                if (ParseUtils.isValidYear(nameYear.second)) {
+                                    name = nameYear.first;
+                                    year = nameYear.second;
+                                }
+                            }
+                        }
+                        if (log.isDebugEnabled()) log.debug("getMatch: patternsEpisodeFirst {} season {} episode {} year {}", nameCountry.first, matcher.group(1), matcher.group(2), year);
                         buffer.put(SHOW, nameCountry.first);
                         buffer.put(SEASON, matcher.group(1));
                         buffer.put(EPNUM, matcher.group(2));
-                        buffer.put(YEAR, nameYear.second);
+                        buffer.put(YEAR, year);
                         buffer.put(ORIGIN, nameCountry.second);
                         return buffer;
-                    }
-                } catch (IllegalArgumentException ignored) {}
+                    }                } catch (IllegalArgumentException ignored) {}
             }
         return null;
     }
