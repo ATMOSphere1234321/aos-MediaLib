@@ -366,6 +366,7 @@ public class ShowScraper4 extends BaseScraper2 {
             // retreive now the desired episodes
             List<TvEpisode> tvEpisodes = new ArrayList<>();
             Map<Integer, TvSeason> tvSeasons = new HashMap<Integer, TvSeason>();
+            boolean fetchedFullSeason = false;
 
             if (getAllEpisodes) {
                 //I WILL GET EACH EASON AS NEEDED, I ONLY HAVE SOME SEASONS OF SOME SHOWS
@@ -374,6 +375,7 @@ public class ShowScraper4 extends BaseScraper2 {
                     tvEpisodes.addAll(showIdSeason.tvSeason.episodes);
                     if (! tvSeasons.containsKey(showIdSeason.tvSeason.season_number))
                         tvSeasons.put(showIdSeason.tvSeason.season_number, showIdSeason.tvSeason);
+                    fetchedFullSeason = true;
                 } else {
                     log.warn("getDetailsInternal: scrapeStatus for s" + requestedSeason + " is NOK!");
                     return new ScrapeDetailResult(new EpisodeTags(showTags, requestedSeason, requestedEpisode), true, null, showIdSeason.status, showIdSeason.reason);
@@ -410,6 +412,7 @@ public class ShowScraper4 extends BaseScraper2 {
                     if (showIdSeason.status == ScrapeStatus.OKAY) {
                         tvEpisodes.addAll(showIdSeason.tvSeason.episodes);
                         tvSeasons.putIfAbsent(showIdSeason.tvSeason.season_number, showIdSeason.tvSeason);
+                        fetchedFullSeason = true;
                     } else {
                         // save showtag even if episodetag is empty
                         EpisodeTags episodeTag = new EpisodeTags();
@@ -427,9 +430,9 @@ public class ShowScraper4 extends BaseScraper2 {
             Map<String, EpisodeTags> searchEpisodes = ShowIdEpisodes.getEpisodes(seasonKey, showId, tvEpisodes, tvSeasons, showTags, resultLanguage, adultScrape, getTmdb(), mContext);
             if (!searchEpisodes.isEmpty()) {
                 allEpisodes = searchEpisodes;
-                // Only cache full season fetches, not single episode fetches, to avoid
-                // partial cache entries that cause subsequent lookups for other episodes to miss
-                if (episode == -1) {
+                // Cache only when the fetch path populated a full season map.
+                // Manual single-episode searches still bypass the season cache.
+                if (fetchedFullSeason) {
                     if (log.isDebugEnabled()) log.debug("getDetailsInternal: sEpisodeCache put allEpisodes with key {}", seasonKey);
                     sEpisodeCache.put(seasonKey, allEpisodes);
                 } else {
