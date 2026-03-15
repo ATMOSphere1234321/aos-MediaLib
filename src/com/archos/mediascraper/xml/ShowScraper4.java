@@ -361,6 +361,10 @@ public class ShowScraper4 extends BaseScraper2 {
                 if (log.isDebugEnabled()) log.debug("getDetailsInternal: show {} is known: rebuild from tag", showId);
                 // showTags exits we get it from db
                 showTags = buildShowTagsOnlineId(mContext, showId);
+                if (showTags == null) {
+                    log.warn("getDetailsInternal: show {} not found in db, cannot rebuild tags", showId);
+                    return new ScrapeDetailResult(null, true, null, ScrapeStatus.ERROR_PARSER, null);
+                }
             }
 
             // retreive now the desired episodes
