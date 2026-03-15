@@ -77,8 +77,9 @@ public class ShowId {
                     }
                     break;
             }
-        } catch (IOException e) {
-            log.error("getBaseInfo: caught IOException getting summary for showId={}", showId);
+        } catch (Exception e) {
+            log.error("getBaseInfo: caught {} getting summary for showId={}", e.getClass().getSimpleName(), showId);
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             myResult.status = ScrapeStatus.ERROR_PARSER;
             myResult.reason = e;
         }

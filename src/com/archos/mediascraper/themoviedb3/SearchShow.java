@@ -124,11 +124,12 @@ public class SearchShow {
                     myResult.status = ScrapeStatus.OKAY;
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
-                log.error("search: caught IOException {}", e.getMessage(), e);
+                log.error("search: caught {} {}", e.getClass().getSimpleName(), e.getMessage(), e);
             else
-                log.error("search: caught IOException");
+                log.error("search: caught {}", e.getClass().getSimpleName());
             myResult.result = SearchShowResult.EMPTY_LIST;
             myResult.status = ScrapeStatus.ERROR_PARSER;
             myResult.reason = e;

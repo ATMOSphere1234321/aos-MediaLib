@@ -97,7 +97,7 @@ public class SearchMovie2 {
                     }
                 }
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (Exception e) {
             log.error("searchMovie: caught {}", e.getClass().getSimpleName());
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             if (log.isDebugEnabled()) log.debug(e.getMessage(), e);

@@ -89,8 +89,9 @@ public class MovieId2 {
                     }
                     break;
             }
-        } catch (IOException e) {
-            log.error("getBaseInfo: caught IOException getting summary for movieId={}", movieId);
+        } catch (Exception e) {
+            log.error("getBaseInfo: caught {} getting summary for movieId={}", e.getClass().getSimpleName(), movieId);
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             myResult.status = ScrapeStatus.ERROR_PARSER;
             myResult.reason = e;
         }
