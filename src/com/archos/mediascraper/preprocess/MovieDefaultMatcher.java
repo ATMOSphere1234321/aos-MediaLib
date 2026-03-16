@@ -93,7 +93,7 @@ class MovieDefaultMatcher implements InputMatcher {
         boolean yearAtStart = false;
 
         // Step 1: try parenthesisYearExtractor - if matches, it's a confident release year
-        Pair<String, String> nameYear = ParseUtils.parenthesisYearExtractor(name);
+        Pair<String, String> nameYear = ParseUtils.parenthesisYearExtractorTitleOnly(name);
         if (isPlausibleYear(nameYear.second, nameYear.first, currentYear)) {
             name = nameYear.first;
             year = nameYear.second;

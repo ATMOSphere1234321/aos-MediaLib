@@ -248,6 +248,12 @@ public class ParseUtils {
         return twoPatternExtractor(input, PARENTHESIS_YEAR_PATTERN, 3);
     }
 
+    // Movie preprocessing needs the title before the release year only.
+    public static Pair<String, String> parenthesisYearExtractorTitleOnly(String input) {
+        if (log.isDebugEnabled()) log.debug("parenthesisYearExtractorTitleOnly input: {}", input);
+        return twoPatternExtractor(input, PARENTHESIS_YEAR_PATTERN, 0);
+    }
+
     // matches country of origin ((US|UK|FR)), country is group 1
     // COUNTRY_OF_ORIGIN has an extra group for the inner capture, so "after" is group 4
     public static Pair<String, String> getCountryOfOrigin(String input) {
