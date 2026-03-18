@@ -777,25 +777,25 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         // 2. UPLOAD WITH ORIGINAL CONFLICT CHECKING (DB → Trakt)
         // This preserves the critical "don't overwrite newer progress" logic
         Trakt.Status uploadStatus = syncResumePointsToTrakt(traktProgress);
-        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || uploadStatus == Trakt.Status.ERROR_AUTH) {
             return uploadStatus;
         }
         
         // Upload watched status (minimal for now since most logic is in resume points)
         uploadStatus = syncWatchedStatusToTrakt(traktWatched);
-        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || uploadStatus == Trakt.Status.ERROR_AUTH) {
             return uploadStatus;
         }
         
         // 3. DOWNLOAD WITH NEW IMPROVED LOGIC (Trakt → DB)
         // This uses your enhanced conflict resolution and specification compliance
         Trakt.Status downloadStatus = syncResumePointsToDb(traktProgress);
-        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || downloadStatus == Trakt.Status.ERROR_AUTH) {
             return downloadStatus;
         }
 
         downloadStatus = syncWatchedStatusToDb(traktWatched);
-        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || downloadStatus == Trakt.Status.ERROR_AUTH) {
             return downloadStatus;
         }
 
@@ -1570,6 +1570,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 log.error(accountLockedMessage);
                 // Don't set flag for retry since account is locked
                 break;
+            case ERROR_AUTH:
+                log.warn("Trakt sync aborted due to authentication failure: {}", details);
+                // Don't set flag for retry since auth is failed
+                Trakt.setFlagSyncPreference(mPreferences, 0);
+                break;
             case SUCCESS:
                 if ((flag & FLAG_SYNC_TO_TRAKT_WATCHED) != 0 || (flag & FLAG_SYNC_TO_DB_WATCHED) != 0) {
                     final long time = getCurrentTraktTime();
@@ -1639,7 +1644,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             if (log.isDebugEnabled()) log.debug("get lastactivity");
 
             Trakt.Result result = mTrakt.getLastActivity();
-            if (result.status == Trakt.Status.ERROR_NETWORK || result.status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+            if (result.status == Trakt.Status.ERROR_NETWORK || result.status == Trakt.Status.ERROR_ACCOUNT_LOCKED || result.status == Trakt.Status.ERROR_AUTH)
                 return handleSyncStatus(result.status, flag, "lastActivities");
             flag |= getFlagsFromTraktLastActivity(result, movieTime, showTime);
         }
@@ -1668,12 +1673,12 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     long maxPushedTime = -1;
                     if (log.isDebugEnabled()) log.debug("syncing movies({}) {} from DB to trakt.tv", toMark, library);
                     Trakt.Status status = syncMoviesToTrakt(library, toMark);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncMoviesToTrakt");
                     maxPushedTime = Math.max(maxPushedTime, Trakt.getLastPushedWatchedTime());
                     if (log.isDebugEnabled()) log.debug("syncing shows({}) {} from DB to trakt.tv", toMark, library);
                     status = syncShowsToTrakt(library, toMark);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncShowsToTrakt");
                     maxPushedTime = Math.max(maxPushedTime, Trakt.getLastPushedWatchedTime());
                     if (maxPushedTime > 0 && toMark && library.equals(Trakt.LIBRARY_WATCHED)) {
@@ -1691,7 +1696,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         if(Trakt.getSyncPlaybackPreference(mPreferences)) {
             if (log.isDebugEnabled()) log.debug("sync: using hybrid playback sync (preserves original logic + new improvements)");
             Trakt.Status hybridStatus = syncPlaybackStatusHybrid();
-            if (hybridStatus == Trakt.Status.ERROR_NETWORK) {
+            if (hybridStatus == Trakt.Status.ERROR_NETWORK || hybridStatus == Trakt.Status.ERROR_AUTH) {
                 return handleSyncStatus(hybridStatus, flag, "syncPlaybackStatusHybrid");
             }
         }
@@ -1721,14 +1726,14 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     if (log.isDebugEnabled()) log.debug("syncing movies {} from trakt.tv to DB", library);
                     Trakt.Status status = syncMoviesToDb(library);
                     if (log.isDebugEnabled()) log.debug("syncing movies {} from trakt.tv to DB finished : {}", library, status);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncMoviesToDb");
                 }
                 if (syncShowsFromTrakt) {
                     if (log.isDebugEnabled()) log.debug("syncing shows {} from trakt.tv to DB", library);
                     Trakt.Status status = syncShowsToDb(library);
                     if (log.isDebugEnabled()) log.debug("syncing shows {} from trakt.tv to DB finished : {}", library, status);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncShowsToDb");
                 }
             }
