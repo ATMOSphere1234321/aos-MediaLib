@@ -39,7 +39,6 @@ import org.jupnp.registry.DefaultRegistryListener;
 import org.jupnp.registry.Registry;
 import org.jupnp.registry.RegistryListener;
 import org.jupnp.android.AndroidUpnpService;
-import org.jupnp.android.AndroidUpnpServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -215,7 +214,7 @@ public class UpnpServiceManager {
      */
     public void start() {
         if (mState == State.NOT_RUNNING || mState == State.ERROR) {
-            boolean result = mContext.bindService(new Intent(mContext, AndroidUpnpServiceImpl.class), mServiceConnection, Context.BIND_AUTO_CREATE);
+            boolean result = mContext.bindService(new Intent(mContext, NovaUpnpService.class), mServiceConnection, Context.BIND_AUTO_CREATE);
             if (result) {
                 mState = State.STARTING;
                 if (log.isDebugEnabled()) log.debug("State STARTING");

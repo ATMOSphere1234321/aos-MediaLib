@@ -106,6 +106,17 @@ public class ScraperTrailer {
         Log.d("urldebug", String.format(urlScheme, mVideoKey));
         return Uri.parse(String.format(urlScheme, mVideoKey));
     }
+
+    public String getNfoValue() {
+        if ("YouTube".equals(mSite) && mVideoKey != null && !mVideoKey.isEmpty()) {
+            return String.format("https://www.youtube.com/watch?v=%s", mVideoKey);
+        }
+        if (mVideoKey != null && (mVideoKey.startsWith("http://") || mVideoKey.startsWith("https://"))) {
+            return mVideoKey;
+        }
+        return null;
+    }
+
     public static ScraperTrailer fromCursor(Cursor cur, Type type) {
         long imageId = cur.getLong(cur.getColumnIndexOrThrow(BaseColumns._ID));
         long remoteId = cur.getLong(cur.getColumnIndexOrThrow(type.movieIdColumn));

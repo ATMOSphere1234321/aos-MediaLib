@@ -30,6 +30,7 @@ import com.archos.mediascraper.SearchResult;
 import com.archos.mediascraper.TagsFactory;
 import com.archos.mediascraper.preprocess.MovieSearchInfo;
 import com.archos.mediascraper.preprocess.SearchInfo;
+import com.archos.mediascraper.preprocess.SearchPreprocessor;
 import com.archos.mediascraper.themoviedb3.CollectionInfo;
 import com.archos.mediascraper.themoviedb3.CollectionResult;
 import com.archos.mediascraper.themoviedb3.ImageConfiguration;
@@ -48,6 +49,9 @@ import com.uwetrottmann.tmdb2.services.SearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -124,68 +128,156 @@ public class MovieScraper3 extends BaseScraper2 {
 
         // make sure we have a valid title.
         if (log.isDebugEnabled()) log.debug("movie search:{} year:{} language:{}", searchInfo.getName(), searchInfo.getYear(), language);
-        String[] candidates = {
-                // prefer the cleaned name (without year) over the display suggestion (which may append year)
-                searchInfo.getName(),
-                searchInfo.getSearchSuggestion()
-        };
+        
+        // We use unified scoring if the year is not "confident" (i.e. not in parentheses)
+        // or if we just want to be more robust for titles containing years.
+        boolean useUnifiedScoring = !searchInfo.isYearConfident() && searchInfo.getYear() != null;
+        
+        List<SearchResult> allResults = new ArrayList<>();
+        ScrapeStatus status = ScrapeStatus.NOT_FOUND;
+        Throwable reason = null;
 
-        //Check Search Suggestion, Name and fallback to filename.
-        String searchQuery = searchInfo.getFile().toString();
-        for (String candidate : candidates) {
-            if (!(candidate == null || candidate.isBlank() || candidate.contains("null"))) {
-                searchQuery = candidate;
-                break; // first valid match wins, fallback to file name.
+        // Candidate building logic:
+        class SearchCandidate {
+            String query;
+            String year;
+            SearchCandidate(String q, String y) { this.query = q; this.year = y; }
+        }
+        List<SearchCandidate> candidates = new ArrayList<>();
+
+        if (useUnifiedScoring) {
+            if (searchInfo.isYearAtStart()) {
+                // Scenario A: Year at Start -> try full title first, then remainder with year filter
+                candidates.add(new SearchCandidate(searchInfo.getOriginalName(), null));
+                candidates.add(new SearchCandidate(searchInfo.getName(), searchInfo.getYear()));
+            } else {
+                // Scenario B: Year at End/Middle -> try remainder with year filter first, then full title
+                candidates.add(new SearchCandidate(searchInfo.getName(), searchInfo.getYear()));
+                candidates.add(new SearchCandidate(searchInfo.getOriginalName(), null));
             }
+        } else {
+            // Standard cases: cleaned name with year (if any) first, then fallback to suggestion
+            candidates.add(new SearchCandidate(searchInfo.getName(), searchInfo.getYear()));
+            candidates.add(new SearchCandidate(searchInfo.getSearchSuggestion(), null));
         }
 
-        String reversed = new StringBuilder(searchQuery).reverse().toString();
+        for (SearchCandidate candidate : candidates) {
+            String searchQuery = candidate.query;
+            String yearToUse = candidate.year;
+            
+            if (searchQuery == null || searchQuery.isBlank() || searchQuery.contains("null")) continue;
+            if (log.isDebugEnabled()) log.debug("getMatches2: trying candidate '{}' with year {}", searchQuery, yearToUse);
 
-        //Make sure the presference is enabled.
-        SearchMovieResult searchResult = null;
-        if (searchInfo.scrapeFromDB) {
-            //Check the Database for this Movie, we may have scraped it already on a different URI.
-            searchResult = MovieTags.getMovieResultIfAlreadyKnown(mContext, searchQuery, searchInfo.getYear(), searchInfo.getOriginalUri());
-            if (searchResult != null) {
-                for (SearchResult result : searchResult.result) {
-                    result.setScraper(this);
-                    result.setFile(searchInfo.getFile());
-                }
-                return new ScrapeSearchResult(searchResult.result, true, searchResult.status, searchResult.reason);
-            }
-        }
-
-        //SEARCH TMDB FOR THE MOVIE!
-        //If the Query is 5 words or more, and for as long as it is, remove a word
-        //BUT! Only remove and try 3 times (Aussie Logic, backwards as fuck but works!)
-        for (int i = 0; i < (searchInfo.aggressiveScan ? 4 : 1); i++ ){
-            searchResult = SearchMovie2.search(searchQuery, language, searchInfo.getYear(), maxItems, getSearchService(), adultScrape);
-            //Check result and try again if we need to.
-            if (searchResult.status == ScrapeStatus.OKAY && (!searchResult.result.isEmpty())) {
-                // TODO: this triggers scrape for all search results, is this intended?
-                for (SearchResult result : searchResult.result) {
-                    result.setScraper(this);
-                    result.setFile(searchInfo.getFile());
-                }
-                break;
-            } else if (searchInfo.aggressiveScan && (searchResult.status == ScrapeStatus.OKAY || searchResult.status == ScrapeStatus.NOT_FOUND)) {
-                //Only if its over 3 words. (Stop false positives on small titles like "The")
-                if (searchQuery.split("[\\s\\-_.]+").length > 4) {
-                    //Grab the one word off.
-                    Pattern sepPattern = Pattern.compile("[\\s\\-_.]");
-                    Matcher matcher = sepPattern.matcher(reversed);
-                    if (matcher.find()) {
-                        searchQuery = searchQuery.substring(0, searchQuery.length() - matcher.start() - 1).trim();
-                        reversed = new StringBuilder(searchQuery).reverse().toString();
+            SearchMovieResult searchResult = null;
+            if (searchInfo.scrapeFromDB) {
+                //Check the Database for this Movie, we may have scraped it already on a different URI.
+                searchResult = MovieTags.getMovieResultIfAlreadyKnown(mContext, searchQuery, yearToUse, searchInfo.getOriginalUri());
+                if (searchResult != null && searchResult.result != null && !searchResult.result.isEmpty()) {
+                    for (SearchResult result : searchResult.result) {
+                        result.setScraper(this);
+                        result.setFile(searchInfo.getFile());
                     }
-                } else
-                    break;          //NOT OVER 3 WORDS. DONT SEARCH AGAIN
-            } else
+                    if (!useUnifiedScoring)
+                        return new ScrapeSearchResult(searchResult.result, true, searchResult.status, searchResult.reason);
+                    allResults.addAll(searchResult.result);
+                    status = ScrapeStatus.OKAY;
+                }
+            }
+
+            //SEARCH TMDB FOR THE MOVIE!
+            //If the Query is 5 words or more, and for as long as it is, remove a word
+            //BUT! Only remove and try 3 times (Aussie Logic, backwards as fuck but works!)
+            if (searchResult == null || searchResult.result == null || searchResult.result.isEmpty()) {
+                for (int i = 0; i < (searchInfo.aggressiveScan ? 4 : 1); i++ ){
+                    if (log.isDebugEnabled()) log.debug("getMatches2: searching TMDB for '{}' with year {}", searchQuery, yearToUse);
+                    searchResult = SearchMovie2.search(searchQuery, language, yearToUse, maxItems, getSearchService(), adultScrape);
+                    
+                    //Check result and try again if we need to.
+                    if (searchResult.status == ScrapeStatus.OKAY && (searchResult.result != null && !searchResult.result.isEmpty())) {
+                        for (SearchResult result : searchResult.result) {
+                            result.setScraper(this);
+                            result.setFile(searchInfo.getFile());
+                        }
+                        allResults.addAll(searchResult.result);
+                        status = ScrapeStatus.OKAY;
+                        break;
+                    } else if (searchInfo.aggressiveScan && (searchResult.status == ScrapeStatus.OKAY || searchResult.status == ScrapeStatus.NOT_FOUND)) {
+                        //Only if its over 3 words. (Stop false positives on small titles like "The")
+                        if (searchQuery.split("[\\s\\-_.]+").length > 4) {
+                            //Grab the one word off.
+                            String reversed = new StringBuilder(searchQuery).reverse().toString();
+                            Pattern sepPattern = Pattern.compile("[\\s\\-_.]");
+                            Matcher matcher = sepPattern.matcher(reversed);
+                            if (matcher.find()) {
+                                searchQuery = searchQuery.substring(0, searchQuery.length() - matcher.start() - 1).trim();
+                            }
+                        } else break; //NOT OVER 3 WORDS. DONT SEARCH AGAIN
+                    } else {
+                        if (searchResult.status != ScrapeStatus.NOT_FOUND) {
+                            status = searchResult.status;
+                            reason = searchResult.reason;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // If we found results and we're NOT doing unified scoring, we can stop early
+            if (!allResults.isEmpty() && !useUnifiedScoring) {
+                if (log.isDebugEnabled()) log.debug("getMatches2: found results for '{}', stopping early", searchQuery);
                 break;
+            }
         }
+
+        // Fallback: if no results found with year constraint, retry primary candidate without year
+        if (allResults.isEmpty()) {
+            SearchCandidate primary = candidates.get(0);
+            if (primary.year != null && primary.query != null && !primary.query.isBlank() && !primary.query.contains("null")) {
+                if (log.isDebugEnabled()) log.debug("getMatches2: fallback trying '{}' without year", primary.query);
+                SearchMovieResult searchResult = SearchMovie2.search(primary.query, language, null, maxItems, getSearchService(), adultScrape);
+                if (searchResult.status == ScrapeStatus.OKAY && searchResult.result != null && !searchResult.result.isEmpty()) {
+                    for (SearchResult result : searchResult.result) {
+                        result.setScraper(this);
+                        result.setFile(searchInfo.getFile());
+                    }
+                    allResults.addAll(searchResult.result);
+                    status = ScrapeStatus.OKAY;
+                }
+            }
+        }
+
+        if (allResults.isEmpty()) {
+            return new ScrapeSearchResult(null, true, status, reason);
+        }
+
+        // UNIFIED SCORING:
+        // If we have multiple results (likely from both stripped and unstripped queries),
+        // we re-calculate the distance against the most complete reference title we have.
+        String referenceName = searchInfo.getOriginalName() != null ? searchInfo.getOriginalName() : searchInfo.getName();
+        if (log.isDebugEnabled()) log.debug("getMatches2: unified scoring against reference '{}'", referenceName);
+        
+        org.apache.commons.text.similarity.LevenshteinDistance levenshteinDistance = new org.apache.commons.text.similarity.LevenshteinDistance();
+        String referenceNameLC = referenceName.toLowerCase();
+        
+        java.util.LinkedHashMap<Integer, SearchResult> uniqueResults = new java.util.LinkedHashMap<>();
+        for (SearchResult sr : allResults) {
+            if (uniqueResults.containsKey(sr.getId())) continue;
+            
+            String title = sr.getTitle();
+            String originalTitle = sr.getOriginalTitle();
+            int distTitle = title != null ? levenshteinDistance.apply(referenceNameLC, title.toLowerCase()) : Integer.MAX_VALUE;
+            int distOrig = originalTitle != null ? levenshteinDistance.apply(referenceNameLC, originalTitle.toLowerCase()) : Integer.MAX_VALUE;
+            sr.setLevenshteinDistance(Math.min(distTitle, distOrig));
+            if (log.isDebugEnabled()) log.debug("getMatches2: result {} ({}) distance={}", sr.getTitle(), sr.getId(), sr.getLevenshteinDistance());
+            
+            uniqueResults.put(sr.getId(), sr);
+        }
+        
+        List<SearchResult> sortedResults = new ArrayList<>(uniqueResults.values());
+        Collections.sort(sortedResults, com.archos.mediascraper.themoviedb3.SearchParserResult.comparator);
 
         //Return the rest we got.
-        return new ScrapeSearchResult(searchResult.result, true, searchResult.status, searchResult.reason);
+        return new ScrapeSearchResult(sortedResults, true, ScrapeStatus.OKAY, null);
     }
 
     @Override

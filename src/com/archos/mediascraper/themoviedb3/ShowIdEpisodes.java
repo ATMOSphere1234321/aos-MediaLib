@@ -109,7 +109,7 @@ public class ShowIdEpisodes {
                             if (log.isDebugEnabled()) log.debug("getEpisodes: tvSeason.poster_path is null get showTag default poster");
                             episodeTags.addDefaultPoster(showTags.getDefaultPoster());
                         }
-                        if (log.isDebugEnabled()) log.debug("getEpisodes: {} s{}, has poster {} path {}", showTags.getTitle(), tvEpisode.season_number, episodeTags.getDefaultPoster().getLargeUrl(), episodeTags.getDefaultPoster().getLargeFile());
+                        if (log.isDebugEnabled()) log.debug("getEpisodes: {} s{}, has poster {} path {}", showTags.getTitle(), tvEpisode.season_number, episodeTags.getDefaultPoster() != null ? episodeTags.getDefaultPoster().getLargeUrl() : "null", episodeTags.getDefaultPoster() != null ? episodeTags.getDefaultPoster().getLargeFile() : "null");
                     }
                 } else {
                     if (log.isDebugEnabled()) log.debug("getEpisodes: no poster set for {}s{}", showTags.getTitle(), tvEpisode.season_number);
@@ -135,8 +135,10 @@ public class ShowIdEpisodes {
                     // when no still revert to episodeTags.getDefaultPoster() that should be the season poster (global poster is showTags.getDefaultPoster().getLargeUrl())
                     if (episodeTags.getDefaultPoster() != null)
                         episodeTags.setEpisodePicture(episodeTags.getDefaultPoster().getLargeUrl(), context, true);
-                    else // we get the tvShow global poster
+                    else if (showTags.getDefaultPoster() != null) // we get the tvShow global poster
                         episodeTags.setEpisodePicture(showTags.getDefaultPoster().getLargeUrl(), context, true);
+                    else
+                        if (log.isDebugEnabled()) log.debug("getEpisodes: no poster available for showId={} s{}e{}", showId, tvEpisode.season_number, tvEpisode.episode_number);
                 }
                 if ((tvEpisode.overview == null || tvEpisode.overview.length() == 0 || tvEpisode.name == null || tvEpisode.name.length() == 0)
                         && !language.equals("en")) { // missing overview in native language

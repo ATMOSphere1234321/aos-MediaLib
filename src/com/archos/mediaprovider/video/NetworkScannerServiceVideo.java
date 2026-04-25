@@ -140,8 +140,8 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
             if (data != null && Build.VERSION.SDK_INT >= 29) { // setIdentifier added in API 29
                 serviceIntent.setIdentifier(data.toString());
             }
-            if(broadcast.getExtras()!=null)
-                serviceIntent.putExtras(broadcast.getExtras()); //in case we have an extra... such as "recordLogExtra"
+            copyStringExtraIfPresent(broadcast, serviceIntent, RECORD_ON_FAIL_PREFERENCE);
+            copyStringExtraIfPresent(broadcast, serviceIntent, RECORD_END_OF_SCAN_PREFERENCE);
             int pendingScans = com.archos.mediascraper.AutoScrapeService.getNetworkScanCount();
             if (isForeground || pendingScans > 0) {
                 if (log.isDebugEnabled()) log.debug("startIfHandles: starting service (isForeground={}, pendingScans={})", isForeground, pendingScans);
@@ -154,6 +154,14 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         if (log.isDebugEnabled()) log.debug("startIfHandles is false: do nothing");
         return false;
     }
+
+    private static void copyStringExtraIfPresent(Intent source, Intent dest, String key) {
+        String value = source.getStringExtra(key);
+        if (value != null) {
+            dest.putExtra(key, value);
+        }
+    }
+
     public static boolean willBeScanned(Uri uri){ //returns whether or not a video will be scanned by NetworkScannerServiceVideo
         return (!FileUtils.isLocal(uri)||UriUtils.isContentUri(uri))&& UriUtils.isIndexable(uri); // http(s)/smb/upnp/(s)ftp(s)/content
     }
@@ -207,8 +215,10 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel nc = new NotificationChannel(notifChannelId, notifChannelName,
-                    nm.IMPORTANCE_LOW);
+                    NotificationManager.IMPORTANCE_DEFAULT);
             nc.setDescription(notifChannelDescr);
+            nc.setSound(null, null);
+            nc.enableVibration(false);
             if (nm != null)
                 nm.createNotificationChannel(nc);
         }
@@ -216,7 +226,7 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
                 .setContentTitle(getString(R.string.scraping_in_progress))
                 .setContentText("")
-                .setPriority(Notification.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setTicker(null).setOnlyAlertOnce(true).setOngoing(true).setAutoCancel(true);
         n = nb.build();
 
@@ -256,13 +266,14 @@ public class NetworkScannerServiceVideo extends Service implements Handler.Callb
         
         if (intent == null || intent.getAction() == null)
             return START_NOT_STICKY;
-        if(intent.getExtras()!=null) {
-            if (log.isDebugEnabled()) log.debug("extra not null");
-            mRecordOnFailPreference = intent.getExtras().getString(RECORD_ON_FAIL_PREFERENCE, null);
+        String recordOnFailPreference = intent.getStringExtra(RECORD_ON_FAIL_PREFERENCE);
+        String recordEndOfScanPreference = intent.getStringExtra(RECORD_END_OF_SCAN_PREFERENCE);
+        if (recordOnFailPreference != null || recordEndOfScanPreference != null) {
+            if (log.isDebugEnabled()) log.debug("scanner preference extras present");
+            mRecordOnFailPreference = recordOnFailPreference;
             if(mRecordEndOfScanPreference==null) //reset only when null to avoid pred not being written when another intent with no pref comes just after (this will be written when service stops)
-                mRecordEndOfScanPreference = intent.getExtras().getString(RECORD_END_OF_SCAN_PREFERENCE,null);
-        }
-        else {
+                mRecordEndOfScanPreference = recordEndOfScanPreference;
+        } else {
             if (log.isDebugEnabled()) log.debug("extra null");
             mRecordOnFailPreference = null;
             mRecordEndOfScanPreference =  null;

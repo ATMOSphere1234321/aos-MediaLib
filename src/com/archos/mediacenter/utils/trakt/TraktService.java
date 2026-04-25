@@ -674,9 +674,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             String whereR;
             for (PlaybackResponse video : videos){
                 if (video.movie != null) { // it is a movie
+                    if (video.movie.ids == null || video.movie.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM movie where " + VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID + "= " + video.movie.ids.tmdb+")";
                 } else { // it is an episode
+                    if (video.episode == null || video.episode.ids == null || video.episode.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM episode where " + VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID + "= " + video.episode.ids.tmdb+")";
                 }
@@ -689,7 +691,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                             int id = c.getInt(idIdx);
                             VideoDbInfo i = VideoDbInfo.fromId(cr, id);
                             // i is the video from db and video is the video from trakt
-                            if (i != null) {
+                            if (i != null && video.progress != null) {
                                 int newResumePercent = (int) Math.round(video.progress);
                                 int newResume = (int) (video.progress/100.0*i.duration);
                                 long lastWatched = 1; // 1st second of 1970 by default
@@ -775,25 +777,25 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         // 2. UPLOAD WITH ORIGINAL CONFLICT CHECKING (DB → Trakt)
         // This preserves the critical "don't overwrite newer progress" logic
         Trakt.Status uploadStatus = syncResumePointsToTrakt(traktProgress);
-        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || uploadStatus == Trakt.Status.ERROR_AUTH) {
             return uploadStatus;
         }
         
         // Upload watched status (minimal for now since most logic is in resume points)
         uploadStatus = syncWatchedStatusToTrakt(traktWatched);
-        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (uploadStatus == Trakt.Status.ERROR_NETWORK || uploadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || uploadStatus == Trakt.Status.ERROR_AUTH) {
             return uploadStatus;
         }
         
         // 3. DOWNLOAD WITH NEW IMPROVED LOGIC (Trakt → DB)
         // This uses your enhanced conflict resolution and specification compliance
         Trakt.Status downloadStatus = syncResumePointsToDb(traktProgress);
-        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || downloadStatus == Trakt.Status.ERROR_AUTH) {
             return downloadStatus;
         }
 
         downloadStatus = syncWatchedStatusToDb(traktWatched);
-        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED) {
+        if (downloadStatus == Trakt.Status.ERROR_NETWORK || downloadStatus == Trakt.Status.ERROR_ACCOUNT_LOCKED || downloadStatus == Trakt.Status.ERROR_AUTH) {
             return downloadStatus;
         }
 
@@ -926,9 +928,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             String whereR;
             for (HistoryEntry video : traktWatched){
                 if (video.movie != null) { // it is a movie
+                    if (video.movie.ids == null || video.movie.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM movie where " + VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID + "= " + video.movie.ids.tmdb+")";
                 } else { // it is an episode
+                    if (video.episode == null || video.episode.ids == null || video.episode.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM episode where " + VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID + "= " + video.episode.ids.tmdb+")";
                 }
@@ -1005,9 +1009,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             String whereR;
             for (HistoryEntry video : videos){
                 if (video.movie != null) { // it is a movie
+                    if (video.movie.ids == null || video.movie.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM movie where " + VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID + "= " + video.movie.ids.tmdb+")";
                 } else { // it is an episode
+                    if (video.episode == null || video.episode.ids == null || video.episode.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM episode where " + VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID + "= " + video.episode.ids.tmdb+")";
                 }
@@ -1075,9 +1081,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             String whereR;
             for (PlaybackResponse video : traktVideos){
                 if (video.movie != null) { // it is a movie
+                    if (video.movie.ids == null || video.movie.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM movie where " + VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID + "= " + video.movie.ids.tmdb+")";
                 } else { // it is an episode
+                    if (video.episode == null || video.episode.ids == null || video.episode.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM episode where " + VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID + "= " + video.episode.ids.tmdb+")";
                 }
@@ -1089,7 +1097,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                             int id = c.getInt(idIdx);
                             VideoDbInfo i = VideoDbInfo.fromId(cr, id);
                             // i is the video from db and video is the video from trakt
-                            if (i != null) {
+                            if (i != null && video.progress != null) {
                                 int newResumePercent = (int) Math.round(video.progress);
                                 int newResume = (int) (video.progress/100.0*i.duration);
                                 long lastWatched = 1; // 1st second of 1970 by default
@@ -1169,9 +1177,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             String whereR;
             for (PlaybackResponse video : videos){
                 if (video.movie != null) { // it is a movie
+                    if (video.movie.ids == null || video.movie.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM movie where " + VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID + "= " + video.movie.ids.tmdb+")";
                 } else { // it is an episode
+                    if (video.episode == null || video.episode.ids == null || video.episode.ids.tmdb == null) continue;
                     whereR = VideoStore.Video.VideoColumns._ID+" IN ("+
                             "SELECT video_id FROM episode where " + VideoStore.Video.VideoColumns.SCRAPER_E_ONLINE_ID + "= " + video.episode.ids.tmdb+")";
                 }
@@ -1183,7 +1193,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                             int id = c.getInt(idIdx);
                             VideoDbInfo i = VideoDbInfo.fromId(cr, id);
                             // i is the video from db and video is the video from trakt
-                            if (i != null) {
+                            if (i != null && video.progress != null) {
                                 int newResumePercent = (int) Math.round(video.progress);
                                 int newResume = (int) (video.progress/100.0*i.duration);
                                 long lastWatched = 1; // 1st second of 1970 by default
@@ -1248,11 +1258,15 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 result.objType == Trakt.Result.ObjectType.MOVIES) {
             java.util.List<BaseMovie> movies = (java.util.List<BaseMovie>) result.obj;
             if (log.isDebugEnabled()) log.debug("syncMoviesToDb: found {} movies to sync", movies.size());
-            if (!movies.isEmpty()) {
+            if (movies != null && !movies.isEmpty()) {
                 InBuilder inBuilder = new InBuilder(VideoStore.Video.VideoColumns.SCRAPER_M_ONLINE_ID);
                 for (BaseMovie movie : movies){
-                    inBuilder.addParam(movie.movie.ids.tmdb);
-                    if (log.isTraceEnabled()) log.trace("syncMoviesToDb: marking {}", movie.movie.title);
+                    if (movie != null && movie.movie != null && movie.movie.ids != null && movie.movie.ids.tmdb != null) {
+                        inBuilder.addParam(movie.movie.ids.tmdb);
+                        if (log.isTraceEnabled()) log.trace("syncMoviesToDb: marking {}", movie.movie.title);
+                    } else {
+                        if (log.isDebugEnabled()) log.debug("syncMoviesToDb: skipping movie with null entry or tmdb id");
+                    }
                 }
                 final String inSelection = inBuilder.get();
                 if (inSelection != null) {
@@ -1278,14 +1292,22 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             if (log.isDebugEnabled()) log.debug("syncShowsToDb: found {} shows to sync", shows.size());
             if (!shows.isEmpty()) {
                 for (BaseShow show : shows) {
+                    if (show.show == null || show.show.ids == null || show.show.ids.tmdb == null) {
+                        if (log.isDebugEnabled()) log.debug("syncShowsToDb: skipping show with null tmdb id");
+                        continue;
+                    }
+                    if (show.seasons == null) continue;
                     for (BaseSeason season : show.seasons) {
                         InBuilder inBuilder = new InBuilder("number_episode");
+                        if (season.episodes == null) continue;
                         for (BaseEpisode episode : season.episodes) {
-                            if (log.isTraceEnabled()) log.trace("syncShowsToDb: marking {} s{}e{}", show.show.title, season.number, episode.number);
-                            inBuilder.addParam(episode.number);
+                            if (show.show.title != null && season.number != null && episode.number != null) {
+                                if (log.isTraceEnabled()) log.trace("syncShowsToDb: marking {} s{}e{}", show.show.title, season.number, episode.number);
+                                inBuilder.addParam(episode.number);
+                            }
                         }
                         final String inSelection = inBuilder.get();
-                        if (inSelection != null) {
+                        if (inSelection != null && season.number != null) {
                             final String selection = "_id IN ("+
                                     "SELECT video_id FROM episode where season_episode = " + season.number +
                                     " AND " + inSelection +
@@ -1548,6 +1570,11 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                 log.error(accountLockedMessage);
                 // Don't set flag for retry since account is locked
                 break;
+            case ERROR_AUTH:
+                log.warn("Trakt sync aborted due to authentication failure: {}", details);
+                // Don't set flag for retry since auth is failed
+                Trakt.setFlagSyncPreference(mPreferences, 0);
+                break;
             case SUCCESS:
                 if ((flag & FLAG_SYNC_TO_TRAKT_WATCHED) != 0 || (flag & FLAG_SYNC_TO_DB_WATCHED) != 0) {
                     final long time = getCurrentTraktTime();
@@ -1617,7 +1644,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
             if (log.isDebugEnabled()) log.debug("get lastactivity");
 
             Trakt.Result result = mTrakt.getLastActivity();
-            if (result.status == Trakt.Status.ERROR_NETWORK || result.status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+            if (result.status == Trakt.Status.ERROR_NETWORK || result.status == Trakt.Status.ERROR_ACCOUNT_LOCKED || result.status == Trakt.Status.ERROR_AUTH)
                 return handleSyncStatus(result.status, flag, "lastActivities");
             flag |= getFlagsFromTraktLastActivity(result, movieTime, showTime);
         }
@@ -1646,12 +1673,12 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     long maxPushedTime = -1;
                     if (log.isDebugEnabled()) log.debug("syncing movies({}) {} from DB to trakt.tv", toMark, library);
                     Trakt.Status status = syncMoviesToTrakt(library, toMark);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncMoviesToTrakt");
                     maxPushedTime = Math.max(maxPushedTime, Trakt.getLastPushedWatchedTime());
                     if (log.isDebugEnabled()) log.debug("syncing shows({}) {} from DB to trakt.tv", toMark, library);
                     status = syncShowsToTrakt(library, toMark);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncShowsToTrakt");
                     maxPushedTime = Math.max(maxPushedTime, Trakt.getLastPushedWatchedTime());
                     if (maxPushedTime > 0 && toMark && library.equals(Trakt.LIBRARY_WATCHED)) {
@@ -1669,7 +1696,7 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
         if(Trakt.getSyncPlaybackPreference(mPreferences)) {
             if (log.isDebugEnabled()) log.debug("sync: using hybrid playback sync (preserves original logic + new improvements)");
             Trakt.Status hybridStatus = syncPlaybackStatusHybrid();
-            if (hybridStatus == Trakt.Status.ERROR_NETWORK) {
+            if (hybridStatus == Trakt.Status.ERROR_NETWORK || hybridStatus == Trakt.Status.ERROR_AUTH) {
                 return handleSyncStatus(hybridStatus, flag, "syncPlaybackStatusHybrid");
             }
         }
@@ -1699,14 +1726,14 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                     if (log.isDebugEnabled()) log.debug("syncing movies {} from trakt.tv to DB", library);
                     Trakt.Status status = syncMoviesToDb(library);
                     if (log.isDebugEnabled()) log.debug("syncing movies {} from trakt.tv to DB finished : {}", library, status);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncMoviesToDb");
                 }
                 if (syncShowsFromTrakt) {
                     if (log.isDebugEnabled()) log.debug("syncing shows {} from trakt.tv to DB", library);
                     Trakt.Status status = syncShowsToDb(library);
                     if (log.isDebugEnabled()) log.debug("syncing shows {} from trakt.tv to DB finished : {}", library, status);
-                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED)
+                    if (status == Trakt.Status.ERROR_NETWORK || status == Trakt.Status.ERROR_ACCOUNT_LOCKED || status == Trakt.Status.ERROR_AUTH)
                         return handleSyncStatus(status, flag, "syncShowsToDb");
                 }
             }
@@ -1851,9 +1878,13 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                                 for(ListEntry onlineItem : traktListItems){
                                     if(videoItem.episodeId > 0
                                             && onlineItem.episode!=null
+                                            && onlineItem.episode.ids != null
+                                            && onlineItem.episode.ids.tmdb != null
                                             && onlineItem.episode.ids.tmdb.equals(videoItem.episodeId)
                                             || videoItem.movieId>0
                                             && onlineItem.movie!=null
+                                            && onlineItem.movie.ids != null
+                                            && onlineItem.movie.ids.tmdb != null
                                             && onlineItem.movie.ids.tmdb.equals(videoItem.movieId)){
                                         isIn = true;
                                         break;
@@ -1883,13 +1914,22 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                         for(ListEntry onlineItem : traktListItems){
                             if(onlineItem.episode == null && onlineItem.movie == null)
                                 continue; //skip everything that is not movies or episodes
+                            // skip entries without valid TMDb IDs
+                            if (onlineItem.movie != null && (onlineItem.movie.ids == null || onlineItem.movie.ids.tmdb == null))
+                                continue;
+                            if (onlineItem.episode != null && (onlineItem.episode.ids == null || onlineItem.episode.ids.tmdb == null))
+                                continue;
                             boolean isIn = false;
                             for(VideoStore.VideoList.VideoItem videoItem : localListItems){
                                 if(videoItem.episodeId > 0
                                         && onlineItem.episode!=null
+                                        && onlineItem.episode.ids != null
+                                        && onlineItem.episode.ids.tmdb != null
                                         && onlineItem.episode.ids.tmdb.equals(videoItem.episodeId)
                                         || videoItem.movieId>0
                                         && onlineItem.movie!=null
+                                        && onlineItem.movie.ids != null
+                                        && onlineItem.movie.ids.tmdb != null
                                         && onlineItem.movie.ids.tmdb.equals(videoItem.movieId)) {
                                     isIn = true;
                                     if(videoItem.syncStatus == VideoStore.List.SyncStatus.STATUS_DELETED) {
@@ -1903,8 +1943,10 @@ public class TraktService extends Service implements DefaultLifecycleObserver {
                             if(!isIn){
                                 //add to DB
                                 boolean isEpisode = onlineItem.episode != null;
-                                VideoStore.VideoList.VideoItem videoItem  =
-                                        new VideoStore.VideoList.VideoItem(localId,!isEpisode?onlineItem.movie.ids.tmdb:-1, isEpisode?onlineItem.episode.ids.tmdb:-1, VideoStore.List.SyncStatus.STATUS_OK);
+                                int tmdbMovieId = (onlineItem.movie != null && onlineItem.movie.ids != null && onlineItem.movie.ids.tmdb != null) ? onlineItem.movie.ids.tmdb : -1;
+                                int tmdbEpisodeId = (onlineItem.episode != null && onlineItem.episode.ids != null && onlineItem.episode.ids.tmdb != null) ? onlineItem.episode.ids.tmdb : -1;
+                                VideoStore.VideoList.VideoItem videoItem =
+                                new VideoStore.VideoList.VideoItem(localId, !isEpisode ? tmdbMovieId : -1, isEpisode ? tmdbEpisodeId : -1, VideoStore.List.SyncStatus.STATUS_OK);
 
                                 getContentResolver().insert(listUri, videoItem.toContentValues());
                             }

@@ -116,6 +116,7 @@ public class NfoWriter {
             textTag(serializer, "title", tag.getTitle());
             textTag(serializer, "rating", tag.getRating());
             textTag(serializer, "year", tag.getYear());
+            textTag(serializer, "releasedate", tag.getReleaseDate());
             textTag(serializer, "outline", tag.getPlot());
             textTag(serializer, "runtime", tag.getRuntime(TimeUnit.MINUTES));
             textTag(serializer, "lastplayed", tag.getLastPlayed(TimeUnit.SECONDS));
@@ -130,6 +131,9 @@ public class NfoWriter {
             textTag(serializer, "tmdbid", tag.getOnlineId());
             for (String studio : tag.getStudios())
                 textTag(serializer, "studio", studio);
+            for (ScraperTrailer trailer : tag.getTrailers() == null ? java.util.Collections.<ScraperTrailer>emptyList() : tag.getTrailers()) {
+                textTag(serializer, "trailer", trailer.getNfoValue());
+            }
             for (String genre : tag.getGenres())
                 textTag(serializer, "genre", genre);
             for (Entry<String, String> entry : tag.getActors().entrySet()) {
@@ -240,6 +244,10 @@ public class NfoWriter {
             textTag(serializer, "imdbid", tag.getImdbId());
             for (String studio : tag.getStudios())
                 textTag(serializer, "studio", studio);
+            for (String director : tag.getDirectors())
+                textTag(serializer, "director", director);
+            for (String writer : tag.getWriters())
+                textTag(serializer, "writer", writer);
             for (String genre : tag.getGenres())
                 textTag(serializer, "genre", genre);
             for (Entry<String, String> entry : tag.getActors().entrySet()) {

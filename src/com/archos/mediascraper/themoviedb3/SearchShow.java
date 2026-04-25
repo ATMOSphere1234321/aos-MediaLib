@@ -30,8 +30,6 @@ import java.io.IOException;
 
 import retrofit2.Response;
 
-import static com.archos.mediascraper.preprocess.ParseUtils.yearExtractor;
-
 // Search Show for name query for year in language (ISO 639-1 code)
 public class SearchShow {
     private static final Logger log = LoggerFactory.getLogger(SearchShow.class);
@@ -80,7 +78,14 @@ public class SearchShow {
                 if (response.body() == null)
                     isResponseEmpty = true;
                 else {
-                    if (response.body().total_results == 0) notFoundIssue = true;
+                    if (response.body().total_results == 0 && !language.equals("en")) {
+                        // Retry in English when native language search returns no results
+                        // since TMDB may only index the English title
+                        if (log.isDebugEnabled()) log.debug("search: no results in {}, retrying in en for {}", language, searchQueryString);
+                        response = tmdb.searchService().tv(searchQueryString, 1, "en", year, false).execute();
+                        if (response.isSuccessful()) isResponseOk = true;
+                    }
+                    if (response.body() == null || response.body().total_results == 0) notFoundIssue = true;
 
                     //We have a show, put it in cache before returning.
                     if (isResponseOk) {
@@ -119,11 +124,12 @@ public class SearchShow {
                     myResult.status = ScrapeStatus.OKAY;
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             if (log.isDebugEnabled())
-                log.error("search: caught IOException {}", e.getMessage(), e);
+                log.error("search: caught {} {}", e.getClass().getSimpleName(), e.getMessage(), e);
             else
-                log.error("search: caught IOException");
+                log.error("search: caught {}", e.getClass().getSimpleName());
             myResult.result = SearchShowResult.EMPTY_LIST;
             myResult.status = ScrapeStatus.ERROR_PARSER;
             myResult.reason = e;
