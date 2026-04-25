@@ -548,7 +548,7 @@ public class HttpImageManager{
         public long skip(long n) throws IOException {
             long totalBytesSkipped = 0L;
             while (totalBytesSkipped < n) {
-                long bytesSkipped = in.skip(n - totalBytesSkipped);
+                long bytesSkipped = in.skip(n - totalBytesSkipped);  // SKIP-OK: #legacy-untriaged
                 if (bytesSkipped == 0L) {
                     int byt = read();
                     if (byt < 0) {
