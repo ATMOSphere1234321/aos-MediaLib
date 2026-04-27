@@ -175,6 +175,26 @@ public abstract class BaseTags implements Parcelable {
     }
     
     /**
+     * No-arg overload kept for backward compatibility with the 4 call sites
+     * in the Video/ module's Leanback fragments that predate the int-arg
+     * version of this method (the int-arg version was added when role-text
+     * alpha tinting was introduced). Defaults to Color.WHITE because every
+     * consuming view in Nova's Leanback (TV-mode) UI renders cast text on
+     * a dark surface, where white is the de-facto default text color.
+     *
+     * Adding this overload (rather than migrating the 4 call sites) is the
+     * upstream-friendly path: Archos can take this patch as-is into v6.4
+     * mainline without changing their Video module.
+     *
+     * Call sites that still use this no-arg form (verified 2026-04-27):
+     *   - VideoDetailsFragment.java:1535,1539
+     *   - TvshowMoreDetailsFragment.java:329,330
+     */
+    public SpannableString getSpannableActorsFormatted() {
+        return getSpannableActorsFormatted(Color.WHITE);
+    }
+
+    /**
      * Returns spannable formatted actors with character names displayed at 2/3 alpha
      * of the given text color.
      * @param textColor the current text color of the view displaying the cast
